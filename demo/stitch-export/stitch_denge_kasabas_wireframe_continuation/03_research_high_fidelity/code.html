@@ -1,0 +1,339 @@
+<!DOCTYPE html><html lang="tr"><head>
+<meta charset="utf-8">
+<meta content="width=1440, height=900, initial-scale=1.0" name="viewport">
+<title>03 — Research — Denge Kasabası</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@300..700,0..1&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#0d5c75',
+              dark: '#004357',
+              light: '#e6f4f8',
+              surface: '#f0f8fa'
+            },
+            eco: {
+              DEFAULT: '#006d3b',
+              light: '#e7f7ed',
+              accent: '#22c55e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 1440px;
+      height: 900px;
+      max-width: 1440px;
+      max-height: 900px;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="w-[1440px] h-[900px] bg-[#f7f9ff] text-slate-800 flex flex-col justify-between select-none overflow-hidden">
+<!-- TOP HEADER (Matching 01/02 High-Fidelity Style) -->
+<header class="w-full h-[68px] bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-8 flex items-center justify-between z-20 shrink-0 shadow-sm">
+<!-- Left Logo/Brand -->
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
+<span class="material-symbols-outlined text-[20px]">eco</span>
+</div>
+<div><h1 class="text-sm font-extrabold tracking-wider text-slate-900 uppercase">DENGE KASABASI</h1>
+<p class="text-[10px] font-bold text-slate-500 tracking-wider uppercase">SU VE YAŞAM SİMÜLASYONU</p></div>
+</div>
+<!-- Center Status Metrics -->
+<div class="flex items-center gap-4">
+<!-- Water Status Pill -->
+<div class="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-sky-50 border border-sky-100 shadow-xs">
+<div class="w-6 h-6 rounded-full bg-sky-500/15 flex items-center justify-center text-sky-600">
+<span class="material-symbols-outlined text-[16px]">water_drop</span>
+</div>
+<span class="text-xs text-slate-600 font-medium">Su: <strong class="font-bold text-slate-900 ml-0.5">%42</strong></span>
+</div>
+<!-- Budget Status Pill -->
+<div class="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-100 shadow-xs">
+<div class="w-6 h-6 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-600">
+<span class="material-symbols-outlined text-[16px]">payments</span>
+</div>
+<span class="text-xs text-slate-600 font-medium">Bütçe: <strong class="font-bold text-slate-900 ml-0.5">100</strong></span>
+</div>
+</div>
+<!-- Right Mission Step Pill -->
+<div class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-xs font-bold text-slate-700">Görev 3 / 7</span>
+</div>
+</header>
+<!-- MAIN TWO-COLUMN CONTENT AREA -->
+<main class="w-full flex-1 px-8 py-5 flex gap-6 items-stretch overflow-hidden">
+<!-- LEFT PANEL: RESEARCH & SOURCES (High-Fidelity) -->
+<section class="flex-1 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between overflow-hidden">
+<!-- Header inside Left Card -->
+<div>
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<span class="px-2.5 py-1 rounded-full bg-[#0d5c75]/10 text-[#0d5c75] text-[11px] font-bold tracking-wide uppercase">
+              ARAŞTIRMA &amp; KANIT TOPLAMA
+            </span>
+<span class="text-slate-400 text-xs">•</span>
+<p class="text-xs text-slate-500 font-medium">Her kaynağı inceleyerek güvenilir verileri topla.</p>
+</div>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-wider">BİLGİ KAYNAKLARI</span>
+</div>
+<!-- 6 Clickable Source Cards Grid (3 columns x 2 rows) -->
+<div class="grid grid-cols-3 gap-3.5">
+<!-- Card 1: Active / Selected (Belediye mühendisi) -->
+<div class="bg-[#f0f8fa] rounded-2xl p-3.5 border-2 border-[#0d5c75] shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all relative overflow-hidden">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-[#0d5c75] text-white flex items-center justify-center shrink-0 shadow-xs">
+<span class="material-symbols-outlined text-[18px]">engineering</span>
+</div>
+<span class="text-[13px] font-bold text-slate-900 leading-snug">Belediye mühendisi</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-[#0d5c75]"></span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="text-[11px] font-semibold text-[#0d5c75] bg-white/90 border border-[#0d5c75]/20 px-2 py-0.5 rounded-md">
+                Uzman görüşü
+              </span>
+<span class="text-[10px] font-bold text-[#0d5c75] flex items-center gap-0.5"><span class="material-symbols-outlined text-[13px]">check_circle</span> İncelendi</span>
+</div>
+</div>
+<!-- Card 2: Çiftçi -->
+<div class="bg-white rounded-2xl p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">agriculture</span>
+</div>
+<span class="text-[13px] font-semibold text-slate-800 leading-snug">Çiftçi</span>
+</div>
+<div>
+<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                Paydaş görüşü
+              </span>
+</div>
+</div>
+<!-- Card 3: Çevre uzmanı -->
+<div class="bg-white rounded-2xl p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">psychiatry</span>
+</div>
+<span class="text-[13px] font-semibold text-slate-800 leading-snug">Çevre uzmanı</span>
+</div>
+<div>
+<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                Uzman görüşü
+              </span>
+</div>
+</div>
+<!-- Card 4: Su kullanım verisi -->
+<div class="bg-white rounded-2xl p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">bar_chart</span>
+</div>
+<span class="text-[13px] font-semibold text-slate-800 leading-snug">Su kullanım verisi</span>
+</div>
+<div>
+<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                Veri / grafik
+              </span>
+</div>
+</div>
+<!-- Card 5: Sosyal medya paylaşımı -->
+<div class="bg-white rounded-2xl p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">forum</span>
+</div>
+<span class="text-[13px] font-semibold text-slate-800 leading-snug">Sosyal medya paylaşımı</span>
+</div>
+<div>
+<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                Doğrulanmamış iddia
+              </span>
+</div>
+</div>
+<!-- Card 6: Belediye bütçe bilgisi -->
+<div class="bg-white rounded-2xl p-3.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 shadow-xs flex flex-col justify-between h-[96px] cursor-pointer transition-all">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-700 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+</div>
+<span class="text-[13px] font-semibold text-slate-800 leading-snug">Belediye bütçe bilgisi</span>
+</div>
+<div>
+<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                Resmî veri
+              </span>
+</div>
+</div>
+</div>
+</div>
+<!-- SELECTED SOURCE DETAIL INSPECTION PANEL -->
+<div class="bg-gradient-to-b from-[#f8fbfd] to-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between mt-4">
+<div class="space-y-4">
+<!-- Top Row of Detail Box -->
+<div class="flex items-center justify-between pb-3.5 border-b border-slate-200">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#0d5c75] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[22px]">engineering</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-lg font-bold text-slate-900 tracking-tight">Belediye mühendisi</h3>
+<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
+                    Seçili Kaynak
+                  </span>
+</div>
+<p class="text-xs text-slate-500">Altyapı ve Dağıtım Birimi Değerlendirmesi</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-xs text-xs font-semibold text-slate-700">
+<span class="material-symbols-outlined text-[16px] text-teal-700">verified</span>
+<span class="">Kaynak türü: Uzman / ölçüm verisi</span>
+</div>
+</div>
+<!-- Statement & Evidence Quote -->
+<div class="p-4 rounded-xl bg-[#0d5c75]/5 border border-[#0d5c75]/15 relative">
+<span class="material-symbols-outlined absolute right-4 top-3 text-3xl text-[#0d5c75]/20 select-none">format_quote</span>
+<p class="text-base font-bold text-[#0d5c75] leading-relaxed pr-8">
+              “Şebekedeki suyun yaklaşık %18'i kaçaklardan kaybediliyor.”
+            </p>
+</div>
+<!-- Explanation text -->
+<div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-[13.5px] text-slate-700 leading-relaxed">
+            Eski boru hatları ve dağıtım altyapısındaki basınç dalgalanmaları nedeniyle su iletim hatlarında düzenli sızıntılar tespit edilmiştir. İyileştirme yapılması kayıpları azaltabilir.
+          </div>
+</div>
+<!-- Detail Footer -->
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="">İnceleme durumu: <strong class="font-semibold text-slate-800">İncelendi (1/6)</strong></span>
+</div>
+<span class="text-slate-500 font-medium">Detay görünümü: Aktif</span>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL: TASK & CHECKLIST (High-Fidelity) -->
+<aside class="w-[370px] bg-white rounded-3xl p-6 flex flex-col justify-between border border-slate-200/90 shadow-sm shrink-0">
+<div class="space-y-4">
+<!-- Title & description -->
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-[10px] font-extrabold uppercase tracking-wider text-[#0d5c75] bg-[#0d5c75]/10 px-2 py-0.5 rounded">
+              GÖREV ADIMI
+            </span>
+</div>
+<h2 class="text-xl font-extrabold tracking-tight text-slate-900 mb-1">
+            GÖREV
+          </h2>
+<p class="text-xs text-slate-600 leading-relaxed">
+            Karar vermeden önce farklı bilgi kaynaklarını incele.
+          </p>
+</div>
+<!-- Hint Callout Box -->
+<div class="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-2.5">
+<span class="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">lightbulb</span>
+<p class="text-xs text-amber-900 leading-normal">
+<span class="font-bold">İpucu:</span> Tüm kaynaklar aynı derecede güvenilir olmayabilir.
+          </p>
+</div>
+<!-- Checklist Section -->
+<div>
+<div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+<h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              İNCELENEN KAYNAKLAR
+            </h3>
+<span class="text-[11px] font-bold text-[#0d5c75] bg-[#0d5c75]/10 px-2 py-0.5 rounded-full">
+              1 / 6 İncelendi
+            </span>
+</div>
+<ul class="space-y-1.5 text-xs text-slate-700">
+<!-- 1. Belediye mühendisi (Checked) -->
+<li class="flex items-center justify-between p-2 rounded-xl bg-teal-50/50 border border-[#0d5c75]/20">
+<div class="flex items-center gap-2.5">
+<div class="w-4 h-4 rounded bg-[#0d5c75] text-white flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[13px] font-bold">check</span>
+</div>
+<span class="font-bold text-slate-900">Belediye mühendisi</span>
+</div>
+<span class="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">İncelendi</span>
+</li>
+<!-- 2. Çiftçi (Unchecked) -->
+<li class="flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="w-4 h-4 rounded border border-slate-300 bg-white shrink-0"></span>
+<span class="text-slate-700 font-medium">Çiftçi</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Bekliyor</span>
+</li>
+<!-- 3. Çevre uzmanı (Unchecked) -->
+<li class="flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="w-4 h-4 rounded border border-slate-300 bg-white shrink-0"></span>
+<span class="text-slate-700 font-medium">Çevre uzmanı</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Bekliyor</span>
+</li>
+<!-- 4. Su kullanım verisi (Unchecked) -->
+<li class="flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="w-4 h-4 rounded border border-slate-300 bg-white shrink-0"></span>
+<span class="text-slate-700 font-medium">Su kullanım verisi</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Bekliyor</span>
+</li>
+<!-- 5. Sosyal medya paylaşımı (Unchecked) -->
+<li class="flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="w-4 h-4 rounded border border-slate-300 bg-white shrink-0"></span>
+<span class="text-slate-700 font-medium">Sosyal medya paylaşımı</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Bekliyor</span>
+</li>
+<!-- 6. Belediye bütçe bilgisi (Unchecked) -->
+<li class="flex items-center justify-between p-2 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="w-4 h-4 rounded border border-slate-300 bg-white shrink-0"></span>
+<span class="text-slate-700 font-medium">Belediye bütçe bilgisi</span>
+</div>
+<span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Bekliyor</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Main Action CTA Button -->
+<button class="w-full py-3.5 px-4 bg-[#0d5c75] hover:bg-[#004357] text-white text-xs font-bold rounded-xl tracking-wider uppercase transition-all shadow-md shadow-[#0d5c75]/25 hover:shadow-lg hover:shadow-[#0d5c75]/30 flex items-center justify-center gap-2 group cursor-pointer active:scale-[0.99]">
+<span class="">PLAN OLUŞTURMAYA GEÇ</span>
+<span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</aside>
+</main>
+<!-- BOTTOM HELPER TEXT -->
+<footer class="w-full py-2 text-center text-xs text-slate-500 font-medium shrink-0 tracking-wide">
+    Kaynakları incele, karşılaştır ve hangi bilginin daha güvenilir olduğunu düşün.
+  </footer>
+
+
+</body></html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html><html class="h-full" lang="tr"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Denge Kasabası — 04 Planlama</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              teal: '#0d5c75',
+              darkTeal: '#09475b',
+              lightTeal: '#f0fdfa',
+              softBg: '#f4f7fb',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Precise Design Matching -->
+<style data-purpose="base-styling">
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f4f7fb;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between select-none">
+<!-- BEGIN: MainHeader -->
+<header class="w-full bg-white/95 border-b border-slate-200/80 px-8 py-3.5 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.03)] z-30" data-purpose="app-header">
+<!-- Brand Logo and Name -->
+<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-[#0d5c75] flex items-center justify-center text-white shadow-sm shadow-[#0d5c75]/30"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6"></path></svg></div><div class="flex flex-col"><h1 class="text-base font-extrabold tracking-tight text-slate-800 leading-none">DENGE KASABASI</h1><span class="text-[10.5px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">SU VE YAŞAM SİMÜLASYONU</span></div></div>
+<!-- Status Indicators (Water & Budget) -->
+<div class="flex items-center gap-3">
+<!-- Water Indicator Pill -->
+<div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f0f9ff] border border-sky-200/70 text-sky-900 font-semibold text-xs shadow-sm"><div class="w-5 h-5 rounded-full bg-sky-200/60 flex items-center justify-center text-sky-600"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></div><span class="">Su: <strong class="font-bold text-sky-950">%42</strong></span></div>
+<!-- Budget Indicator Pill -->
+<div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#fef8ee] border border-amber-200/80 text-amber-900 font-semibold text-xs shadow-sm">
+<div class="w-5 h-5 rounded-full bg-amber-200/70 flex items-center justify-center text-amber-700">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24">
+<rect height="14" rx="2" width="20" x="2" y="5"></rect>
+<line x1="2" x2="22" y1="10" y2="10"></line>
+</svg>
+</div>
+<span class="">Bütçe: <strong class="font-bold text-amber-950">100</strong></span>
+</div>
+</div>
+<!-- Mission Step Indicator -->
+<div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 animate-pulse"></span>
+<span class="">Görev 4 / 7</span>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContentLayout -->
+<main class="flex-1 max-w-[1440px] w-full mx-auto px-8 grid grid-cols-12 gap-6 min-h-0 items-stretch py-4" data-purpose="main-workspace">
+<!-- BEGIN: LeftPlanningColumn -->
+<section class="col-span-8 bg-white rounded-3xl border border-slate-200/80 shadow-[0_12px_36px_-6px_rgba(13,92,117,0.06)] p-6 flex flex-col justify-between overflow-hidden" data-purpose="interventions-panel">
+<!-- Panel Header Information -->
+<div class="mb-3">
+<div class="flex items-center gap-2.5 mb-1.5">
+<span class="px-2.5 py-0.5 rounded-md bg-slate-100 text-[#0d5c75] font-bold text-[11px] tracking-wide uppercase">
+            PLANLAMA &amp; MÜDAHALE
+          </span>
+<span class="text-slate-300">•</span>
+<p class="text-xs font-medium text-slate-500">Kasaba için en dengeli çözümleri incele ve seçimini yap.</p>
+</div>
+<div class="flex items-center justify-between">
+<h2 class="text-xl font-extrabold text-slate-900 tracking-tight">ÇÖZÜM SEÇENEKLERİ</h2>
+<span class="text-xs font-semibold text-slate-400">En fazla 3 müdahale seçilebilir</span>
+</div>
+</div>
+<!-- Solution Cards Vertical Stack -->
+<div class="flex flex-col gap-2.5 flex-1 justify-center py-1">
+<!-- Card 1: SELECTED STATE -->
+<article class="relative rounded-2xl border-2 border-[#0d5c75] bg-[#f0f9ff]/50 px-4 py-3 flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer" data-purpose="solution-item-selected">
+<div class="flex items-center gap-3.5">
+<!-- Icon Container -->
+<div class="w-10 h-10 rounded-xl bg-[#0d5c75] text-white flex items-center justify-center shrink-0 shadow-sm">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+</svg>
+</div>
+<!-- Title & Impact Chips -->
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-sm text-slate-900">1. Şebeke kaçaklarını onar</h3>
+<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">Maliyet: 20</span>
+</div>
+<div class="flex items-center gap-2 mt-1.5">
+<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10.5px] font-semibold">Su etkisi: yüksek</span>
+<span class="px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 text-[10.5px] font-semibold">Çevresel risk: düşük</span>
+</div>
+</div>
+</div>
+<!-- Selected Status Badge -->
+<div class="flex items-center gap-1.5 bg-[#0d5c75] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+<span class="">Seçildi</span>
+</div>
+</article>
+<!-- Card 2: UNSELECTED STATE -->
+<article class="relative rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 px-4 py-3 flex items-center justify-between transition-all duration-200 cursor-pointer" data-purpose="solution-item-unselected">
+<div class="flex items-center gap-3.5">
+<!-- Icon Container -->
+<div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+<path d="M12 12 2.1 7.1"></path>
+<path d="m12 12 4.9 8.9"></path>
+</svg>
+</div>
+<!-- Title & Impact Chips -->
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-sm text-slate-800">2. Tarımsal sulamayı azalt</h3>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">Maliyet: 5</span>
+</div>
+<div class="flex items-center gap-2 mt-1.5">
+<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10.5px] font-semibold">Su etkisi: yüksek</span>
+<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/60 text-[10.5px] font-semibold">Tarım etkisi: olumsuz olabilir</span>
+</div>
+</div>
+</div>
+<!-- Unselected Hollow Checkbox -->
+<div class="w-6 h-6 rounded-lg border-2 border-slate-300 flex items-center justify-center"></div>
+</article>
+<!-- Card 3: UNSELECTED STATE -->
+<article class="relative rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 px-4 py-3 flex items-center justify-between transition-all duration-200 cursor-pointer" data-purpose="solution-item-unselected">
+<div class="flex items-center gap-3.5">
+<!-- Icon Container -->
+<div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M12 10a6 6 0 0 0-6-6H3v2a6 6 0 0 0 6 6h3"></path>
+<path d="M12 14a6 6 0 0 1 6-6h3v2a6 6 0 0 1-6 6h-3"></path>
+<line x1="12" x2="12" y1="2" y2="22"></line>
+</svg>
+</div>
+<!-- Title & Impact Chips -->
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-sm text-slate-800">3. Park sulamasını azalt</h3>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">Maliyet: 2</span>
+</div>
+<div class="flex items-center gap-2 mt-1.5">
+<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[10.5px] font-semibold">Su etkisi: düşük</span>
+<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[10.5px] font-semibold">Çevresel etki: orta</span>
+</div>
+</div>
+</div>
+<!-- Unselected Hollow Checkbox -->
+<div class="w-6 h-6 rounded-lg border-2 border-slate-300 flex items-center justify-center"></div>
+</article>
+<!-- Card 4: SELECTED STATE -->
+<article class="relative rounded-2xl border-2 border-[#0d5c75] bg-[#f0f9ff]/50 px-4 py-3 flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer" data-purpose="solution-item-selected">
+<div class="flex items-center gap-3.5">
+<!-- Icon Container -->
+<div class="w-10 h-10 rounded-xl bg-[#0d5c75] text-white flex items-center justify-center shrink-0 shadow-sm">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+<path d="M16 14v6"></path>
+<path d="M8 14v6"></path>
+<path d="M12 16v6"></path>
+</svg>
+</div>
+<!-- Title & Impact Chips -->
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-sm text-slate-900">4. Yağmur suyu toplama sistemi kur</h3>
+<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">Maliyet: 25</span>
+</div>
+<div class="flex items-center gap-2 mt-1.5">
+<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10.5px] font-semibold">Su etkisi: orta</span>
+<span class="px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/60 text-[10.5px] font-semibold">Uzun vadeli fayda: yüksek</span>
+</div>
+</div>
+</div>
+<!-- Selected Status Badge -->
+<div class="flex items-center gap-1.5 bg-[#0d5c75] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+<span class="">Seçildi</span>
+</div>
+</article>
+<!-- Card 5: UNSELECTED STATE -->
+<article class="relative rounded-2xl border border-slate-200/90 bg-white hover:border-slate-300 px-4 py-3 flex items-center justify-between transition-all duration-200 cursor-pointer" data-purpose="solution-item-unselected">
+<div class="flex items-center gap-3.5">
+<!-- Icon Container -->
+<div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0 border border-cyan-100">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10"></circle>
+<path d="M12 6v6l4 2"></path>
+</svg>
+</div>
+<!-- Title & Impact Chips -->
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-sm text-slate-800">5. Yeni kuyu aç</h3>
+<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">Maliyet: 15</span>
+</div>
+<div class="flex items-center gap-2 mt-1.5">
+<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[10.5px] font-semibold">Kısa vadeli su etkisi: yüksek</span>
+<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/60 text-[10.5px] font-semibold">Uzun vadeli çevresel sonuç: belirsiz</span>
+</div>
+</div>
+</div>
+<!-- Unselected Hollow Checkbox -->
+<div class="w-6 h-6 rounded-lg border-2 border-slate-300 flex items-center justify-center"></div>
+</article>
+</div>
+<!-- Planning Summary Container (SEÇİLEN PLAN) -->
+<footer class="rounded-2xl bg-slate-50 border border-slate-200/70 p-4 mt-2" data-purpose="plan-summary-metrics">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">SEÇİLEN PLAN ÖZETİ</span>
+<span class="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/50">Plan Dengesi: Aktif</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Left Column Metrics -->
+<div class="space-y-1 text-xs">
+<p class="text-slate-600 font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#0d5c75]"></span>
+              En fazla 3 çözüm seçebilirsin.
+            </p>
+<p class="text-slate-800 font-bold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Toplam bütçe: <span class="text-slate-900 font-extrabold">100</span>
+</p>
+</div>
+<!-- Right Column Metrics -->
+<div class="space-y-1 text-xs">
+<p class="text-[#0d5c75] font-bold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#0d5c75]"></span>
+              Seçilen çözüm sayısı: <span class="underline underline-offset-2">2 / 3</span>
+</p>
+<p class="text-slate-700 font-semibold flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Kullanılan bütçe: <span class="font-extrabold text-slate-900">45</span> <span class="text-slate-400 font-normal">/ 100</span>
+</p>
+</div>
+</div>
+</footer>
+</section>
+<!-- END: LeftPlanningColumn -->
+<!-- BEGIN: RightTaskColumn -->
+<aside class="col-span-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_12px_36px_-6px_rgba(13,92,117,0.06)] p-6 flex flex-col justify-between overflow-hidden" data-purpose="task-instruction-sidebar">
+<!-- Top Instruction Block -->
+<div>
+<!-- Mission Step Pill -->
+<span class="inline-block px-2.5 py-1 rounded-md bg-teal-50 text-[#0d5c75] font-bold text-[11px] uppercase tracking-wider">
+          GÖREV ADIMI
+        </span>
+<!-- Task Header & Description -->
+<h2 class="text-2xl font-black text-slate-900 mt-2 tracking-tight">GÖREV</h2>
+<p class="text-slate-600 text-sm font-medium mt-1 leading-relaxed">
+          Kasabanın su sorununu çözmek için uygun müdahaleleri seç.
+        </p>
+<!-- Hint Box -->
+<div class="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 my-5 shadow-[0_2px_8px_rgba(245,158,11,0.04)]" data-purpose="hint-box">
+<div class="flex items-start gap-2.5">
+<span class="text-base leading-none">💡</span>
+<p class="text-amber-950 text-xs font-semibold leading-relaxed">
+<strong class="font-bold">İpucu:</strong> En yüksek su tasarrufu her zaman en dengeli çözüm olmayabilir.
+            </p>
+</div>
+</div>
+<!-- Rules Section -->
+<div class="mt-6">
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-3">KURALLAR</h3>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 text-xs font-bold text-slate-700 bg-slate-50/90 p-2.5 rounded-xl border border-slate-100">
+<div class="w-5 h-5 rounded-md bg-[#0d5c75] text-white flex items-center justify-center shrink-0">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+<span class="">En fazla 3 çözüm seç.</span>
+</li>
+<li class="flex items-center gap-3 text-xs font-bold text-slate-700 bg-slate-50/90 p-2.5 rounded-xl border border-slate-100">
+<div class="w-5 h-5 rounded-md bg-[#0d5c75] text-white flex items-center justify-center shrink-0">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+<span class="">Bütçeyi aşma.</span>
+</li>
+<li class="flex items-center gap-3 text-xs font-bold text-slate-700 bg-slate-50/90 p-2.5 rounded-xl border border-slate-100">
+<div class="w-5 h-5 rounded-md bg-[#0d5c75] text-white flex items-center justify-center shrink-0">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+<span class="">Farklı etkileri birlikte düşün.</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Action Button (Primary CTA) -->
+<div class="pt-4">
+<button class="w-full bg-[#0d5c75] hover:bg-[#09475b] active:scale-[0.99] text-white font-extrabold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0d5c75]/25 transition-all text-sm tracking-wide group" type="button">
+<span class="">KARAR AŞAMASINA GEÇ</span>
+<svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<line x1="5" x2="19" y1="12" y2="12"></line>
+<polyline points="12 5 19 12 12 19"></polyline>
+</svg>
+</button>
+</div>
+</aside>
+<!-- END: RightTaskColumn -->
+</main>
+<!-- END: MainContentLayout -->
+<!-- BEGIN: BottomHelperFooter -->
+<footer class="w-full py-2.5 text-center" data-purpose="bottom-footnote">
+<p class="text-xs text-slate-500 font-medium text-center tracking-wide">Farklı çözüm seçeneklerini karşılaştır ve kasaba için dengeli bir plan oluşturmaya çalış.</p>
+</footer>
+<!-- END: BottomHelperFooter -->
+
+
+</body></html>

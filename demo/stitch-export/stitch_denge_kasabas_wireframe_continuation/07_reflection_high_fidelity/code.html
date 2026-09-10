@@ -1,0 +1,286 @@
+<!DOCTYPE html><html class="h-full" lang="tr"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Denge Kasabası - 07 Yansıtma &amp; Yeniden Değerlendirme</title>
+<!-- Tailwind CSS CDN with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              teal: '#0d5c75',
+              'teal-dark': '#094558',
+              'teal-light': '#f0f9fa',
+              'teal-border': '#11718f',
+            },
+            stat: {
+              water: '#e0f2fe',
+              'water-text': '#0369a1',
+              budget: '#fef3c7',
+              'budget-text': '#b45309',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="base-custom-styles">
+    body {
+      background-color: #f4f7fb;
+      color: #0f172a;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 sm:p-5 antialiased selection:bg-teal-100 selection:text-brand-teal">
+<!-- BEGIN: ApplicationViewportFrame (1440x900 target canvas) -->
+<div class="w-full max-w-[1440px] h-full min-h-[900px] flex flex-col justify-between py-2" data-purpose="viewport-container">
+<!-- BEGIN: MainHeader -->
+<header class="bg-white rounded-3xl border border-slate-200/80 shadow-sm px-6 py-3.5 mb-4 flex items-center justify-between" data-purpose="persistent-header">
+<!-- Brand & Identity -->
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-2xl bg-brand-teal flex items-center justify-center text-white shadow-sm shadow-brand-teal/20">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M12 22C6.5 22 2 17.5 2 12A10 10 0 0 1 12 2c3.5 0 6.6 1.8 8.4 4.6"></path>
+<path d="M8 12c1.5 2 3.5 3 6 3 2 0 4-1 5-3"></path>
+</svg>
+</div>
+<div>
+<h1 class="text-sm font-extrabold tracking-tight text-slate-900 leading-none">DENGE KASABASI</h1>
+<p class="text-[10px] font-semibold tracking-wider text-slate-400 mt-1 uppercase">Su ve Yaşam Simülasyonu</p>
+</div>
+</div>
+<!-- Live Resource Indicators -->
+<div class="flex items-center gap-3">
+<!-- Water Status Pill -->
+<div class="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50/80 border border-cyan-100 text-sky-800 text-xs font-bold">
+<svg class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24">
+<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+</svg>
+<span class="">Su: %64</span>
+</div>
+<!-- Budget Status Pill -->
+<div class="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50/80 border border-amber-200/70 text-amber-800 text-xs font-bold">
+<svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24">
+<rect height="12" rx="2" width="20" x="2" y="6"></rect>
+<circle cx="12" cy="12" r="2.5"></circle>
+<path d="M6 12h.01M18 12h.01"></path>
+</svg>
+<span class="">Bütçe: 53</span>
+</div>
+</div>
+<!-- Task Progress Pill -->
+<div class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs font-bold">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="">Görev 7 / 7</span>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: WorkspaceLayout -->
+<main class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-stretch" data-purpose="main-layout">
+<!-- BEGIN: LeftColumnReflectionArea -->
+<section class="lg:col-span-8 bg-white rounded-3xl border border-slate-200/80 p-7 shadow-sm flex flex-col justify-between" data-purpose="reflection-content-panel">
+<div>
+<!-- Meta Header Row -->
+<div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-5">
+<div class="flex items-center gap-2 text-xs font-semibold text-slate-500">
+<span class="w-2 h-2 rounded-full bg-brand-teal"></span>
+<span class="uppercase tracking-wider font-bold text-slate-800">Yansıtma &amp; Yeniden Değerlendirme</span>
+<span class="text-slate-300">|</span>
+<span class="text-slate-500 font-normal">Sonuçları ve yeni bulguları değerlendirerek kararını gözden geçir.</span>
+</div>
+<span class="px-3 py-1 rounded-md bg-slate-100 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
+              Dönem 1 Refleksiyon
+            </span>
+</div>
+<!-- Section Heading -->
+<h2 class="text-2xl font-bold tracking-tight text-slate-900 mb-5">
+            PLANINI YENİDEN DEĞERLENDİR
+          </h2>
+<!-- Top Context Summary (Plan Context & Evidence Card) -->
+<div class="grid grid-cols-1 gap-3.5 mb-6" data-purpose="context-summary-group">
+<!-- Applied Plan Reference Strip -->
+<div class="p-3.5 bg-slate-50/90 border border-slate-200/70 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div class="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wide px-1">
+<span class="">İLK PLANIN:</span>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+<span class="">🔧</span> Şebeke kaçaklarını onar
+                </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+<span class="">🌧️</span> Yağmur suyu toplama sistemi kur
+                </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+<span class="">🌲</span> Park sulamasını azalt
+                </span>
+</div>
+</div>
+<!-- New Evidence Card -->
+<div class="p-4 bg-sky-50/60 border border-sky-200/80 rounded-2xl flex items-start gap-3.5 shadow-2xs" data-purpose="evidence-card">
+<div class="w-9 h-9 rounded-xl bg-brand-teal text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10"></circle>
+<line x1="12" x2="12" y1="16" y2="12"></line>
+<line x1="12" x2="12.01" y1="8" y2="8"></line>
+</svg>
+</div>
+<div class="flex-1 space-y-1">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-900 tracking-wide">YENİ BİLGİ</span>
+<span class="px-2 py-0.5 rounded-md bg-white border border-sky-200 text-[11px] font-semibold text-sky-800">İklim Verisi</span>
+</div>
+<p class="text-sm font-bold text-slate-900 leading-snug">
+                  Önümüzdeki üç ayda yağışların normalin yaklaşık %40 altında kalması bekleniyor.
+                </p>
+<p class="text-xs text-slate-600 leading-normal">
+                  Bu bilgi yağmur suyu toplama sisteminin kısa vadeli etkisini değiştirebilir.
+                </p>
+</div>
+</div>
+</div>
+<!-- BEGIN: ReflectionQuestionsSection -->
+<div class="space-y-5" data-purpose="reflection-interactive-forms">
+<!-- Question 1 -->
+<div class="space-y-2.5" data-purpose="question-one-container">
+<label class="block text-sm font-bold text-slate-900">
+                1. Beklemediğin bir sonuç veya yeni bilgi oldu mu?
+              </label>
+<div class="grid grid-cols-2 gap-3.5">
+<!-- Option A: Evet (Selected State) -->
+<button class="flex items-center justify-between p-3.5 rounded-2xl border-2 border-brand-teal bg-brand-teal-light text-left transition-all hover:shadow-sm" data-purpose="option-selected" type="button">
+<span class="text-sm font-bold text-slate-900">Evet</span>
+<div class="w-5 h-5 rounded-full bg-brand-teal flex items-center justify-center text-white">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+</button>
+<!-- Option B: Hayır (Unselected State) -->
+<button class="flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 bg-white text-left hover:border-slate-300 transition-all hover:shadow-sm" data-purpose="option-unselected" type="button">
+<span class="text-sm font-medium text-slate-700">Hayır</span>
+<div class="w-5 h-5 rounded-full border border-slate-300 bg-white"></div>
+</button>
+</div>
+</div>
+<!-- Question 2 -->
+<div class="space-y-2.5" data-purpose="question-two-container">
+<label class="block text-sm font-bold text-slate-900">
+                2. Yeni bilgi kararını etkiledi mi?
+              </label>
+<div class="space-y-2.5">
+<!-- Option A: Change Plan (Neutral Unselected State) -->
+<button class="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 bg-white text-left hover:border-slate-300 transition-all hover:shadow-sm" type="button">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-full border border-slate-300 bg-white"></div>
+<span class="text-sm font-medium text-slate-800">Evet, planımı değiştirmek istiyorum.</span>
+</div>
+<span class="text-xs text-slate-400 font-medium">Farklı müdahaleler dene</span>
+</button>
+<!-- Option B: Keep Plan (Selected State) -->
+<button class="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 border-brand-teal bg-brand-teal-light text-left transition-all hover:shadow-sm" type="button">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded-full bg-brand-teal flex items-center justify-center text-white">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+<span class="text-sm font-bold text-slate-900">Hayır, mevcut planımı koruyorum.</span>
+</div>
+<span class="text-xs text-brand-teal font-semibold">Uzun vadeli dengeyi sürdür</span>
+</button>
+</div>
+</div>
+</div>
+<!-- END: ReflectionQuestionsSection -->
+</div>
+<!-- Reflection Hint Note within left panel -->
+<div class="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+<svg class="w-4 h-4 text-brand-teal shrink-0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10"></circle>
+<path d="m9 12 2 2 4-4"></path>
+</svg>
+<span class="">Her iki tercih de simülasyonun bir sonraki döngüsünde yeni sonuçlar üretecektir.</span>
+</div>
+</section>
+<!-- END: LeftColumnReflectionArea -->
+<!-- BEGIN: RightColumnTaskPanel -->
+<aside class="lg:col-span-4 bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-sm flex flex-col justify-between" data-purpose="task-instruction-panel">
+<!-- Task Header & Description -->
+<div class="space-y-5">
+<div>
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-sky-50 text-sky-800 text-[11px] font-extrabold uppercase tracking-wider mb-3">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+<polyline points="14 2 14 8 20 8"></polyline>
+</svg>
+              Görev Adımı
+            </span>
+<h3 class="text-2xl font-extrabold tracking-tight text-slate-900">GÖREV</h3>
+<p class="text-sm text-slate-600 mt-2 leading-relaxed">
+              Sonuçları ve yeni bilgiyi düşünerek ilk kararını yeniden değerlendir.
+            </p>
+</div>
+<!-- Thoughtful Hint Box -->
+<div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs leading-relaxed flex items-start gap-2.5">
+<span class="text-base shrink-0 mt-0.5">💡</span>
+<div class="">
+<span class="font-bold">İpucu:</span> Kararını değiştirmek de korumak da mümkündür. Önemli olan yeni bilgiyi dikkate almaktır.
+            </div>
+</div>
+<!-- Guided Checklist / Thought Prompts -->
+<div>
+<div class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-3">DÜŞÜN</div>
+<ul class="space-y-2.5" data-purpose="reflection-checklist">
+<li class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+<span class="w-6 h-6 rounded-full bg-cyan-100 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">1</span>
+<span class="text-xs font-semibold text-slate-700">Beklediğin sonuç neydi?</span>
+</li>
+<li class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+<span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0">2</span>
+<span class="text-xs font-semibold text-slate-700">Gerçekte ne oldu?</span>
+</li>
+<li class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+<span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+<span class="text-xs font-semibold text-slate-700">Yeni bilgi önemli mi?</span>
+</li>
+<li class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+<span class="w-6 h-6 rounded-full bg-cyan-100 text-sky-700 text-xs font-bold flex items-center justify-center shrink-0">4</span>
+<span class="text-xs font-semibold text-slate-700">Planını değiştirmek gerekiyor mu?</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Completion Action Button -->
+<div class="pt-6">
+<button class="w-full py-4 px-6 rounded-2xl bg-brand-teal hover:bg-brand-teal-dark text-white font-bold text-sm tracking-wide shadow-md shadow-brand-teal/20 transition-all flex items-center justify-center gap-2 group cursor-pointer" data-purpose="cta-complete-button" type="button">
+<span class="">DEĞERLENDİRMEYİ TAMAMLA</span>
+<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<line x1="5" x2="19" y1="12" y2="12"></line>
+<polyline points="12 5 19 12 12 19"></polyline>
+</svg>
+</button>
+</div>
+</aside>
+<!-- END: RightColumnTaskPanel -->
+</main>
+<!-- END: WorkspaceLayout -->
+<!-- BEGIN: BottomPedagogicalNote -->
+<footer class="text-center py-2.5" data-purpose="pedagogical-reflection-footer">
+<p class="text-xs text-slate-500 font-medium text-center tracking-wide">Yeni bir kanıt geldiğinde önceki kararını yeniden düşünmek, kararının yanlış olduğu anlamına gelmez.</p>
+</footer>
+<!-- END: BottomPedagogicalNote -->
+</div>
+<!-- END: ApplicationViewportFrame -->
+
+
+</body></html>
