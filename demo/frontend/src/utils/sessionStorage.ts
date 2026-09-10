@@ -31,7 +31,8 @@ export function parseSessionState(value: unknown): SessionState | null {
 
   if (
     !(sessionId === null || (typeof sessionId === 'string' && uuidPattern.test(sessionId))) ||
-    !(currentScreen === 1 || currentScreen === 2) ||
+    !(currentScreen === 1 || currentScreen === 2 || currentScreen === 3 || currentScreen === 4 ||
+      currentScreen === 5 || currentScreen === 6 || currentScreen === 7 || currentScreen === 8) ||
     !isIdList(exploredLocations, scenario.locations.map(({ id }) => id)) ||
     !isIdList(viewedSources, scenario.sources.map(({ id }) => id)) ||
     !isIdList(selectedInterventions, scenario.interventions.map(({ id }) => id)) ||
@@ -50,19 +51,159 @@ export function parseSessionState(value: unknown): SessionState | null {
 
   if (sessionId === null
     ? currentScreen !== 1 || value.events.length !== 0
-    : currentScreen !== 2 || value.events.length !== 1
+    : currentScreen === 1 || value.events.length < 1
   ) return null
 
+  const locationIds = scenario.locations.map(({ id }) => id)
+  const sourceIds = scenario.sources.map(({ id }) => id)
+  const interventionIds = scenario.interventions.map(({ id }) => id)
+  const reasonIds = scenario.reasons.map(({ id }) => id)
   const events: SessionEvent[] = []
-  for (const event of value.events) {
+  for (const [index, event] of value.events.entries()) {
     if (
-      !isRecord(event) || event.eventType !== 'session_started' || event.screen !== 'intro' ||
-      typeof event.timestamp !== 'string' ||
+      !isRecord(event) || typeof event.timestamp !== 'string' ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(event.timestamp) ||
       !Number.isFinite(Date.parse(event.timestamp))
     ) return null
-    events.push({ eventType: 'session_started', timestamp: event.timestamp, screen: 'intro' })
+
+    if (index === 0 && event.eventType === 'session_started' && event.screen === 'intro') {
+      events.push({ eventType: 'session_started', timestamp: event.timestamp, screen: 'intro' })
+    } else if (index > 0 && event.eventType === 'location_opened' && event.screen === 'town-map' &&
+      isId(event.target, locationIds)) {
+      events.push({
+        eventType: 'location_opened', timestamp: event.timestamp, screen: 'town-map', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'source_opened' && event.screen === 'research' &&
+      isId(event.target, sourceIds)) {
+      events.push({
+        eventType: 'source_opened', timestamp: event.timestamp, screen: 'research', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'hint_requested' && event.screen === 'research') {
+      events.push({ eventType: 'hint_requested', timestamp: event.timestamp, screen: 'research' })
+    } else if (index > 0 && event.eventType === 'intervention_viewed' && event.screen === 'planning' &&
+      isId(event.target, interventionIds)) {
+      events.push({
+        eventType: 'intervention_viewed', timestamp: event.timestamp, screen: 'planning', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'intervention_selected' && event.screen === 'planning' &&
+      isId(event.target, interventionIds)) {
+      events.push({
+        eventType: 'intervention_selected', timestamp: event.timestamp, screen: 'planning', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'intervention_removed' && event.screen === 'planning' &&
+      isId(event.target, interventionIds)) {
+      events.push({
+        eventType: 'intervention_removed', timestamp: event.timestamp, screen: 'planning', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'reason_selected' && event.screen === 'decision' &&
+      isId(event.target, reasonIds)) {
+      events.push({
+        eventType: 'reason_selected', timestamp: event.timestamp, screen: 'decision', target: event.target,
+      })
+    } else if (index > 0 && event.eventType === 'confidence_submitted' && event.screen === 'decision' &&
+      (event.value === 1 || event.value === 2 || event.value === 3 || event.value === 4 || event.value === 5)) {
+      events.push({
+        eventType: 'confidence_submitted', timestamp: event.timestamp, screen: 'decision', value: event.value,
+      })
+    } else if (index > 0 && event.eventType === 'plan_submitted' && event.screen === 'decision' &&
+      isIdList(event.value, interventionIds)) {
+      const submittedCost = event.value.reduce((total, id) =>
+        total + (scenario.interventions.find((item) => item.id === id)?.cost ?? 0), 0)
+      if (event.value.length > scenario.limits.maxInterventions || submittedCost > scenario.initialState.budget) return null
+      events.push({
+        eventType: 'plan_submitted', timestamp: event.timestamp, screen: 'decision', value: [...event.value],
+      })
+    } else if (index > 0 && event.eventType === 'plan_revised' && event.screen === 'decision' &&
+      isIdList(event.value, interventionIds)) {
+      const revisedCost = event.value.reduce((total, id) =>
+        total + (scenario.interventions.find((item) => item.id === id)?.cost ?? 0), 0)
+      if (event.value.length > scenario.limits.maxInterventions || revisedCost > scenario.initialState.budget) return null
+      events.push({
+        eventType: 'plan_revised', timestamp: event.timestamp, screen: 'decision', value: [...event.value],
+      })
+    } else if (index > 0 && event.eventType === 'outcome_viewed' && event.screen === 'outcome' &&
+      (event.value === 'first' || event.value === 'final')) {
+      events.push({
+        eventType: 'outcome_viewed', timestamp: event.timestamp, screen: 'outcome', value: event.value,
+      })
+    } else if (index > 0 && event.eventType === 'new_evidence_viewed' && event.screen === 'outcome' &&
+      event.target === scenario.newEvidence.id) {
+      events.push({
+        eventType: 'new_evidence_viewed', timestamp: event.timestamp, screen: 'outcome', target: scenario.newEvidence.id,
+      })
+    } else if (index > 0 && event.eventType === 'reflection_answered' && event.screen === 'reflection' &&
+      isRecord(event.value) && typeof event.value.unexpectedResult === 'boolean' &&
+      typeof event.value.wantsRevision === 'boolean') {
+      events.push({
+        eventType: 'reflection_answered', timestamp: event.timestamp, screen: 'reflection',
+        value: { unexpectedResult: event.value.unexpectedResult, wantsRevision: event.value.wantsRevision },
+      })
+    } else if (index > 0 && event.eventType === 'session_completed' && event.screen === 'session-summary') {
+      events.push({ eventType: 'session_completed', timestamp: event.timestamp, screen: 'session-summary' })
+    } else {
+      return null
+    }
   }
+
+  const openedLocations = new Set(events.flatMap((event) =>
+    event.eventType === 'location_opened' && event.target ? [event.target] : []))
+  const openedSources = new Set(events.flatMap((event) =>
+    event.eventType === 'source_opened' && event.target ? [event.target] : []))
+  const requestedHints = events.filter((event) => event.eventType === 'hint_requested').length
+  const reasonEvents = events.filter((event) => event.eventType === 'reason_selected')
+  const confidenceEvents = events.filter((event) => event.eventType === 'confidence_submitted')
+  const submittedPlans = events.filter((event) => event.eventType === 'plan_submitted')
+  const viewedOutcomes = events.filter((event) => event.eventType === 'outcome_viewed')
+  const viewedEvidence = events.filter((event) => event.eventType === 'new_evidence_viewed')
+  const revisedPlans = events.filter((event) => event.eventType === 'plan_revised')
+  const reflectionEvents = events.filter((event) => event.eventType === 'reflection_answered')
+  const completionEvents = events.filter((event) => event.eventType === 'session_completed')
+  const lastReflection = reflectionEvents.at(-1)?.value
+  const reflectedUnexpected = isRecord(lastReflection) && typeof lastReflection.unexpectedResult === 'boolean'
+    ? lastReflection.unexpectedResult : null
+  const reflectedRevision = isRecord(lastReflection) && typeof lastReflection.wantsRevision === 'boolean'
+    ? lastReflection.wantsRevision : null
+  const lastReason = reasonEvents.at(-1)?.target ?? null
+  const lastConfidence = confidenceEvents.at(-1)?.value ?? null
+  const replayedInterventions = new Set<string>()
+  for (const event of events) {
+    if (event.eventType === 'intervention_selected' && event.target) {
+      if (replayedInterventions.has(event.target)) return null
+      replayedInterventions.add(event.target)
+      const replayedCost = [...replayedInterventions].reduce((total, id) =>
+        total + (scenario.interventions.find((item) => item.id === id)?.cost ?? 0), 0)
+      if (replayedInterventions.size > scenario.limits.maxInterventions ||
+        replayedCost > scenario.initialState.budget) return null
+    } else if (event.eventType === 'intervention_removed' && event.target) {
+      if (!replayedInterventions.delete(event.target)) return null
+    }
+  }
+  const firstSubmittedPlan = submittedPlans[0]?.value
+  const revisedPlan = revisedPlans[0]?.value
+  const revisionIsDifferent = Array.isArray(firstSubmittedPlan) && Array.isArray(revisedPlan) && (
+    firstSubmittedPlan.length !== revisedPlan.length ||
+    revisedPlan.some((id) => typeof id !== 'string' || !firstSubmittedPlan.includes(id))
+  )
+  if (
+    exploredLocations.some((id) => !openedLocations.has(id)) ||
+    [...openedLocations].some((id) => !exploredLocations.includes(id as typeof exploredLocations[number])) ||
+    viewedSources.some((id) => !openedSources.has(id)) ||
+    [...openedSources].some((id) => !viewedSources.includes(id as typeof viewedSources[number])) ||
+    selectedInterventions.some((id) => !replayedInterventions.has(id)) ||
+    [...replayedInterventions].some((id) => !selectedInterventions.includes(id as typeof selectedInterventions[number])) ||
+    selectedReason !== lastReason || confidence !== lastConfidence ||
+    (currentScreen >= 6 && submittedPlans.length < 1) || viewedOutcomes.length > submittedPlans.length ||
+    outcomeViewed !== (viewedOutcomes.length > 0) || newEvidenceViewed !== (viewedEvidence.length > 0) ||
+    viewedEvidence.length > 1 || (currentScreen >= 7 && viewedOutcomes.length < 1) ||
+    reflectionEvents.length > 1 || (reflectionEvents.length > 0 &&
+      (reflectionUnexpectedResult !== reflectedUnexpected || wantsRevision !== reflectedRevision)) ||
+    (revisionCount === 1 && (reflectedRevision !== true || submittedPlans.length > 2)) ||
+    revisedPlans.length > 1 || (revisedPlans.length === 1 &&
+      (revisionCount !== 1 || submittedPlans.length !== 2 || !revisionIsDifferent)) ||
+    completionEvents.length > 1 || completed !== (completionEvents.length === 1) ||
+    (completed && currentScreen !== 8) ||
+    hintCount !== requestedHints || hintCount > 1
+  ) return null
 
   return {
     sessionId, currentScreen,

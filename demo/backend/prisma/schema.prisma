@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Session {
+  id          String    @id @default(uuid())
+  scenarioId  String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  events      Event[]
+}
+
+model Event {
+  id         String   @id @default(uuid())
+  sessionId  String
+  eventType  String
+  screen     String
+  target     String?
+  value      Json?
+  metadata   Json?
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([eventType])
+}

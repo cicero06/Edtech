@@ -31,7 +31,7 @@ test('Intro loads local artwork, starts once and resumes after refresh without c
     button.click()
     button.click()
   })
-  await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
   const stored: { version: number; state: SessionState } = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SESSION_STORAGE_KEY)
   expect(stored.version).toBe(1)
   expect(stored.state.sessionId).toMatch(uuidPattern)
@@ -49,7 +49,7 @@ test('Intro loads local artwork, starts once and resumes after refresh without c
   ].sort())
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
   expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SESSION_STORAGE_KEY)).toEqual(stored)
   expect(errors).toEqual([])
   expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:5174')).toBe(true)
@@ -60,7 +60,7 @@ test('keyboard activation starts an anonymous session', async ({ page }) => {
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'GÖREVE BAŞLA' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeFocused()
 })
 
 test('corrupted or unknown-version storage recovers to Intro', async ({ page }) => {
@@ -71,7 +71,7 @@ test('corrupted or unknown-version storage recovers to Intro', async ({ page }) 
     await expect(page.getByRole('heading', { name: 'SU KRİZİ', exact: true })).toBeVisible()
   }
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
 })
 
 test('storage denial does not crash the start action and explains refresh limitations', async ({ page }) => {
@@ -82,7 +82,7 @@ test('storage denial does not crash the start action and explains refresh limita
   })
   await page.goto('/')
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
   await expect(page.getByRole('status')).toContainText('Sayfayı yenilersen ilerleme kaybolabilir.')
   expect(errors).toEqual([])
 })
@@ -114,6 +114,6 @@ for (const width of [1280, 1024, 768, 375]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`intro-${width}.png`), fullPage: true })
     await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-    await expect(page.getByRole('heading', { name: '02 — Town Map' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
   })
 }

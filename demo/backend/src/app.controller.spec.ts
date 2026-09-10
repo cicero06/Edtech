@@ -15,8 +15,13 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should describe the API', () => {
+      expect(appController.getStatus()).toEqual({
+        name: 'Denge Kasabası API',
+        status: 'ok',
+        frontendUrl: 'http://localhost:5173',
+        endpoints: ['/sessions', '/sessions/:id/events', '/sessions/:id/summary'],
+      });
     });
   });
 });

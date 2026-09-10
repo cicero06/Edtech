@@ -1,8 +1,8 @@
-# Denge Kasabası — Başlangıç İskeleti
+# Denge Kasabası — Su Krizi PoC
 
 Uygulama kökü bu `demo/` dizinidir. Frontend ve backend ayrı npm projeleridir; ek veya iç içe bir proje kökü yoktur.
 
-Bu aşamada yalnızca React + Vite + TypeScript ve NestJS + TypeScript başlangıç iskeletleri vardır. Ürün ekranı, oyun mantığı, senaryo veri dosyası, Prisma modeli, veritabanı bağlantısı veya deployment oluşturulmamıştır.
+Sekiz ekranlı React uygulaması, anonim session state, tek plan revizyon döngüsü ve gözlenebilir event akışı uygulanmıştır. NestJS REST API, Prisma `Session`/`Event` modelleri ve PostgreSQL persistence mevcuttur. Deployment henüz oluşturulmamıştır.
 
 ## Gereksinimler
 
@@ -76,10 +76,17 @@ cp -n frontend/.env.example frontend/.env
 cp -n backend/.env.example backend/.env
 ```
 
-- Frontend: `VITE_API_URL=http://localhost:3000`. İskelet henüz API isteği yapmaz. `VITE_` değişkenleri tarayıcıya açıktır; gizli bilgi içeremez.
-- Backend: `PORT=3000`; başlangıç komutları varsa `.env` dosyasını Node.js üzerinden yükler. Mevcut süreç ortamı önceliklidir.
-- `FRONTEND_URL` ve `DATABASE_URL` sonraki entegrasyon fazları için örnektir; henüz kullanılmaz. Veritabanı URL'sindeki `USER` ve `PASSWORD` gerçek kimlik bilgileri değildir.
+- Frontend: `VITE_API_URL=http://localhost:3000`. Tanımlanırsa anonim session ve event'ler REST API'ye gönderilir; tanımlanmazsa uygulama yalnızca localStorage ile çalışır. `VITE_` değişkenleri tarayıcıya açıktır ve gizli bilgi içeremez.
+- Backend: `PORT=3000`; başlangıç komutları `.env` dosyasını Node.js üzerinden yükler. Mevcut süreç ortamı önceliklidir.
+- `FRONTEND_URL` CORS origin'ini, `DATABASE_URL` Prisma/PostgreSQL bağlantısını belirler. Veritabanı URL'sindeki `USER` ve `PASSWORD` yerel değerlerle değiştirilmesi gereken yer tutuculardır.
 - Gerçek `.env` dosyaları Git'e eklenmemelidir; `.env.example` dosyaları sürüm kontrolünde tutulmalıdır.
+
+İlk yerel veritabanı kurulumunda backend dizinindeki `DATABASE_URL` tanımlandıktan sonra:
+
+```sh
+npm --prefix backend exec prisma generate
+npm --prefix backend exec prisma migrate deploy
+```
 
 ## Geliştirme
 
@@ -89,23 +96,26 @@ cp -n backend/.env.example backend/.env
 npm --prefix frontend run dev
 ```
 
-Frontend varsayılan adresi: `http://localhost:5173`. Yalnızca kurulumun hazır olduğunu belirten teknik bir yer tutucu gösterir.
+Frontend varsayılan adresi: `http://localhost:5173`. Tam anonim oyun akışı Intro'dan Session Summary'ye kadar çalışır.
 
 ```sh
 npm --prefix backend run start:dev
 ```
 
-Backend varsayılan adresi: `http://localhost:3000`. Standart NestJS `GET /` endpoint'i `Hello World!` döndürür; ürün API'si değildir.
+Backend varsayılan adresi: `http://localhost:3000`. `GET /` sağlık kontrolüne ek olarak `/sessions`, `/sessions/:id/events` ve `/sessions/:id/summary` endpoint'leri kullanılabilir.
 
 ## Doğrulama
 
 ```sh
+npm --prefix frontend run typecheck
 npm --prefix frontend run build
 npm --prefix frontend run lint
+npm --prefix frontend test
 npm --prefix backend run build
 npm --prefix backend run lint
 npm --prefix backend test
 npm --prefix backend run test:e2e
+npm --prefix backend exec prisma validate
 ```
 
 Build çıktıları uygulamaların kendi `dist/` dizinlerindedir ve Git'e eklenmez.
@@ -131,6 +141,6 @@ Vite preview yalnızca yerel build kontrolü içindir; production sunucusu deği
 
 ## Bağımlılık kontrol notları
 
-10 Eylül 2026 kurulum kontrolünde frontend audit sonucu temizdir. Backend audit raporunda `@nestjs/platform-express@12.0.1` tarafından sabitlenen `multer@2.2.0` kaynaklı dört yüksek önem dereceli bulgu vardır. Düzeltilmiş `multer@2.3.0` yayımlanmıştır; NestJS'in bu bağımlılığı güncellemesi veya uyumluluğu doğrulanmış bir override için ayrıca onay gerekir. Bu iskelette dosya yükleme endpoint'i yoktur. Production öncesinde bulgular giderilmelidir; `npm audit fix --force` uygulanmamıştır.
+10 Eylül 2026 kontrolünde frontend audit sonucu temizdir. Backend production audit raporunda NestJS/Multer zinciri ile Prisma CLI yapılandırma bağımlılıklarında toplam yedi yüksek önem dereceli bulgu vardır. Uygulamada dosya yükleme veya MySQL bağlantısı kullanılmaz; yine de production öncesinde upstream güncellemeler değerlendirilmelidir. Breaking downgrade uygulayacak `npm audit fix --force` çalıştırılmamıştır.
 
 NestJS şablonunun `vite-tsconfig-paths` bağımlılığı testlerde Vite'ın yerleşik çözümleyicisine geçiş önerisi gösterir; testleri engellemez. Şablon yapılandırması bu nedenle değiştirilmemiştir.
