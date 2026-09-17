@@ -1,0 +1,12 @@
+node_modules
+.ssr
+dist
+test-results
+playwright-report
+docs
+tests
+README.md
+playwright.config.ts
+.env
+.env.*
+*.log
