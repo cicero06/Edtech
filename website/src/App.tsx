@@ -30,11 +30,11 @@ function Brand() {
   );
 }
 const links = [
-  ["Ürünümüz", "/denge-kasabasi"],
-  ["Yaklaşımımız", "/#yaklasimimiz"],
-  ["Gelecek Çözümler", "/#gelecek"],
-  ["Hakkımızda", "/#hakkimizda"],
-  ["İletişim", "/#iletisim"],
+  ["Oyunlarımız", "/denge-kasabasi"],
+  ["Denge Kasabası", "/#urun"],
+  ["Düşünme Güçleri", "/#yaklasimimiz"],
+  ["Gelecek Dünyalar", "/#gelecek"],
+  ["Öğretmenler & Okul", "/#hakkimizda"],
 ];
 function Header({ product }: { product: boolean }) {
   const [open, setOpen] = useState(false);
@@ -176,35 +176,38 @@ function Home() {
     <>
       <section className="hero container">
         <div className="hero-copy">
-          <Eyebrow>GERÇEK PROBLEMLER. ANLAMLI DENEYİMLER.</Eyebrow>
+          <div className="hero-badge">
+            <span className="hero-badge-dot" />
+            <span>Gerçek Yaşam Problemleri &amp; Eğlenceli Deneyimler</span>
+          </div>
           <h1>
-            Oyunla keşfet.
+            Oyunla keşfet,
             <br />
-            Kanıtla düşün.
+            kanıtla düşün,
             <br />
-            <em>Geleceği şekillendir.</em>
+            <em>geleceği şekillendir!</em>
           </h1>
           <p>
-            Çocukların dünyayı anlaması, farklı olasılıkları keşfetmesi ve kendi
-            kararlarını gerekçelendirmesi için oyun tabanlı öğrenme deneyimleri
-            geliştiriyoruz.
+            Atlas Learning Technologies ile çocuklar teorik ezber yerine kasaba
+            yönetir, veri toplar, hipotez test eder ve kendi kararlarının doğaya
+            etkisini gözleriyle görür.
           </p>
           <div className="actions">
             <a className="button primary" href="/denge-kasabasi">
-              Denge Kasabası’nı keşfet <Arrow />
+              Denge Kasabası&apos;na Işınlan <Arrow />
             </a>
-            <a className="text-link" href="#yaklasimimiz">
-              Yaklaşımımız <span aria-hidden="true">↓</span>
+            <a className="button light" href="#yaklasimimiz">
+              Nasıl Oynanır? (2 Dk)
             </a>
           </div>
           <div className="hero-foot">
             <span className="little-orbit" aria-hidden="true">
-              ✳
+              ✓
             </span>
             <span>
-              Merakı harekete geçiren,
+              MEB kazanımlarına uygun,
               <br />
-              düşünmeye alan açan öğrenme.
+              10–12 yaş için tasarlandı.
             </span>
           </div>
         </div>
