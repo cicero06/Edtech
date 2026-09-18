@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build && vite build --ssr src/entry-server.tsx --outDir .ssr && node scripts/prerender.mjs",
+    "build": "npm run typecheck && vite build && vite build --ssr src/entry-server.tsx --outDir .ssr && npm --prefix ./denge-kasabasi-game run build && node scripts/copy-demo.mjs && node scripts/prerender.mjs",
     "preview": "node scripts/preview.mjs",
     "test": "playwright test"
   },

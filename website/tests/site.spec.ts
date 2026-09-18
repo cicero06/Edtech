@@ -75,12 +75,8 @@ test("Demo, iletişim, yenileme ve gerçek 404", async ({ page, request }) => {
   await page.reload();
   await expect(page.locator("h1")).toContainText("Senin kararların");
   for (const a of await page.getByRole("link", { name: /Demoyu Oyna/ }).all()) {
-    await expect(a).toHaveAttribute(
-      "href",
-      "https://edtech-edtech8.vercel.app/",
-    );
-    await expect(a).toHaveAttribute("target", "_blank");
-    await expect(a).toHaveAccessibleName(/yeni sekmede/);
+    await expect(a).toHaveAttribute("href", "/denge-kasabasi/oyna/");
+    await expect(a).not.toHaveAttribute("target", "_blank");
   }
   await expect(
     page.getByRole("link", { name: "İletişime geçin", exact: false }),

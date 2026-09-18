@@ -2,8 +2,7 @@ export const site = {
   name: "Atlas Learning Technologies",
   origin: "https://atlaslearningtech.com",
   email: "huseyinn.dnz@gmail.com",
-  // Gelecekte: https://demo.atlaslearningtech.com
-  demoUrl: "https://edtech-edtech8.vercel.app/",
+  demoUrl: "/denge-kasabasi/oyna/",
 };
 export const pages = {
   "/": {

@@ -7,14 +7,8 @@ function Arrow({ external = false }: { external?: boolean }) {
 }
 function DemoLink({ light = false }: { light?: boolean }) {
   return (
-    <a
-      className={`button ${light ? "light" : "primary"}`}
-      href={site.demoUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Demoyu Oyna <Arrow external />
-      <span className="sr-only"> (yeni sekmede açılır)</span>
+    <a className={`button ${light ? "light" : "primary"}`} href={site.demoUrl}>
+      Demoyu Oyna <Arrow />
     </a>
   );
 }
@@ -713,9 +707,14 @@ function Product() {
 export function App({ path }: { path: string }) {
   const normalized = path.replace(/\/+$/, "") || "/";
   const product = normalized === "/denge-kasabasi";
-  const known = normalized === "/" || product;
+  const gameRoute =
+    normalized === "/denge-kasabasi/oyna" ||
+    normalized.startsWith("/denge-kasabasi/oyna/");
+  const known = normalized === "/" || product || gameRoute;
   useEffect(() => {
-    const meta = pages[known ? (product ? "/denge-kasabasi" : "/") : "/404"];
+    const meta = pages[
+      known ? (product || gameRoute ? "/denge-kasabasi" : "/") : "/404"
+    ];
     document.title = meta.title;
     let tag = document.querySelector('meta[name="description"]');
     if (!tag) {
@@ -724,7 +723,7 @@ export function App({ path }: { path: string }) {
       document.head.append(tag);
     }
     tag.setAttribute("content", meta.description);
-  }, [known, product]);
+  }, [known, product, gameRoute]);
   return (
     <>
       <a className="skip-link" href="#main">
@@ -734,6 +733,8 @@ export function App({ path }: { path: string }) {
       <main id="main">
         {known ? (
           product ? (
+            <Product />
+          ) : gameRoute ? (
             <Product />
           ) : (
             <Home />

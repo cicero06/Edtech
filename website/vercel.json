@@ -4,7 +4,10 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/denge-kasabasi", "destination": "/denge-kasabasi/index.html" }
+    { "source": "/denge-kasabasi", "destination": "/denge-kasabasi/index.html" },
+    { "source": "/denge-kasabasi/", "destination": "/denge-kasabasi/index.html" },
+    { "source": "/denge-kasabasi/oyna", "destination": "/denge-kasabasi/oyna/index.html" },
+    { "source": "/denge-kasabasi/oyna/", "destination": "/denge-kasabasi/oyna/index.html" }
   ],
   "headers": [
     {
