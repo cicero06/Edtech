@@ -1,4 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { AreaInfoModal } from '../components/AreaInfoModal.tsx'
+import { areas } from '../data/areas.ts'
+import { CharacterDialogue } from '../components/CharacterDialogue.tsx'
+import { firstTask, linaFirstTask, linaExplorationComplete } from '../data/characterDialogues.ts'
+import { useEffect, useRef, useState } from 'react'
 import { AppHeader } from '../components/AppHeader.tsx'
 import { PrimaryButton } from '../components/PrimaryButton.tsx'
 import { useSession } from '../context/sessionContext.ts'
@@ -28,7 +32,9 @@ function LocationIcon({ locationId }: { locationId: LocationId }) {
 export function TownMapScreen() {
   const { state, openLocation, continueToResearch } = useSession()
   const heading = useRef<HTMLHeadingElement>(null)
-  const activeLocation = [...state.events].reverse().find((event) => event.eventType === 'location_opened')?.target
+  const [selectedArea, setSelectedArea] = useState<LocationId | null>(null)
+  const visitedAreas = state.exploredLocations
+  const allVisited = waterCrisisScenario.locations.every(({ id }) => visitedAreas.includes(id))
 
   useEffect(() => {
     heading.current?.focus()
@@ -46,15 +52,15 @@ export function TownMapScreen() {
               const explored = state.exploredLocations.includes(location.id)
               return (
                 <button
-                  className={`location-pin ${detail.className}${activeLocation === location.id ? ' active' : ''}`}
+                  className={`location-pin ${detail.className}${selectedArea === location.id ? ' active' : ''}`}
                   type="button"
                   key={location.id}
                   aria-label={`${location.name}: ${detail.subtitle}${explored ? ', incelendi' : ''}`}
-                  aria-pressed={activeLocation === location.id}
-                  onClick={() => openLocation(location.id)}
+                  aria-haspopup="dialog"
+                  onClick={() => setSelectedArea(location.id)}
                 >
                   <span className="pin-icon"><LocationIcon locationId={location.id} /></span>
-                  <span className="pin-copy"><strong>{location.name}</strong><small>{detail.subtitle}</small></span>
+                  <span className="pin-copy"><strong>{location.name}{explored && <span className="pin-completed" aria-hidden="true"> ✓</span>}</strong><small>{detail.subtitle}</small></span>
                 </button>
               )
             })}
@@ -65,31 +71,27 @@ export function TownMapScreen() {
         <aside className="task-sidebar" aria-labelledby="town-map-title">
           <div>
             <span className="step-label">GÖREV ADIMI</span>
-            <h1 id="town-map-title" ref={heading} tabIndex={-1}>GÖREV</h1>
-            <p className="task-lead">Kasabanın neden su sorunu yaşadığını araştır.</p>
-            <p className="task-info">Her bölgedeki su kullanımını ve durumu inceleyerek sorunun kaynağını bul.</p>
-            <div className="checklist-heading">
-              <h2>İNCELENEN BÖLGELER</h2>
-              <span>{state.exploredLocations.length} / {waterCrisisScenario.locations.length} Seçildi</span>
+            <h1 id="town-map-title" ref={heading} tabIndex={-1}>{firstTask.title}</h1>
+            <CharacterDialogue dialogue={allVisited ? linaExplorationComplete : linaFirstTask} />
+            <p className="task-lead">{firstTask.instruction} {firstTask.hint}</p>
+            <div className="exploration-progress">
+              <div><strong>{firstTask.progressLabel}</strong><span role="status" aria-label="Görev ilerlemesi">{visitedAreas.length}/{waterCrisisScenario.locations.length} Bölge İncelendi</span></div>
+              <progress aria-label="İncelenen bölgeler" max={waterCrisisScenario.locations.length} value={visitedAreas.length} />
             </div>
-            <ul className="location-checklist">
-              {waterCrisisScenario.locations.map((location) => {
-                const explored = state.exploredLocations.includes(location.id)
-                return (
-                  <li key={location.id}>
-                    <button type="button" className={explored ? 'explored' : ''} onClick={() => openLocation(location.id)}>
-                      <span className="check-box" aria-hidden="true">{explored ? '✓' : ''}</span>
-                      <span>{location.name}</span>
-                      <small>{explored ? 'İncelendi' : 'Bekliyor'}</small>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
           </div>
-          <PrimaryButton onClick={continueToResearch}>BİLGİLERİ ARAŞTIR</PrimaryButton>
+          <div>
+            <PrimaryButton onClick={continueToResearch} disabled={!allVisited} aria-describedby={!allVisited ? 'exploration-required' : undefined}>{firstTask.continueLabel}</PrimaryButton>
+            {!allVisited && <p className="decision-requirement" id="exploration-required">{firstTask.lockedMessage}</p>}
+          </div>
         </aside>
       </main>
+      {selectedArea && <AreaInfoModal key={selectedArea} area={areas[selectedArea]}
+        onClose={() => setSelectedArea(null)}
+        onComplete={() => {
+          // Keep the existing persisted session/event format; record only explicit completion.
+          if (!visitedAreas.includes(selectedArea)) openLocation(selectedArea)
+          setSelectedArea(null)
+        }} /> }
     </>
   )
 }

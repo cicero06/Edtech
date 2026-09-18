@@ -37,13 +37,7 @@ export function AppHeader({
             <span className="brand-subtitle">{subtitle}</span>
           </div>
         </div>
-        <div className="player-mini-card" aria-label="Oyuncu profili">
-          <span className="player-mini-avatar" aria-hidden="true">🧑‍🌾</span>
-          <span className="player-mini-text">
-            <strong>Arda</strong>
-            <small>Kasaba Mühendisi</small>
-          </span>
-        </div>
+        
       </div>
       {showResources && (
         <div className="resource-status" aria-label="Başlangıç kaynakları">

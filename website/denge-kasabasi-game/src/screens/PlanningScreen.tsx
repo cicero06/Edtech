@@ -1,17 +1,17 @@
-import { useEffect, useRef } from 'react'
+import { SolutionDetail } from '../components/SolutionDetail.tsx'
+import { PlanSummary } from '../components/PlanSummary.tsx'
+import { PlanConfirmation } from '../components/PlanConfirmation.tsx'
+import { CharacterDialogue } from '../components/CharacterDialogue.tsx'
+import { lina } from '../data/characterDialogues.ts'
+import { solutions, planningCopy } from '../data/solutions.ts'
+import { evidenceSources } from '../data/evidenceSources.ts'
+import { summarizePlan } from '../utils/planSummary.ts'
+import { useEffect, useRef, useState } from 'react'
 import { AppHeader } from '../components/AppHeader.tsx'
 import { PrimaryButton } from '../components/PrimaryButton.tsx'
 import { useSession } from '../context/sessionContext.ts'
 import { waterCrisisScenario } from '../data/waterCrisisScenario.ts'
 import type { InterventionId } from '../types/scenario.ts'
-
-const impactLabels: Record<InterventionId, readonly [string, string]> = {
-  'network-leak-repair': ['Su etkisi: yüksek', 'Çevresel risk: düşük'],
-  'reduce-agricultural-irrigation': ['Su etkisi: yüksek', 'Tarım etkisi: olumsuz olabilir'],
-  'reduce-park-irrigation': ['Su etkisi: düşük', 'Çevresel etki: orta'],
-  'rainwater-harvesting': ['Su etkisi: orta', 'Uzun vadeli fayda: yüksek'],
-  'new-well': ['Kısa vadeli su etkisi: yüksek', 'Uzun vadeli çevresel sonuç: belirsiz'],
-}
 
 function InterventionIcon({ interventionId }: { interventionId: InterventionId }) {
   return (
@@ -29,11 +29,15 @@ export function PlanningScreen() {
   const { state, viewIntervention, selectIntervention, removeIntervention, continueToDecision } = useSession()
   const heading = useRef<HTMLHeadingElement>(null)
   const budget = waterCrisisScenario.initialState.budget
-  const usedBudget = state.selectedInterventions.reduce((total, id) =>
-    total + (waterCrisisScenario.interventions.find((item) => item.id === id)?.cost ?? 0), 0)
+  const plan = summarizePlan(state.selectedInterventions, state.revisionCount)
+  const usedBudget = plan.usedBudget
+  const [expandedId, setExpandedId] = useState<InterventionId | null>(null)
+  const [selectionMessage, setSelectionMessage] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const continueButton = useRef<HTMLButtonElement>(null)
+  const showDetail = (id: InterventionId) => { setExpandedId(id); viewIntervention(id) }
   const reviewed = new Set(state.events.flatMap((event) =>
     event.eventType === 'intervention_viewed' && event.target ? [event.target] : []))
-  const activeId = [...state.events].reverse().find(({ eventType }) => eventType === 'intervention_viewed')?.target
 
   useEffect(() => {
     heading.current?.focus()
@@ -44,13 +48,7 @@ export function PlanningScreen() {
       <AppHeader step={4} showResources />
       <main className="planning-layout">
         <section className="planning-workspace" aria-labelledby="planning-options-title">
-          <div className="story-identity-card" aria-label="Oyuncu özeti">
-            <span className="story-identity-avatar" aria-hidden="true">🧑‍🌾</span>
-            <div>
-              <strong>Arda</strong>
-              <small>Kasaba Mühendisi</small>
-            </div>
-          </div>
+          
           <div className="planning-heading">
             <div><span>PLANLAMA &amp; MÜDAHALE</span><p>Kasaba için çözüm seçeneklerini incele ve seçimini yap.</p></div>
             <div><h2 id="planning-options-title">ÇÖZÜM SEÇENEKLERİ</h2><small>En fazla 3 müdahale seçilebilir</small></div>
@@ -60,55 +58,81 @@ export function PlanningScreen() {
               const selected = state.selectedInterventions.includes(intervention.id)
               const exceedsCount = state.selectedInterventions.length >= waterCrisisScenario.limits.maxInterventions
               const exceedsBudget = usedBudget + intervention.cost > budget
-              const disabled = !selected && (exceedsCount || exceedsBudget)
-              const disabledReason = exceedsCount
-                ? 'En fazla 3 müdahale seçebilirsin.'
-                : 'Bu seçenek mevcut seçimlerle bütçeyi aşar.'
+              const unavailable = !selected && (exceedsCount || exceedsBudget)
+              const disabledReason = exceedsBudget
+                ? `Bu çözümü plana eklemek için yeterli bütçen yok. ${usedBudget + intervention.cost - budget} bütçe puanına daha ihtiyacın var.`
+                : `En fazla ${waterCrisisScenario.limits.maxInterventions} çözüm seçebilirsin. Önce bir seçimi kaldır.`
               return (
-                <article className={`intervention-card${selected ? ' selected' : ''}${activeId === intervention.id ? ' active' : ''}`} key={intervention.id}>
-                  <button className="intervention-info" type="button" onClick={() => viewIntervention(intervention.id)} aria-label={`${intervention.name} etkilerini incele`}>
+                <article className={`intervention-card${selected ? ' selected' : ''}${expandedId === intervention.id ? ' active' : ''}`} key={intervention.id}>
+                  <button className="intervention-info" type="button" aria-expanded={expandedId === intervention.id} aria-controls={`solution-${intervention.id}`} onClick={() => { if (expandedId === intervention.id) setExpandedId(null); else showDetail(intervention.id) }} aria-label={`${intervention.name} etkilerini incele`}>
                     <span className="intervention-icon"><InterventionIcon interventionId={intervention.id} /></span>
                     <span className="intervention-copy">
-                      <span className="intervention-title"><strong>{index + 1}. {intervention.name}</strong><small>Maliyet: {intervention.cost}</small></span>
-                      <span className="impact-chips"><small>{impactLabels[intervention.id][0]}</small><small>{impactLabels[intervention.id][1]}</small></span>
+                      <span className="intervention-title"><strong>{index + 1}. {intervention.name}</strong><small>💰 Maliyet: {intervention.cost}</small></span>
+                      <span className="impact-chips">{solutions[intervention.id].labels.map((label) => <small key={label}>{label}</small>)}</span>
                     </span>
                     {reviewed.has(intervention.id) && <span className="reviewed-label">İncelendi</span>}
                   </button>
                   <button
-                    className="selection-toggle"
+                    className={`selection-toggle${unavailable ? ' unavailable' : ''}`}
                     type="button"
-                    disabled={disabled}
-                    title={disabled ? disabledReason : undefined}
+                    title={unavailable ? disabledReason : undefined}
                     aria-label={selected ? `${intervention.name} seçimini kaldır` : `${intervention.name} seç`}
                     aria-pressed={selected}
-                    onClick={() => selected ? removeIntervention(intervention.id) : selectIntervention(intervention.id)}
+                    onClick={() => {
+                      setConfirming(false)
+                      if (selected) { removeIntervention(intervention.id); setSelectionMessage(''); return }
+                      showDetail(intervention.id)
+                      if (unavailable) { setSelectionMessage(disabledReason); return }
+                      selectIntervention(intervention.id)
+                      setSelectionMessage('')
+                    }}
                   >
                     {selected ? '✓ Seçildi' : 'Seç'}
                   </button>
+                  {unavailable && <p className="solution-constraint">{disabledReason}</p>}
+                  <div className="solution-evidence" aria-label="İlgili kanıtlar">
+                    <span>🔎 İlgili kanıtlar</span>
+                    {solutions[intervention.id].evidenceLinks.map((id) => {
+                      const source = waterCrisisScenario.sources.find((item) => item.id === id)!
+                      return <details key={id}><summary>{source.name}</summary><p>{evidenceSources[id].takeaway}</p><small>{state.viewedSources.includes(id) ? '✓ Araştırmada inceledin' : 'Araştırmada henüz incelenmedi'}</small></details>
+                    })}
+                  </div>
+                  {expandedId === intervention.id && <SolutionDetail intervention={intervention} />}
                 </article>
               )
             })}
           </div>
-          <div className="plan-summary" aria-label="Seçilen plan özeti">
-            <strong>SEÇİLEN PLAN ÖZETİ</strong>
-            <div><span>Toplam bütçe: <b>{budget}</b></span><span>Seçilen çözüm: <b>{state.selectedInterventions.length} / {waterCrisisScenario.limits.maxInterventions}</b></span></div>
-            <div><span>Kullanılan bütçe: <b>{usedBudget}</b></span><span>Kalan bütçe: <b>{budget - usedBudget}</b></span></div>
-          </div>
+          <p className="selection-message" role="status">{selectionMessage}</p>
+          <PlanSummary plan={plan} />
         </section>
         <aside className="planning-sidebar" aria-labelledby="planning-title">
           <div>
             <span className="step-label">GÖREV ADIMI</span>
-            <h1 id="planning-title" ref={heading} tabIndex={-1}>GÖREV</h1>
+            <h1 id="planning-title" ref={heading} tabIndex={-1}>Planını Oluştur</h1>
             <p className="task-lead">Kasabanın su sorununu çözmek için uygun müdahaleleri seç.</p>
-            <p className="planning-note"><strong>Düşünme notu:</strong> En yüksek su tasarrufu her zaman en dengeli çözüm olmayabilir.</p>
+            <div className="research-guide"><CharacterDialogue dialogue={{ id: 'lina-planning', character: lina, steps: [planningCopy.guidance], nextLabel: 'Devam', completeLabel: 'Tamam' }} /></div>
+            <div className="planning-live" aria-live="polite"><p>{plan.selected.length} / {waterCrisisScenario.limits.maxInterventions} çözüm seçildi</p><p>{usedBudget} / {budget} bütçe kullanıldı</p></div>
             <h2 className="rules-title">KURALLAR</h2>
             <ul className="planning-rules">
               <li><span>✓</span>En fazla 3 çözüm seç.</li>
               <li><span>✓</span>Bütçeyi aşma.</li>
               <li><span>✓</span>Farklı etkileri birlikte düşün.</li>
             </ul>
+            <p className="planning-freedom">{planningCopy.budgetFreedom}</p>
+            <ul className="plan-feedback" aria-live="polite">
+              {plan.agricultureRisk && <li>⚠ Tarım etkisi olan bir çözüm seçtin.</li>}
+              {plan.longTermBenefit && <li>🔮 Uzun vadeli fayda potansiyeli sağlayan bir çözüm var.</li>}
+              {plan.environmentalRisk && <li>🌳 Yeşil alanları etkileyebilecek bir çözüm seçtin.</li>}
+              {plan.environmentalUncertainty && <li>⚠ Planında çevresel belirsizlik bulunuyor.</li>}
+            </ul>
           </div>
-          <PrimaryButton onClick={continueToDecision}>KARAR AŞAMASINA GEÇ</PrimaryButton>
+          {confirming ? <PlanConfirmation plan={plan} onConfirm={continueToDecision} onChange={() => {
+            setConfirming(false)
+            requestAnimationFrame(() => continueButton.current?.focus())
+          }} /> : <div>
+            <PrimaryButton ref={continueButton} disabled={plan.selected.length === 0} onClick={() => setConfirming(true)}>KARAR AŞAMASINA GEÇ</PrimaryButton>
+            {plan.selected.length === 0 && <p className="decision-requirement">Devam etmek için en az 1 çözüm seç.</p>}
+          </div>}
         </aside>
       </main>
     </>

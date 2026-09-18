@@ -157,7 +157,8 @@ test('Outcome viewing and new evidence events are atomic before Reflection', () 
   const started = sessionReducer(createInitialSessionState(), startAction)
   const research = sessionReducer(started, { type: 'continueToResearch' })
   const planning = sessionReducer(research, { type: 'continueToPlanning' })
-  const decision = sessionReducer(planning, { type: 'continueToDecision' })
+  const selected = sessionReducer(planning, { type: 'selectIntervention', interventionId: 'network-leak-repair', timestamp: '2026-09-10T12:16:00.000Z' })
+  const decision = sessionReducer(selected, { type: 'continueToDecision' })
   const reason = sessionReducer(decision, {
     type: 'selectReason', reasonId: 'environment', timestamp: '2026-09-10T12:17:00.000Z',
   })

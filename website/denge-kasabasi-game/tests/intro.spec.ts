@@ -19,9 +19,9 @@ test('Intro loads local artwork, starts once and resumes after refresh without c
   await expect(page.getByText('Kasabanın su ihtiyacını karşıla, çevreyi koru ve bütçeyi aşma.')).toBeVisible()
   const image = page.getByRole('img', { name: /Denge Kasabası:/ })
   await expect(image).toBeVisible()
-  await expect(image).toHaveAttribute('src', '/assets/town-intro.jpg')
+  await expect(image).toHaveAttribute('src', '/denge-kasabasi/oyna/assets/town-intro.jpg')
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth === 512)).toBe(true)
-  const asset = await page.request.get('/assets/town-intro.jpg')
+  const asset = await page.request.get('/denge-kasabasi/oyna/assets/town-intro.jpg')
   expect(asset.status()).toBe(200)
   expect(asset.headers()['content-type']).toContain('image/jpeg')
   expect(await page.evaluate((key) => localStorage.getItem(key), SESSION_STORAGE_KEY)).toBeNull()
@@ -31,7 +31,7 @@ test('Intro loads local artwork, starts once and resumes after refresh without c
     button.click()
     button.click()
   })
-  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeVisible()
   const stored: { version: number; state: SessionState } = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SESSION_STORAGE_KEY)
   expect(stored.version).toBe(1)
   expect(stored.state.sessionId).toMatch(uuidPattern)
@@ -49,18 +49,22 @@ test('Intro loads local artwork, starts once and resumes after refresh without c
   ].sort())
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeVisible()
   expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), SESSION_STORAGE_KEY)).toEqual(stored)
   expect(errors).toEqual([])
-  expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:5174')).toBe(true)
+  // The existing stylesheet loads Fredoka and Nunito from Google Fonts.
+  const allowedOrigins = ['http://127.0.0.1:5174', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com']
+  expect(requests.every((url) => allowedOrigins.includes(new URL(url).origin))).toBe(true)
 })
 
 test('keyboard activation starts an anonymous session', async ({ page }) => {
   await page.goto('/')
   await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Devam', exact: true })).toBeFocused()
+  await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'GÖREVE BAŞLA' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeFocused()
 })
 
 test('corrupted or unknown-version storage recovers to Intro', async ({ page }) => {
@@ -71,7 +75,7 @@ test('corrupted or unknown-version storage recovers to Intro', async ({ page }) 
     await expect(page.getByRole('heading', { name: 'SU KRİZİ', exact: true })).toBeVisible()
   }
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeVisible()
 })
 
 test('storage denial does not crash the start action and explains refresh limitations', async ({ page }) => {
@@ -82,8 +86,8 @@ test('storage denial does not crash the start action and explains refresh limita
   })
   await page.goto('/')
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
-  await expect(page.getByRole('status')).toContainText('Sayfayı yenilersen ilerleme kaybolabilir.')
+  await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Sayfayı yenilersen' })).toContainText('Sayfayı yenilersen ilerleme kaybolabilir.')
   expect(errors).toEqual([])
 })
 
@@ -92,7 +96,7 @@ test('storage helpers reset only this anonymous session', async ({ page }) => {
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
   const reset = await page.evaluate(async (key) => {
     localStorage.setItem('unrelated-setting', 'keep')
-    const helpers = await import(new URL('/src/utils/sessionStorage.ts', location.origin).href)
+    const helpers = await import(new URL('/denge-kasabasi/oyna/src/utils/sessionStorage.ts', location.origin).href)
     const state = helpers.resetSession()
     return { state, loaded: helpers.loadSessionState(), stored: JSON.parse(localStorage.getItem(key)!), other: localStorage.getItem('unrelated-setting') }
   }, SESSION_STORAGE_KEY)
@@ -114,6 +118,6 @@ for (const width of [1280, 1024, 768, 375]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`intro-${width}.png`), fullPage: true })
     await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-    await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'İlk Görevin', exact: true })).toBeVisible()
   })
 }

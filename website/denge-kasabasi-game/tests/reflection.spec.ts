@@ -1,3 +1,4 @@
+import { completeExploration, completeResearch } from './exploration.ts'
 import { expect, test } from '@playwright/test'
 import { SESSION_STORAGE_KEY } from '../src/utils/sessionStorage.ts'
 import type { SessionState } from '../src/types/session.ts'
@@ -5,12 +6,15 @@ import type { SessionState } from '../src/types/session.ts'
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await page.getByRole('button', { name: 'BİLGİLERİ ARAŞTIR' }).click()
+  await completeExploration(page)
+  await page.getByRole('button', { name: 'ÇÖZÜMLERİ İNCELE' }).click()
+  await completeResearch(page)
   await page.getByRole('button', { name: 'PLAN OLUŞTURMAYA GEÇ' }).click()
   await page.getByRole('button', { name: 'Şebeke kaçaklarını onar seç' }).click()
   await page.getByRole('button', { name: 'Yağmur suyu toplama sistemi kur seç' }).click()
   await page.getByRole('button', { name: 'Park sulamasını azalt seç' }).click()
   await page.getByRole('button', { name: 'KARAR AŞAMASINA GEÇ' }).click()
+  await page.getByRole('button', { name: 'PLANI ONAYLA' }).click()
   await page.getByRole('radio', { name: 'Bütçe ile fayda arasında iyi denge kuruyor.' }).locator('..').click()
   await page.getByRole('radio', { name: '4', exact: true }).locator('..').click()
   await page.getByRole('button', { name: 'PLANI UYGULA' }).click()
@@ -57,6 +61,7 @@ test('changing the plan allows exactly one revision and then final Outcome', asy
   await page.getByRole('button', { name: 'Yağmur suyu toplama sistemi kur seçimini kaldır' }).click()
   await page.getByRole('button', { name: 'Yeni kuyu aç seç' }).click()
   await page.getByRole('button', { name: 'KARAR AŞAMASINA GEÇ' }).click()
+  await page.getByRole('button', { name: 'PLANI ONAYLA' }).click()
   await page.getByRole('button', { name: 'PLANI UYGULA' }).click()
 
   await expect(page.getByText('FİNAL SONUÇ')).toBeVisible()

@@ -1,3 +1,4 @@
+import { completeExploration, completeResearch } from './exploration.ts'
 import { expect, test } from '@playwright/test'
 import { SESSION_STORAGE_KEY } from '../src/utils/sessionStorage.ts'
 import type { SessionState } from '../src/types/session.ts'
@@ -5,10 +6,13 @@ import type { SessionState } from '../src/types/session.ts'
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'GÖREVE BAŞLA' }).click()
-  await page.getByRole('button', { name: 'BİLGİLERİ ARAŞTIR' }).click()
+  await completeExploration(page)
+  await page.getByRole('button', { name: 'ÇÖZÜMLERİ İNCELE' }).click()
+  await completeResearch(page)
   await page.getByRole('button', { name: 'PLAN OLUŞTURMAYA GEÇ' }).click()
   await page.getByRole('button', { name: 'Şebeke kaçaklarını onar seç' }).click()
   await page.getByRole('button', { name: 'KARAR AŞAMASINA GEÇ' }).click()
+  await page.getByRole('button', { name: 'PLANI ONAYLA' }).click()
   await expect(page.getByRole('heading', { name: 'GÖREV', exact: true })).toBeFocused()
 })
 

@@ -190,7 +190,7 @@ export function sessionReducer(
     }
 
     case 'continueToDecision': {
-      if (state.sessionId === null || state.currentScreen !== 4) {
+      if (state.sessionId === null || state.currentScreen !== 4 || state.selectedInterventions.length === 0) {
         return state
       }
 

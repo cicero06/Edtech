@@ -196,7 +196,7 @@ function Home() {
             <a className="button primary" href="/denge-kasabasi">
               Denge Kasabası&apos;na Işınlan <Arrow />
             </a>
-            <a className="button light" href="#yaklasimimiz">
+            <a className="button light" href="#nasil-oynanir">
               Nasıl Oynanır? (2 Dk)
             </a>
           </div>
@@ -255,6 +255,76 @@ function Home() {
           </p>
         </div>
       </section>
+
+      <section id="hakkimizda" className="section container about">
+        <div>
+          <Eyebrow>HAKKIMIZDA</Eyebrow>
+          <h2>
+            Öğrenmeye meraklı.
+            <br />
+            <em>Geleceğe karşı sorumlu.</em>
+          </h2>
+        </div>
+        <div>
+          <p className="about-lead">
+            Atlas Learning Technologies, çocukların karmaşık dünyayı anlamasına
+            yardımcı olacak öğrenme deneyimleri geliştirir.
+          </p>
+          <p>
+            İlk ürünümüz Denge Kasabası ile su yönetimini, sistem düşüncesini ve
+            gerekçeli karar vermeyi bir araya getiren oyun tabanlı bir öğrenme
+            deneyimi sunuyoruz.
+          </p>
+
+          <div className="team-summary">
+            <span className="eyebrow">ATLAS EKİBİ</span>
+            <p>
+              Atlas ekibi, yazılım, pedagojik tasarım ve kullanıcı deneyimi
+              alanlarını aynı hedef için bir araya getiren tamamlayıcı bir
+              yapıya sahiptir.
+            </p>
+          </div>
+
+          <div className="team-grid">
+            <article className="team-card">
+              <h3>Hüseyin Deniz</h3>
+              <p className="team-role">Kurucu · Ürün</p>
+              <p>
+                Ürün geliştirme, teknik mimari ve prototipleme sürecini
+                yönlendirerek fikri işlevsel çözümlere taşır.
+              </p>
+            </article>
+
+            <article className="team-card">
+              <h3>Fadime Aksoy</h3>
+              <p className="team-role">Pedagoji</p>
+              <p>
+                Öğrenme hedeflerini oyun mekanikleriyle bağlayan ve içeriği yaş
+                grubuna uygun şekilde tasarlayan ekip üyesidir.
+              </p>
+            </article>
+
+            <article className="team-card">
+              <h3>Deniz Aşçıoğlu</h3>
+              <p className="team-role">Tasarım · UX</p>
+              <p>
+                Görsel dil ve arayüz akışını çocukların kolay anlayabileceği
+                şekilde geliştirmeye odaklanır.
+              </p>
+            </article>
+          </div>
+
+          <div className="team-summary team-summary--accent">
+            <span className="eyebrow">MİSYONUMUZ</span>
+            <p>
+              Çocuklara sadece içerik sunmak değil; onları düşünmeye, kanıtları
+              değerlendirmeye, karar vermeye ve kararlarını sorgulamaya teşvik
+              eden eğitim teknolojileri geliştirmek.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="section container" id="urun">
         <div className="section-heading">
           <div>
@@ -297,6 +367,231 @@ function Home() {
           </div>
         </article>
       </section>
+      <section id="nasil-oynanir" className="section container how-to">
+        <div className="section-heading">
+          <div>
+            <Eyebrow>NASIL OYNANIR?</Eyebrow>
+            <h2>
+              Bir kasabanın geleceği,
+              <br />
+              <em>kararlarınla şekillenir.</em>
+            </h2>
+          </div>
+          <p>
+            Oyun, tek bir doğru cevap bulmak için değil; farklı kaynakları
+            değerlendirmek ve sonuçlarını görmek için tasarlandı.
+          </p>
+        </div>
+
+        <div className="how-to-tutorial">
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">01</span>
+              <h3>Görev başlatılır</h3>
+              <p>
+                Kullanıcı oyuna girdiğinde karşısına kasabanın mevcut sorunu ve
+                hedefi çıkar. Bu ekran, “neden bu kararı veriyoruz?” sorusunu
+                netleştirir ve oyuncunun odak noktasını belirler.
+              </p>
+              <ul>
+                <li>Görevi okur</li>
+                <li>Kasabanın ana sorunu anlar</li>
+                <li>Bu probleme çözüm aramaya başlar</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Giriş ekranı</div>
+              <img
+                src="/denge-kasabasi/oyna/assets/town-intro.jpg"
+                alt="Denge Kasabası görev başlatma ekranı; kullanıcı oyuna başlıyor ve kasabanın su krizini okuyup başlayacak."
+              />
+              <figcaption className="tutorial-caption">
+                <span>Adım</span>
+                <strong>Görevi oku ve problemi tanı.</strong>
+              </figcaption>
+            </figure>
+          </article>
+
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">02</span>
+              <h3>Haritada araştırma yapılır</h3>
+              <p>
+                Ardından kullanıcı kasabanın haritasını inceler. Baraj, evler,
+                tarım alanları ve belediye gibi alanlara tek tek bakar. Burada neyin
+                suya daha çok ihtiyaç duyduğunu görmeye başlar.
+              </p>
+              <ul>
+                <li>Bölgeleri tek tek açar</li>
+                <li>Su kaynaklarını ve yaşam alanlarını karşılaştırır</li>
+                <li>En kritik alanı belirler</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Harita ekranı</div>
+              <img
+                src="/images/game-map.png"
+                alt="Denge Kasabası harita ekranı; kullanıcının bölgeleri tıklayıp kasabayı gezmesi gerekir."
+              />
+              <figcaption className="tutorial-caption">
+                <span>Adım</span>
+                <strong>Kasabayı gezip sorunlu alanı bul.</strong>
+              </figcaption>
+            </figure>
+          </article>
+
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">03</span>
+              <h3>Kanıtlar toplanır ve incelenir</h3>
+              <p>
+                Seçilen alan için kullanıcı görüşme, maliyet, kullanım ve risk
+                bilgilerini ortaya çıkarır. Bu ekran, karar vermeden önce veri ve
+                kanıtları anlamanın ne kadar önemli olduğunu gösterir.
+              </p>
+              <ul>
+                <li>Kaynak ve bilgi kartlarını okur</li>
+                <li>Seçenekleri karşılaştırır</li>
+                <li>En etkili çözüm için mantık kurar</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Bilgi ekranı</div>
+              <img
+                src="/images/game-plan.png"
+                alt="Denge Kasabası bilgi kartları ekranı; kullanıcı kanıtları okur ve karşılaştırır."
+              />
+              <figcaption className="tutorial-caption">
+                <span>Adım</span>
+                <strong>Kanıtları oku ve çözüm seçeneklerini kıyasla.</strong>
+              </figcaption>
+            </figure>
+          </article>
+
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">04</span>
+              <h3>Plan oluşturulur</h3>
+              <p>
+                Kullanıcı, mevcut seçeneklerden uygun müdahaleleri seçerek bir plan
+                oluşturur. Burada kararlar sadece tek tek değil, birlikte kasabanın
+                geleceğini şekillendirir.
+              </p>
+              <ul>
+                <li>Çözüm adımlarını seçer</li>
+                <li>Ek maliyet ve etkiyi görür</li>
+                <li>Planı kaydeder ve ilerler</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Plan ekranı</div>
+              <img
+                src="/images/game-plan.png"
+                alt="Denge Kasabası plan oluşturma ekranı; kullanıcı müdahale seçeneklerini seçer."
+              />
+              <figcaption className="tutorial-caption">
+                <span>Adım</span>
+                <strong>Bir plan oluştur ve seçtiğin adımları uygula.</strong>
+              </figcaption>
+            </figure>
+          </article>
+
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">05</span>
+              <h3>Karar uygulanır ve değerlendirilir</h3>
+              <p>
+                Plan onaylandıktan sonra kullanıcı kararının etkisini görür. Bu
+                aşamada oyunun en önemli fikri ortaya çıkar: “Karar, sadece bir
+                seçenek değil; bütün sistemi etkiler.”
+              </p>
+              <ul>
+                <li>Kararını uygular</li>
+                <li>Sonuç çıktısını inceler</li>
+                <li>Etkiyi yorumlar</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Sonuç ekranı</div>
+              <div className="result-visual" aria-label="Denge Kasabası sonuç ekranı görseli">
+                <div className="result-header">
+                  <span>SONUÇLAR &amp; YENİ BİLGİ</span>
+                  <strong>FİNAL SONUÇ</strong>
+                </div>
+                <div className="result-metrics">
+                  <div className="result-card result-water">
+                    <label>SU DURUMU</label>
+                    <strong>+12</strong>
+                    <small>Önce %42 → Sonra %54</small>
+                  </div>
+                  <div className="result-card result-budget">
+                    <label>BÜTÇE</label>
+                    <strong>−27</strong>
+                    <small>Önce 50 → Sonra 23</small>
+                  </div>
+                </div>
+                <div className="result-secondary">
+                  <div className="result-card result-small">
+                    <label>TARIM</label>
+                    <small>Nitel gözlem</small>
+                  </div>
+                  <div className="result-card result-small">
+                    <label>ÇEVRE</label>
+                    <small>Uzun vadeli fayda yüksek</small>
+                  </div>
+                </div>
+                <div className="result-note">
+                  Yeni bilgi: Yağmur suyu toplama sistemi kısa vadede beklenenden daha az su sağlayabilir.
+                </div>
+              </div>
+              <figcaption className="tutorial-caption">
+                <span>Adım</span>
+                <strong>Kararın etkisini gör ve öğren.</strong>
+              </figcaption>
+            </figure>
+          </article>
+
+          <article className="tutorial-step">
+            <div className="tutorial-copy">
+              <span className="step-number">06</span>
+              <h3>Sonuçlar değerlendirilir ve raporlanır</h3>
+              <p>
+                Sonuç ekranında kullanıcı, önceki adımlara geri dönüp farklı bir
+                karar deneyebilir. Aynı zamanda toplanan veriler öğretmenler ve
+                velilerle açık şekilde paylaşılabilecek bir rapor haline gelir;
+                böylece süreç sadece oyun değil, öğrenme ve izleme aracı olur.
+              </p>
+              <ul>
+                <li>Önceki adımlara geri döner</li>
+                <li>Farklı bir seçenek deneyip karşılaştırır</li>
+                <li>Sonuçları rapor halinde paylaşabilir</li>
+              </ul>
+            </div>
+            <figure className="tutorial-visual">
+              <div className="screen-label">Rapor ekranı</div>
+              <img
+                src="/images/game-plan.png"
+                alt="Denge Kasabası geri dönüp değerlendirme ve raporlama ekranı; kullanıcı kararları ve sonuçları öğretmen ve veliler için paylaşabilir."
+              />
+              <figcaption className="tutorial-caption">
+                <span>Özellik</span>
+                <strong>Sonuçlar açık raporla öğretmen ve velilere ulaşır.</strong>
+              </figcaption>
+            </figure>
+          </article>
+        </div>
+
+        <div className="how-to-cta">
+          <p>
+            Kısacası: çocuk haritayı inceler, kanıtları okur, karar verir ve
+            sonuçları sorgular.
+          </p>
+          <a className="text-link" href="/denge-kasabasi">
+            Demoyu kendi başına deneyimle <Arrow />
+          </a>
+        </div>
+      </section>
+
       <section id="yaklasimimiz" className="approach section">
         <div className="container">
           <div className="section-heading">
@@ -386,38 +681,6 @@ function Home() {
           <a className="text-link" href={`mailto:${site.email}`}>
             Kullanım olanaklarını konuşalım <Arrow />
           </a>
-        </div>
-      </section>
-      <section id="hakkimizda" className="section container about">
-        <div>
-          <Eyebrow>HAKKIMIZDA</Eyebrow>
-          <h2>
-            Öğrenmeye meraklı.
-            <br />
-            <em>Geleceğe karşı sorumlu.</em>
-          </h2>
-        </div>
-        <div>
-          <p className="about-lead">
-            Atlas Learning Technologies, çocukların karmaşık dünyayı anlamasına
-            yardımcı olacak öğrenme deneyimleri geliştiren bir eğitim
-            teknolojisi girişimidir.
-          </p>
-          <p>
-            İlk ürünümüz Denge Kasabası ile su yönetimini; kanıt değerlendirme,
-            sistem düşüncesi ve gerekçeli karar verme için bir keşif alanına
-            dönüştürüyoruz.
-          </p>
-          <div className="team-summary">
-            <span className="eyebrow">EKİBİMİZİN YAKLAŞIMI</span>
-            <p>
-              Hüseyin Deniz, kurucu olarak yazılım ve ürün geliştirmeyi
-              üstleniyor. Fadime Aksoy, pedagojik tasarım ve oyun tasarımı
-              alanında; öğrenme hedeflerinin oyun mekanikleriyle
-              eşleştirilmesine ve pedagojik değerlendirme süreçlerine katkı
-              sağlıyor.
-            </p>
-          </div>
         </div>
       </section>
       <Contact />
