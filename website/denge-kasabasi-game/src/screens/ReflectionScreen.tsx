@@ -29,6 +29,13 @@ export function ReflectionScreen() {
       <AppHeader step={7} showResources water={water} budget={waterCrisisScenario.initialState.budget - usedBudget} />
       <main className="reflection-layout">
         <section className="reflection-workspace" aria-labelledby="reflection-content-title">
+          <div className="story-identity-card" aria-label="Oyuncu özeti">
+            <span className="story-identity-avatar" aria-hidden="true">🧑‍🌾</span>
+            <div>
+              <strong>Arda</strong>
+              <small>Kasaba Mühendisi</small>
+            </div>
+          </div>
           <div className="reflection-heading"><span>YANSITMA &amp; YENİDEN DEĞERLENDİRME</span><p>Sonuçları ve yeni bulguları değerlendirerek kararını gözden geçir.</p></div>
           <h2 id="reflection-content-title">PLANINI YENİDEN DEĞERLENDİR</h2>
           <div className="reflection-plan"><strong>İLK PLANIN:</strong><div>{firstPlan.length > 0

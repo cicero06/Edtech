@@ -40,6 +40,13 @@ export function OutcomeScreen() {
       <AppHeader step={6} showResources water={finalWater} budget={waterCrisisScenario.initialState.budget - usedBudget} />
       <main className="outcome-layout">
         <section className="outcome-workspace" aria-labelledby="outcome-results-title">
+          <div className="story-identity-card" aria-label="Oyuncu özeti">
+            <span className="story-identity-avatar" aria-hidden="true">🧑‍🌾</span>
+            <div>
+              <strong>Arda</strong>
+              <small>Kasaba Mühendisi</small>
+            </div>
+          </div>
           <div className="outcome-heading">
             <div><span>SONUÇLAR &amp; YENİ BİLGİ</span><p>Uygulanan planın kasabadaki etkilerini ve yeni bulguları incele.</p></div>
             <strong>{isFinal ? 'FİNAL SONUÇ' : 'DÖNEM 1 SONUÇLARI'}</strong>

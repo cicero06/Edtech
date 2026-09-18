@@ -44,6 +44,13 @@ export function PlanningScreen() {
       <AppHeader step={4} showResources />
       <main className="planning-layout">
         <section className="planning-workspace" aria-labelledby="planning-options-title">
+          <div className="story-identity-card" aria-label="Oyuncu özeti">
+            <span className="story-identity-avatar" aria-hidden="true">🧑‍🌾</span>
+            <div>
+              <strong>Arda</strong>
+              <small>Kasaba Mühendisi</small>
+            </div>
+          </div>
           <div className="planning-heading">
             <div><span>PLANLAMA &amp; MÜDAHALE</span><p>Kasaba için çözüm seçeneklerini incele ve seçimini yap.</p></div>
             <div><h2 id="planning-options-title">ÇÖZÜM SEÇENEKLERİ</h2><small>En fazla 3 müdahale seçilebilir</small></div>

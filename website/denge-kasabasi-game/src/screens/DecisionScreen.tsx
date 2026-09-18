@@ -25,6 +25,13 @@ export function DecisionScreen() {
       <AppHeader step={5} showResources />
       <main className="decision-layout">
         <section className="decision-workspace" aria-labelledby="decision-heading">
+          <div className="story-identity-card" aria-label="Oyuncu özeti">
+            <span className="story-identity-avatar" aria-hidden="true">🧑‍🌾</span>
+            <div>
+              <strong>Arda</strong>
+              <small>Kasaba Mühendisi</small>
+            </div>
+          </div>
           <div className="decision-heading"><span>KARAR &amp; ONAY</span><p>Seçtiğin planı doğrula, gerekçeni belirt ve uygula.</p></div>
           <section className="selected-plan" aria-label="Seçilen plan özeti">
             <h2 id="selected-plan-title">SEÇİLEN PLAN</h2>

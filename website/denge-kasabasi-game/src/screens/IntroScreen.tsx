@@ -13,6 +13,13 @@ export function IntroScreen() {
       <main className="intro-layout">
         <section className="mission-card" aria-labelledby="scenario-title">
           <div>
+            <div className="mission-identity" aria-label="Oyuncu karakteri">
+              <div className="mission-avatar" aria-hidden="true">🧑‍🌾</div>
+              <div className="mission-greeting">
+                <strong>Kasaba Mühendisi</strong>
+                <span>Arda</span>
+              </div>
+            </div>
             <span className="scenario-label">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 3 10 10h3l-3 5h10l-3-5h3L15 3Zm0 12v5M4 14v6m-3 0h7" />
