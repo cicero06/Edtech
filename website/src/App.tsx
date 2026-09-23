@@ -29,6 +29,7 @@ function Brand() {
     </a>
   );
 }
+
 const links = [
   ["Oyunlarımız", "/denge-kasabasi"],
   ["Denge Kasabası", "/#urun"],
@@ -688,6 +689,8 @@ function Home() {
   );
 }
 function Product() {
+  const [noticeOpen, setNoticeOpen] = useState(false);
+
   return (
     <>
       <section className="product-hero container">
@@ -696,9 +699,11 @@ function Product() {
         </a>
         <Eyebrow>DENGE KASABASI · İLK SENARYO</Eyebrow>
         <div className="product-hero-row">
+
           <div>
             <h1>
               Bir kasabanın geleceği.
+            
               <br />
               <em>Senin kararların.</em>
             </h1>
@@ -706,7 +711,43 @@ function Product() {
               Denge Kasabası: Su Krizi, 10–12 yaş çocukları su kaynakları azalan
               bir kasabada karar verici rolüne yerleştiren oyun tabanlı bir
               öğrenme prototipidir.
-            </p>
+              </p>
+              <div
+                className="notice-card"
+                onClick={() => setNoticeOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setNoticeOpen(true);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="notice-card__layout">
+                  <div className="notice-card__content">
+                    <div className="notice-card__media">
+                      <img
+                        src="/images/denge-world-map.png"
+                        alt="Denge Kasabası genel haritası"
+                      />
+                    </div>
+                    <span className="notice-card__eyebrow">DUYURU</span>
+                    <h3>Yeni sürüm yakında!</h3>
+                    <p>
+                      Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
+                      senaryolarımız çok yakında sizlerle buluşacak.
+                    </p>
+                    <span className="notice-card__cta">Detayları gör</span>
+                  </div>
+                  <div className="notice-card__persona" aria-hidden="true">
+                    <div className="notice-card__bubble">
+                      “Yeni haritamız ve yeni senaryolarımız çok yakında burada!”
+                    </div>
+                    <img src="/images/lina.png" alt="Lina" />
+                  </div>
+                </div>
+              </div>
           </div>
           <div className="product-hero-cta">
             <DemoLink />
@@ -732,6 +773,48 @@ function Product() {
           </div>
         </div>
       </section>
+      {noticeOpen && (
+        <div
+          className="notice-modal"
+          onClick={() => setNoticeOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="notice-title"
+        >
+          <div
+            className="notice-modal__panel"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="notice-modal__close"
+              aria-label="Duyuruyu kapat"
+              onClick={() => setNoticeOpen(false)}
+            >
+              ×
+            </button>
+            <img
+              className="notice-modal__image"
+              src="/images/denge-world-map.png"
+              alt="Denge Kasabası genel haritası"
+            />
+            <span className="notice-modal__eyebrow">DUYURU</span>
+            <h2 id="notice-title">Yeni sürüm yakında!</h2>
+            <p>
+              Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
+              senaryolarımızla çok yakında sizlerle buluşacağız.
+            </p>
+            <button
+              type="button"
+              className="notice-modal__button"
+              onClick={() => setNoticeOpen(false)}
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="section container product-intro">
         <div>
           <Eyebrow>DENGE KASABASI NEDİR?</Eyebrow>
