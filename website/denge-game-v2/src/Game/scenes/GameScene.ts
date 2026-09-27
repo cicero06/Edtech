@@ -118,6 +118,7 @@ export default class GameScene extends Phaser.Scene {
   // =========================================================================
 
   preload(): void {
+    this.load.setBaseURL(import.meta.env.BASE_URL);
     for (const asset of IMAGE_ASSETS) {
       this.load.image(asset.key, asset.path);
     }

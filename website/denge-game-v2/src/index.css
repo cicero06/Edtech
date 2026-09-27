@@ -11,8 +11,8 @@ body,
 }
 
 :root {
-  --game-cursor: url("/assets/ui/cursor-drop.png") 11 9, auto;
-  --game-cursor-action: url("/assets/ui/cursor-drop-gold.png") 11 9, pointer;
+  --game-cursor: url("/denge-kasabasi/ongosteri/assets/ui/cursor-drop.png") 11 9, auto;
+  --game-cursor-action: url("/denge-kasabasi/ongosteri/assets/ui/cursor-drop-gold.png") 11 9, pointer;
 }
 
 body {
