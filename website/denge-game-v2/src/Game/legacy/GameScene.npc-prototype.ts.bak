@@ -1,0 +1,840 @@
+import Phaser from "phaser";
+import { EventBus } from "../EventBus";
+
+type Direction =
+  | "down"
+  | "up"
+  | "left"
+  | "right";
+
+export default class GameScene extends Phaser.Scene {
+  private player!: Phaser.Physics.Arcade.Sprite;
+
+  private npc!: Phaser.Physics.Arcade.Sprite;
+
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+
+  private wasd!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
+
+  private interactKey!: Phaser.Input.Keyboard.Key;
+
+  private interactionText!: Phaser.GameObjects.Text;
+
+  private readonly playerSpeed = 220;
+
+  private readonly interactionDistance = 90;
+
+  private lastDirection: Direction = "down";
+
+  private dialogueOpen = false;
+
+  constructor() {
+    super("GameScene");
+  }
+
+  preload() {
+    this.load.spritesheet(
+      "player",
+      "/assets/characters/player.png",
+      {
+        frameWidth: 32,
+        frameHeight: 48,
+      }
+    );
+  }
+
+  create() {
+    // =========================================
+    // WORLD
+    // =========================================
+
+    this.physics.world.setBounds(
+      0,
+      0,
+      1600,
+      1200
+    );
+
+    this.cameras.main.setBounds(
+      0,
+      0,
+      1600,
+      1200
+    );
+
+    this.cameras.main.setBackgroundColor(
+      "#82c65a"
+    );
+
+    // =========================================
+    // PLAYER ANIMATIONS
+    // =========================================
+
+    this.anims.create({
+      key: "walk-down",
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 0,
+            end: 3,
+          }
+        ),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-right",
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 4,
+            end: 7,
+          }
+        ),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-up",
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 8,
+            end: 11,
+          }
+        ),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-left",
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 12,
+            end: 15,
+          }
+        ),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    // =========================================
+    // GROUND
+    // =========================================
+
+    this.add.rectangle(
+      400,
+      400,
+      300,
+      200,
+      0xd2a65a
+    );
+
+    this.add.rectangle(
+      1100,
+      300,
+      250,
+      350,
+      0x6fa84f
+    );
+
+    this.add.rectangle(
+      900,
+      900,
+      500,
+      200,
+      0xc9974d
+    );
+
+    // =========================================
+    // TREE TEXTURE
+    // =========================================
+
+    const treeGraphics =
+      this.add.graphics();
+
+    treeGraphics.fillStyle(
+      0x795548,
+      1
+    );
+
+    treeGraphics.fillRect(
+      26,
+      46,
+      12,
+      32
+    );
+
+    treeGraphics.fillStyle(
+      0x2e7d32,
+      1
+    );
+
+    treeGraphics.fillCircle(
+      32,
+      28,
+      28
+    );
+
+    treeGraphics.fillStyle(
+      0x388e3c,
+      1
+    );
+
+    treeGraphics.fillCircle(
+      20,
+      25,
+      18
+    );
+
+    treeGraphics.fillCircle(
+      45,
+      25,
+      18
+    );
+
+    treeGraphics.generateTexture(
+      "tree",
+      64,
+      80
+    );
+
+    treeGraphics.destroy();
+
+    // =========================================
+    // TREES
+    // =========================================
+
+    const trees =
+      this.physics.add.staticGroup();
+
+    const tree1 =
+      trees.create(
+        650,
+        500,
+        "tree"
+      ) as Phaser.Physics.Arcade.Sprite;
+
+    const tree2 =
+      trees.create(
+        1000,
+        650,
+        "tree"
+      ) as Phaser.Physics.Arcade.Sprite;
+
+    const tree3 =
+      trees.create(
+        1250,
+        850,
+        "tree"
+      ) as Phaser.Physics.Arcade.Sprite;
+
+    [tree1, tree2, tree3].forEach(
+      (tree) => {
+        const body =
+          tree.body as Phaser.Physics.Arcade.StaticBody;
+
+        body.setSize(
+          22,
+          18
+        );
+
+        body.setOffset(
+          21,
+          58
+        );
+      }
+    );
+
+    // =========================================
+    // NPC TEXTURE
+    // =========================================
+
+    const npcGraphics =
+      this.add.graphics();
+
+    // Hat
+    npcGraphics.fillStyle(
+      0xd19a45,
+      1
+    );
+
+    npcGraphics.fillRect(
+      5,
+      2,
+      22,
+      7
+    );
+
+    // Head
+    npcGraphics.fillStyle(
+      0xf2c38b,
+      1
+    );
+
+    npcGraphics.fillRect(
+      10,
+      9,
+      12,
+      11
+    );
+
+    // Body
+    npcGraphics.fillStyle(
+      0x7b4f32,
+      1
+    );
+
+    npcGraphics.fillRect(
+      7,
+      20,
+      18,
+      20
+    );
+
+    // Feet
+    npcGraphics.fillStyle(
+      0x333333,
+      1
+    );
+
+    npcGraphics.fillRect(
+      8,
+      40,
+      6,
+      8
+    );
+
+    npcGraphics.fillRect(
+      18,
+      40,
+      6,
+      8
+    );
+
+    npcGraphics.generateTexture(
+      "npc",
+      32,
+      48
+    );
+
+    npcGraphics.destroy();
+
+    // =========================================
+    // PLAYER
+    // =========================================
+
+    this.player =
+      this.physics.add.sprite(
+        800,
+        600,
+        "player"
+      );
+
+    this.player.setCollideWorldBounds(
+      true
+    );
+
+    this.player.setFrame(0);
+
+    const playerBody =
+      this.player
+        .body as Phaser.Physics.Arcade.Body;
+
+    playerBody.setSize(
+      18,
+      14
+    );
+
+    playerBody.setOffset(
+      7,
+      32
+    );
+
+    this.physics.add.collider(
+      this.player,
+      trees
+    );
+
+    // =========================================
+    // NPC
+    // =========================================
+
+    this.npc =
+      this.physics.add.sprite(
+        950,
+        600,
+        "npc"
+      );
+
+    this.npc.setImmovable(true);
+
+    const npcBody =
+      this.npc
+        .body as Phaser.Physics.Arcade.Body;
+
+    npcBody.setSize(
+      18,
+      14
+    );
+
+    npcBody.setOffset(
+      7,
+      32
+    );
+
+    this.physics.add.collider(
+      this.player,
+      this.npc
+    );
+
+    // =========================================
+    // INTERACTION TEXT
+    // =========================================
+
+    this.interactionText =
+      this.add.text(
+        0,
+        0,
+        "E ile konuş",
+        {
+          fontFamily: "Arial",
+          fontSize: "16px",
+          color: "#ffffff",
+          backgroundColor:
+            "#000000",
+
+          padding: {
+            x: 8,
+            y: 5,
+          },
+        }
+      );
+
+    this.interactionText
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(100);
+
+    // =========================================
+    // KEYBOARD
+    // =========================================
+
+    this.cursors =
+      this.input.keyboard!
+        .createCursorKeys();
+
+    this.wasd =
+      this.input.keyboard!
+        .addKeys({
+          W:
+            Phaser.Input.Keyboard
+              .KeyCodes.W,
+
+          A:
+            Phaser.Input.Keyboard
+              .KeyCodes.A,
+
+          S:
+            Phaser.Input.Keyboard
+              .KeyCodes.S,
+
+          D:
+            Phaser.Input.Keyboard
+              .KeyCodes.D,
+        }) as typeof this.wasd;
+
+    this.interactKey =
+      this.input.keyboard!.addKey(
+        Phaser.Input.Keyboard
+          .KeyCodes.E
+      );
+
+    // =========================================
+    // CAMERA
+    // =========================================
+
+    this.cameras.main.startFollow(
+      this.player,
+      true,
+      0.08,
+      0.08
+    );
+
+    this.cameras.main.setZoom(
+      1.4
+    );
+
+    // =========================================
+    // REACT -> PHASER EVENTS
+    // =========================================
+
+    EventBus.on(
+      "dialogue-closed",
+      this.handleDialogueClosed,
+      this
+    );
+
+    EventBus.on(
+      "dialogue-choice",
+      this.handleDialogueChoice,
+      this
+    );
+
+    this.events.once(
+      Phaser.Scenes.Events.SHUTDOWN,
+      () => {
+        EventBus.off(
+          "dialogue-closed",
+          this.handleDialogueClosed,
+          this
+        );
+
+        EventBus.off(
+          "dialogue-choice",
+          this.handleDialogueChoice,
+          this
+        );
+      }
+    );
+  }
+
+  update() {
+    if (
+      !this.player ||
+      !this.npc
+    ) {
+      return;
+    }
+
+    // =========================================
+    // NPC DISTANCE
+    // =========================================
+
+    const distance =
+      Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.npc.x,
+        this.npc.y
+      );
+
+    const playerNearNpc =
+      distance <=
+      this.interactionDistance;
+
+    this.interactionText.setPosition(
+      this.npc.x,
+      this.npc.y - 50
+    );
+
+    this.interactionText.setVisible(
+      playerNearNpc &&
+      !this.dialogueOpen
+    );
+
+    // =========================================
+    // START DIALOGUE
+    // =========================================
+
+    if (
+      playerNearNpc &&
+      !this.dialogueOpen &&
+      Phaser.Input.Keyboard.JustDown(
+        this.interactKey
+      )
+    ) {
+      this.dialogueOpen = true;
+
+      this.player.setVelocity(
+        0,
+        0
+      );
+
+      this.player.anims.stop();
+
+      // PHASER -> REACT
+      EventBus.emit(
+        "open-dialogue",
+        {
+          name:
+            "Çiftçi Deniz",
+
+          text:
+            "Kasabada ciddi bir su sıkıntısı başladı. Tarlaları korumamız gerekiyor. Sence ne yapmalıyız?",
+
+          choices: [
+            {
+              id: "repair-well",
+              text:
+                "Eski kuyuyu onar",
+            },
+
+            {
+              id: "reduce-water",
+              text:
+                "Su kullanımını azalt",
+            },
+
+            {
+              id: "ask-town",
+              text:
+                "Kasaba halkıyla konuş",
+            },
+          ],
+        }
+      );
+    }
+
+    // Dialogue is open
+    if (this.dialogueOpen) {
+      this.player.setVelocity(
+        0,
+        0
+      );
+
+      return;
+    }
+
+    // =========================================
+    // MOVEMENT
+    // =========================================
+
+    let velocityX = 0;
+    let velocityY = 0;
+
+    if (
+      this.cursors.left.isDown ||
+      this.wasd.A.isDown
+    ) {
+      velocityX = -1;
+    }
+
+    if (
+      this.cursors.right.isDown ||
+      this.wasd.D.isDown
+    ) {
+      velocityX = 1;
+    }
+
+    if (
+      this.cursors.up.isDown ||
+      this.wasd.W.isDown
+    ) {
+      velocityY = -1;
+    }
+
+    if (
+      this.cursors.down.isDown ||
+      this.wasd.S.isDown
+    ) {
+      velocityY = 1;
+    }
+
+    const velocity =
+      new Phaser.Math.Vector2(
+        velocityX,
+        velocityY
+      );
+
+    if (
+      velocity.length() > 0
+    ) {
+      velocity
+        .normalize()
+        .scale(
+          this.playerSpeed
+        );
+    }
+
+    this.player.setVelocity(
+      velocity.x,
+      velocity.y
+    );
+
+    // =========================================
+    // ANIMATION
+    // =========================================
+
+    if (velocityX < 0) {
+      this.lastDirection =
+        "left";
+
+      this.player.anims.play(
+        "walk-left",
+        true
+      );
+    }
+
+    else if (velocityX > 0) {
+      this.lastDirection =
+        "right";
+
+      this.player.anims.play(
+        "walk-right",
+        true
+      );
+    }
+
+    else if (velocityY < 0) {
+      this.lastDirection =
+        "up";
+
+      this.player.anims.play(
+        "walk-up",
+        true
+      );
+    }
+
+    else if (velocityY > 0) {
+      this.lastDirection =
+        "down";
+
+      this.player.anims.play(
+        "walk-down",
+        true
+      );
+    }
+
+    else {
+      this.player.anims.stop();
+
+      this.setIdleFrame();
+    }
+  }
+
+  // =========================================
+  // IDLE
+  // =========================================
+
+  private setIdleFrame() {
+    switch (
+      this.lastDirection
+    ) {
+      case "down":
+        this.player.setFrame(0);
+        break;
+
+      case "right":
+        this.player.setFrame(4);
+        break;
+
+      case "up":
+        this.player.setFrame(8);
+        break;
+
+      case "left":
+        this.player.setFrame(12);
+        break;
+    }
+  }
+
+  // =========================================
+  // DIALOGUE CLOSED
+  // =========================================
+
+  private handleDialogueClosed() {
+    this.dialogueOpen = false;
+  }
+
+  // =========================================
+  // PLAYER MADE A DECISION
+  // =========================================
+
+  private handleDialogueChoice(
+    choiceId: string
+  ) {
+    let resultText = "";
+
+    switch (choiceId) {
+      case "repair-well":
+        resultText =
+          "Kuyunun onarılmasına karar verdin!";
+        break;
+
+      case "reduce-water":
+        resultText =
+          "Kasabada su tasarrufu başlatıldı!";
+        break;
+
+      case "ask-town":
+        resultText =
+          "Kasaba halkıyla görüşmeye karar verdin!";
+        break;
+
+      default:
+        resultText =
+          "Bir karar verdin.";
+    }
+
+    this.showResultMessage(
+      resultText
+    );
+
+    this.dialogueOpen = false;
+  }
+
+  // =========================================
+  // GAME RESULT MESSAGE
+  // =========================================
+
+  private showResultMessage(
+    message: string
+  ) {
+    const text =
+      this.add.text(
+        this.player.x,
+        this.player.y - 70,
+        message,
+        {
+          fontFamily: "Arial",
+
+          fontSize: "16px",
+
+          color: "#ffffff",
+
+          backgroundColor:
+            "#202020",
+
+          padding: {
+            x: 10,
+            y: 7,
+          },
+        }
+      );
+
+    text
+      .setOrigin(0.5)
+      .setDepth(200);
+
+    this.tweens.add({
+      targets: text,
+
+      y:
+        text.y - 30,
+
+      alpha: 0,
+
+      duration: 2200,
+
+      ease: "Power1",
+
+      onComplete: () => {
+        text.destroy();
+      },
+    });
+  }
+}

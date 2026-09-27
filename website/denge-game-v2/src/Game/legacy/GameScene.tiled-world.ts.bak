@@ -1,0 +1,436 @@
+import Phaser from "phaser";
+
+type Direction =
+  | "down"
+  | "up"
+  | "left"
+  | "right";
+
+export default class GameScene extends Phaser.Scene {
+  private player!: Phaser.Physics.Arcade.Sprite;
+
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+
+  private wasd!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
+
+  private readonly playerSpeed = 120;
+
+  private lastDirection: Direction = "down";
+
+  constructor() {
+    super("GameScene");
+  }
+
+  preload() {
+    // =========================================
+    // TILED MAP
+    // =========================================
+
+    this.load.tilemapTiledJSON(
+      "denge-map",
+      "/maps/denge-kasabasi.json"
+    );
+
+    // =========================================
+    // TILESET
+    // DOSYA ADIN SENDE town_tileset.png
+    // =========================================
+
+    this.load.image(
+      "town-tiles",
+      "/assets/tiles/town/town_tileset.png"
+    );
+
+    // =========================================
+    // PLAYER
+    // =========================================
+
+    this.load.spritesheet(
+      "player",
+      "/assets/characters/player.png",
+      {
+        frameWidth: 32,
+        frameHeight: 48,
+      }
+    );
+  }
+
+  create() {
+    // =========================================
+    // MAP
+    // =========================================
+
+    const map = this.make.tilemap({
+      key: "denge-map",
+    });
+
+    console.log(
+      "Map loaded:",
+      map
+    );
+
+    // DengeTown = Tiled içerisindeki tileset adı
+    // town-tiles = Phaser preload key'i
+    const tileset =
+      map.addTilesetImage(
+        "DengeTown",
+        "town-tiles"
+      );
+
+    if (!tileset) {
+      console.error(
+        "Tileset bulunamadı. Tiled tileset adı kontrol edilmeli."
+      );
+
+      return;
+    }
+
+    // =========================================
+    // TILEMAP LAYERS
+    // =========================================
+
+    const groundLayer =
+      map.createLayer(
+        "Ground",
+        tileset,
+        0,
+        0
+      );
+
+    const pathsLayer =
+      map.createLayer(
+        "Paths",
+        tileset,
+        0,
+        0
+      );
+
+    const waterLayer =
+      map.createLayer(
+        "Water",
+        tileset,
+        0,
+        0
+      );
+
+    const natureLayer =
+      map.createLayer(
+        "Nature",
+        tileset,
+        0,
+        0
+      );
+
+    const buildingsLayer =
+      map.createLayer(
+        "Buildings",
+        tileset,
+        0,
+        0
+      );
+
+    const propsLayer =
+      map.createLayer(
+        "Props",
+        tileset,
+        0,
+        0
+      );
+
+    console.log({
+      groundLayer,
+      pathsLayer,
+      waterLayer,
+      natureLayer,
+      buildingsLayer,
+      propsLayer,
+    });
+
+    // =========================================
+    // WORLD BOUNDS
+    // =========================================
+
+    this.physics.world.setBounds(
+      0,
+      0,
+      map.widthInPixels,
+      map.heightInPixels
+    );
+
+    this.cameras.main.setBounds(
+      0,
+      0,
+      map.widthInPixels,
+      map.heightInPixels
+    );
+
+    // =========================================
+    // ANIMATIONS
+    // =========================================
+
+    this.anims.create({
+      key: "walk-down",
+
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 0,
+            end: 3,
+          }
+        ),
+
+      frameRate: 8,
+
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-right",
+
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 4,
+            end: 7,
+          }
+        ),
+
+      frameRate: 8,
+
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-up",
+
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 8,
+            end: 11,
+          }
+        ),
+
+      frameRate: 8,
+
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: "walk-left",
+
+      frames:
+        this.anims.generateFrameNumbers(
+          "player",
+          {
+            start: 12,
+            end: 15,
+          }
+        ),
+
+      frameRate: 8,
+
+      repeat: -1,
+    });
+
+    // =========================================
+    // PLAYER
+    // =========================================
+
+    this.player =
+      this.physics.add.sprite(
+        640,
+        700,
+        "player"
+      );
+
+    this.player.setFrame(0);
+
+    this.player.setCollideWorldBounds(
+      true
+    );
+
+    // =========================================
+    // INPUT
+    // =========================================
+
+    this.cursors =
+      this.input.keyboard!
+        .createCursorKeys();
+
+    this.wasd =
+      this.input.keyboard!
+        .addKeys({
+          W:
+            Phaser.Input.Keyboard
+              .KeyCodes.W,
+
+          A:
+            Phaser.Input.Keyboard
+              .KeyCodes.A,
+
+          S:
+            Phaser.Input.Keyboard
+              .KeyCodes.S,
+
+          D:
+            Phaser.Input.Keyboard
+              .KeyCodes.D,
+        }) as typeof this.wasd;
+
+    // =========================================
+    // CAMERA
+    // =========================================
+
+    this.cameras.main.startFollow(
+      this.player,
+      true,
+      0.08,
+      0.08
+    );
+
+    this.cameras.main.setZoom(
+      1.8
+    );
+  }
+
+  update() {
+    if (!this.player) {
+      return;
+    }
+
+    let velocityX = 0;
+    let velocityY = 0;
+
+    // =========================================
+    // MOVEMENT
+    // =========================================
+
+    if (
+      this.cursors.left.isDown ||
+      this.wasd.A.isDown
+    ) {
+      velocityX = -1;
+    }
+
+    if (
+      this.cursors.right.isDown ||
+      this.wasd.D.isDown
+    ) {
+      velocityX = 1;
+    }
+
+    if (
+      this.cursors.up.isDown ||
+      this.wasd.W.isDown
+    ) {
+      velocityY = -1;
+    }
+
+    if (
+      this.cursors.down.isDown ||
+      this.wasd.S.isDown
+    ) {
+      velocityY = 1;
+    }
+
+    const velocity =
+      new Phaser.Math.Vector2(
+        velocityX,
+        velocityY
+      );
+
+    if (velocity.length() > 0) {
+      velocity
+        .normalize()
+        .scale(
+          this.playerSpeed
+        );
+    }
+
+    this.player.setVelocity(
+      velocity.x,
+      velocity.y
+    );
+
+    // =========================================
+    // ANIMATIONS
+    // =========================================
+
+    if (velocityX < 0) {
+      this.lastDirection =
+        "left";
+
+      this.player.anims.play(
+        "walk-left",
+        true
+      );
+    }
+
+    else if (velocityX > 0) {
+      this.lastDirection =
+        "right";
+
+      this.player.anims.play(
+        "walk-right",
+        true
+      );
+    }
+
+    else if (velocityY < 0) {
+      this.lastDirection =
+        "up";
+
+      this.player.anims.play(
+        "walk-up",
+        true
+      );
+    }
+
+    else if (velocityY > 0) {
+      this.lastDirection =
+        "down";
+
+      this.player.anims.play(
+        "walk-down",
+        true
+      );
+    }
+
+    else {
+      this.player.anims.stop();
+
+      this.setIdleFrame();
+    }
+  }
+
+  private setIdleFrame() {
+    switch (
+      this.lastDirection
+    ) {
+      case "down":
+        this.player.setFrame(0);
+        break;
+
+      case "right":
+        this.player.setFrame(4);
+        break;
+
+      case "up":
+        this.player.setFrame(8);
+        break;
+
+      case "left":
+        this.player.setFrame(12);
+        break;
+    }
+  }
+}

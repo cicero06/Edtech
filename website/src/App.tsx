@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { site, pages } from "./config";
 import { approaches, futureAreas, flow } from "./content";
+import { gsap, prefersReducedMotion, startSmoothScroll } from "./motion";
 
 function Arrow({ external = false }: { external?: boolean }) {
   return <span aria-hidden="true">{external ? "↗" : "↗"}</span>;
@@ -125,7 +126,7 @@ function Contact() {
   return (
     <section id="iletisim" className="contact">
       <div className="container contact-inner">
-        <div>
+        <div data-reveal>
           <Eyebrow>BİRLİKTE DÜŞÜNELİM</Eyebrow>
           <h2>
             Öğrenmenin geleceğinde
@@ -138,7 +139,7 @@ function Contact() {
             için bize yazın.
           </p>
         </div>
-        <a className="contact-link" href={`mailto:${site.email}`}>
+        <a className="contact-link" href={`mailto:${site.email}`} data-reveal>
           <span>İletişime geçin</span>
           <Arrow />
           <small>{site.email}</small>
@@ -172,14 +173,373 @@ function Footer() {
     </footer>
   );
 }
-function Home() {
+function splitWords(el: HTMLElement) {
+  Array.from(el.childNodes).forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const frag = document.createDocumentFragment();
+      (node.textContent || "").split(/(\s+)/).forEach((part) => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) {
+          frag.appendChild(document.createTextNode(part));
+        } else {
+          const s = document.createElement("span");
+          s.className = "w";
+          s.textContent = part;
+          frag.appendChild(s);
+        }
+      });
+      node.replaceWith(frag);
+    } else if (node instanceof HTMLElement && node.tagName !== "BR") {
+      splitWords(node);
+    }
+  });
+}
+function useReveals(root: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
+        gsap.from(el, {
+          y: 46,
+          opacity: 0,
+          duration: 0.85,
+          ease: "power3.out",
+          scrollTrigger: { trigger: el, start: "top 85%", once: true },
+        });
+      });
+      gsap.utils.toArray<HTMLElement>("[data-reveal-group]").forEach((group) => {
+        gsap.from(group.children, {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power3.out",
+          stagger: 0.09,
+          scrollTrigger: { trigger: group, start: "top 82%", once: true },
+        });
+      });
+    }, root);
+    return () => ctx.revert();
+  }, [root]);
+}
+function useSeqAnimations(
+  root: React.RefObject<HTMLDivElement | null>,
+) {
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const ctx = gsap.context(() => {
+      const seq = root.current?.querySelector<HTMLElement>(".seq");
+      const map = root.current?.querySelector<HTMLElement>(".seq-map");
+      if (!seq || !map) return;
+      const W = () => map.offsetWidth;
+      const H = () => map.offsetHeight;
+      const cam = (px: number, py: number, s: number) => ({
+        x: () => (0.5 - px) * W() * s,
+        y: () => (0.5 - py) * H() * s,
+        scale: s,
+        ease: "power1.inOut" as const,
+      });
+      const fit = () =>
+        Math.min(window.innerWidth / W(), window.innerHeight / H());
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: seq,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1,
+          invalidateOnRefresh: true,
+        },
+      });
+      tl.fromTo(
+        map,
+        { x: 0, y: 0, scale: () => fit() * 0.92 },
+        { x: 0, y: 0, scale: () => fit() * 0.92, duration: 0.01 },
+        0,
+      );
+      tl.to(map, { ...cam(0.5, 0.13, 2.4), duration: 3 }, 2)
+        .to(map, { ...cam(0.16, 0.47, 2.4), duration: 3 }, 6)
+        .to(map, { ...cam(0.5, 0.5, 2.6), duration: 3 }, 10)
+        .to(map, { ...cam(0.84, 0.5, 2.4), duration: 3 }, 14)
+        .to(map, { ...cam(0.5, 0.88, 2.4), duration: 3 }, 18)
+        .to(map, { ...cam(0.5, 0.5, 1.35), duration: 3 }, 22);
+      const beats: [string, number, number][] = [
+        [".seq-t1", 0.3, 1.8],
+        [".seq-t2", 3.4, 5.4],
+        [".seq-t3", 7.4, 9.4],
+        [".seq-t4", 11.4, 13.4],
+        [".seq-t5", 15.4, 17.4],
+        [".seq-t6", 19.4, 21.4],
+        [".seq-end", 22.6, 25],
+      ];
+      beats.forEach(([sel, at, out]) => {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 44 },
+          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+          at,
+        );
+        if (out < 24) {
+          tl.to(
+            sel,
+            { opacity: 0, y: -32, duration: 0.5, ease: "power2.in" },
+            out,
+          );
+        }
+      });
+      tl.to(".seq-hint", { opacity: 0, duration: 0.4 }, 0.8);
+    }, root);
+    return () => ctx.revert();
+  }, [root]);
+}
+function useHomeAnimations(
+  root: React.RefObject<HTMLDivElement | null>,
+) {
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const cleanups: (() => void)[] = [];
+    const ctx = gsap.context(() => {
+      gsap.from(".hero-copy > *", {
+        y: 42,
+        opacity: 0,
+        duration: 0.9,
+        ease: "power3.out",
+        stagger: 0.09,
+      });
+      gsap.from(".hero-art", {
+        y: 70,
+        opacity: 0,
+        duration: 1.05,
+        ease: "power3.out",
+        delay: 0.15,
+      });
+      gsap.to(".hero-art > img", {
+        yPercent: 8,
+        scale: 1.06,
+        ease: "none",
+        scrollTrigger: {
+          trigger: ".hero",
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        },
+      });
+      const manifesto =
+        root.current?.querySelector<HTMLElement>(".intro-inner h2");
+      if (manifesto) {
+        splitWords(manifesto);
+        gsap.fromTo(
+          manifesto.querySelectorAll(".w"),
+          { opacity: 0.2 },
+          {
+            opacity: 1,
+            stagger: 0.05,
+            ease: "none",
+            scrollTrigger: {
+              trigger: manifesto,
+              start: "top 82%",
+              end: "top 35%",
+              scrub: true,
+            },
+          },
+        );
+      }
+      const sysMap =
+        root.current?.querySelector<HTMLElement>(".system-map");
+      if (sysMap) {
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: sysMap, start: "top 82%", once: true },
+        });
+        tl.from(sysMap.querySelectorAll(".sys-node"), {
+          scale: 0.5,
+          opacity: 0,
+          duration: 0.5,
+          ease: "back.out(2)",
+          stagger: 0.18,
+        }).from(
+          sysMap.querySelectorAll(".sys-link"),
+          {
+            scaleX: 0,
+            duration: 0.45,
+            ease: "power2.out",
+            stagger: 0.18,
+          },
+          0.2,
+        );
+      }
+      const props = gsap.utils.toArray<HTMLElement>(".hero-prop");
+      const hero = root.current?.querySelector<HTMLElement>(".hero");
+      if (hero && props.length) {
+        const depths = [34, -22, 26];
+        const qx = props.map((prop) =>
+          gsap.quickTo(prop, "x", { duration: 0.9, ease: "power3.out" }),
+        );
+        const qy = props.map((prop) =>
+          gsap.quickTo(prop, "y", { duration: 0.9, ease: "power3.out" }),
+        );
+        const onMove = (e: MouseEvent) => {
+          const r = hero.getBoundingClientRect();
+          const nx = (e.clientX - r.left) / r.width - 0.5;
+          const ny = (e.clientY - r.top) / r.height - 0.5;
+          props.forEach((prop, i) => {
+            const d = depths[i % depths.length];
+            qx[i](nx * d);
+            qy[i](ny * d * 0.7);
+          });
+        };
+        hero.addEventListener("mousemove", onMove);
+        cleanups.push(() => hero.removeEventListener("mousemove", onMove));
+      }
+      const tiltCards = gsap.utils.toArray<HTMLElement>(
+        ".future-grid article, .team-card",
+      );
+      tiltCards.forEach((card) => {
+        const rx = gsap.quickTo(card, "rotationX", {
+          duration: 0.6,
+          ease: "power3.out",
+        });
+        const ry = gsap.quickTo(card, "rotationY", {
+          duration: 0.6,
+          ease: "power3.out",
+        });
+        const onTilt = (e: MouseEvent) => {
+          const r = card.getBoundingClientRect();
+          ry(((e.clientX - r.left) / r.width - 0.5) * 10);
+          rx(-((e.clientY - r.top) / r.height - 0.5) * 10);
+        };
+        const onLeave = () => {
+          rx(0);
+          ry(0);
+        };
+        card.addEventListener("mousemove", onTilt);
+        card.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => {
+          card.removeEventListener("mousemove", onTilt);
+          card.removeEventListener("mouseleave", onLeave);
+        });
+      });
+      const mm = gsap.matchMedia();
+      mm.add("(min-width: 900px)", () => {
+        const pinEl =
+          root.current?.querySelector<HTMLElement>(".how-to-pin");
+        const track =
+          root.current?.querySelector<HTMLElement>(".how-to-tutorial");
+        const bar = root.current?.querySelector<HTMLElement>(
+          ".how-to-progress span",
+        );
+        if (!pinEl || !track) return;
+        const distance = () =>
+          Math.max(track.scrollWidth - window.innerWidth + 48, 0);
+        gsap.to(track, {
+          x: () => -distance(),
+          ease: "none",
+          scrollTrigger: {
+            trigger: pinEl,
+            start: "top top+=92",
+            end: () => `+=${distance()}`,
+            pin: true,
+            scrub: 1,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+        if (bar) {
+          gsap.to(bar, {
+            scaleX: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: pinEl,
+              start: "top top+=92",
+              end: () => `+=${distance()}`,
+              scrub: 1,
+              invalidateOnRefresh: true,
+            },
+          });
+        }
+      });
+    }, root);
+    return () => {
+      ctx.revert();
+      cleanups.forEach((fn) => fn());
+    };
+  }, [root]);
+}
+function SeqCinematic() {
   return (
-    <>
+    <section className="seq" aria-label="Denge Kasabası tanıtım sekansı">
+      <div className="seq-stage">
+        <img
+          className="seq-map"
+          src="/images/denge-world-map.png"
+          alt="Denge Kasabası haritası; baraj, tarım arazileri, park, evler ve belediye"
+        />
+        <div className="seq-vignette" aria-hidden="true" />
+        <div className="seq-text seq-t1">
+          <span className="seq-eyebrow">İLK ÜRÜNÜMÜZ · İLK SENARYO</span>
+          <h1>Denge Kasabası</h1>
+          <p>Su Krizi — bir kasaba, birbirine bağlı birçok karar.</p>
+        </div>
+        <div className="seq-text seq-t2">
+          <h2>Su azalıyor.</h2>
+          <p>Kasabanın en değerli kaynağı tehlikede.</p>
+        </div>
+        <div className="seq-text seq-t3">
+          <span className="seq-char char-riza" aria-hidden="true">
+            <img src="/images/char-riza.png" alt="" />
+          </span>
+          <h2>Tarım susuz kalırsa?</h2>
+          <p>Çiftçi Rıza’nın tarlaları senin kararlarına bağlı.</p>
+        </div>
+        <div className="seq-text seq-t4">
+          <span className="seq-char char-aylin" aria-hidden="true">
+            <img src="/images/char-aylin.png" alt="" />
+          </span>
+          <h2>Kanıt her yerde.</h2>
+          <p>Mühendis Aylin’in raporları, uzman görüşleri, ölçüm verileri.</p>
+        </div>
+        <div className="seq-text seq-t5">
+          <span className="seq-char char-nuri" aria-hidden="true">
+            <img src="/images/char-nuri.png" alt="" />
+          </span>
+          <h2>Herkes bir paydaş.</h2>
+          <p>Nuri Amca gibi kasabalıların ihtiyaçlarını dinle.</p>
+        </div>
+        <div className="seq-text seq-t6">
+          <h2>Karar senin.</h2>
+          <p>
+            Kanıtı değerlendir, planını kur,
+            <br />
+            kasabanın dengesini koru.
+          </p>
+        </div>
+        <div className="seq-text seq-end">
+          <p className="seq-eyebrow">OYUNLA KEŞFET · KANITLA DÜŞÜN</p>
+          <h2>Kasabanın ilk kararını sen ver.</h2>
+          <div className="seq-actions">
+            <a className="button primary" href={site.demoUrl}>
+              Demoyu Oyna <Arrow />
+            </a>
+          </div>
+          <span className="seq-note">
+            Oynanabilir prototip · 10–12 yaş için tasarlandı
+          </span>
+        </div>
+        <span className="seq-hint" aria-hidden="true">
+          KAYDIR ↓
+        </span>
+      </div>
+    </section>
+  );
+}
+function Home() {
+  const root = useRef<HTMLDivElement>(null);
+  useHomeAnimations(root);
+  useReveals(root);
+  return (
+    <div className="home" ref={root}>
       <section className="hero container">
         <div className="hero-copy">
           <div className="hero-badge">
             <span className="hero-badge-dot" />
-            <span>Gerçek Yaşam Problemleri &amp; Eğlenceli Deneyimler</span>
+            <span>Eğitim Teknolojileri · Oyun Tabanlı Öğrenme</span>
           </div>
           <h1>
             Oyunla keşfet,
@@ -189,13 +549,14 @@ function Home() {
             <em>geleceği şekillendir!</em>
           </h1>
           <p>
-            Atlas Learning Technologies ile çocuklar teorik ezber yerine kasaba
-            yönetir, veri toplar, hipotez test eder ve kendi kararlarının doğaya
-            etkisini gözleriyle görür.
+            Atlas Learning Technologies, çocukların gerçek yaşam problemlerini
+            oyunla keşfettiği öğrenme deneyimleri tasarlar. Teorik ezber yerine
+            kasaba yönetir, veri toplar, hipotez test eder ve kararlarının
+            etkisini görürler.
           </p>
           <div className="actions">
             <a className="button primary" href="/denge-kasabasi">
-              Denge Kasabası&apos;na Işınlan <Arrow />
+              Denge Kasabası&apos;nı Keşfet <Arrow />
             </a>
             <a className="button light" href="#nasil-oynanir">
               Nasıl Oynanır? (2 Dk)
@@ -239,7 +600,107 @@ function Home() {
           </div>
           <span className="art-note">Mevcut oyunun kasaba görseli</span>
         </div>
+        <span className="hero-prop prop-windmill" aria-hidden="true">
+          <img src="/images/windmill.png" alt="" />
+        </span>
+        <span className="hero-prop prop-drop" aria-hidden="true">
+          <img src="/images/cursor-drop.png" alt="" />
+        </span>
+        <span className="hero-prop prop-tree" aria-hidden="true">
+          <img src="/images/tree-blossom.png" alt="" />
+        </span>
       </section>
+      <section className="chars" aria-labelledby="chars-title">
+        <div className="container">
+          <div className="section-heading" data-reveal>
+            <div>
+              <Eyebrow>KASABANIN SAKİNLERİ</Eyebrow>
+              <h2>
+                Kasabada tanışacağın
+                <br />
+                <em>sesler.</em>
+              </h2>
+            </div>
+            <p>
+              Her karakter farklı bir çıkar, farklı bir gündem, farklı bir
+              kanıt taşır. Karar verirken hepsi masada olacak.
+            </p>
+          </div>
+          <div className="chars-grid" data-reveal-group>
+            <figure className="char-card">
+              <div className="char-fig char-lina">
+                <img
+                  src="/images/char-lina.png"
+                  alt="Lina karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Lina</strong>
+                <span>Senin Rehberin</span>
+                <p>“Kasabayı gezelim, önce kimlerin ne istediğine bakalım.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-riza">
+                <img
+                  src="/images/char-riza.png"
+                  alt="Çiftçi Rıza karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Çiftçi Rıza</strong>
+                <span>Tarım Kestanesi</span>
+                <p>“Su kesilirse mahsul gider, mahsul giderse kasaba aç kalır.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-aylin">
+                <img
+                  src="/images/char-aylin.png"
+                  alt="Mühendis Aylin karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Mühendis Aylin</strong>
+                <span>Altyapı ve Kanıt</span>
+                <p>“Hissetmek yetmez; veri, ölçüm ve planla konuşuruz.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-nuri">
+                <img
+                  src="/images/char-nuri.png"
+                  alt="Nuri Amca karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Nuri Amca</strong>
+                <span>Kasabanın Hafızası</span>
+                <p>“Ben bu kasabada üç kuraklık gördüm; üçü de aynı hatayla başladı.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-betul">
+                <img
+                  src="/images/char-betul.png"
+                  alt="Dr. Betül karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Dr. Betül</strong>
+                <span>Kasabanın Doktoru</span>
+                <p>“Sağlıklı bir kasaba temiz suyla başlar — değerleri takip et!”</p>
+              </figcaption>
+            </figure>
+          </div>
+          <div className="chars-cta" data-reveal>
+            <a className="button primary" href="/denge-kasabasi">
+              Kasabayı Ziyaret Et <Arrow />
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section className="intro-strip">
         <div className="container intro-inner">
           <Eyebrow>ATLAS İLE ÖĞRENME</Eyebrow>
@@ -258,7 +719,7 @@ function Home() {
       </section>
 
       <section id="hakkimizda" className="section container about">
-        <div>
+        <div data-reveal>
           <Eyebrow>HAKKIMIZDA</Eyebrow>
           <h2>
             Öğrenmeye meraklı.
@@ -266,7 +727,7 @@ function Home() {
             <em>Geleceğe karşı sorumlu.</em>
           </h2>
         </div>
-        <div>
+        <div data-reveal>
           <p className="about-lead">
             Atlas Learning Technologies, çocukların karmaşık dünyayı anlamasına
             yardımcı olacak öğrenme deneyimleri geliştirir.
@@ -286,7 +747,7 @@ function Home() {
             </p>
           </div>
 
-          <div className="team-grid">
+          <div className="team-grid" data-reveal-group>
             <article className="team-card">
               <h3>Hüseyin Deniz</h3>
               <p className="team-role">Kurucu · Ürün</p>
@@ -323,11 +784,20 @@ function Home() {
               eden eğitim teknolojileri geliştirmek.
             </p>
           </div>
+
+          <div className="team-summary team-summary--accent">
+            <span className="eyebrow">VİZYONUMUZ</span>
+            <p>
+              Yaşadığı dünyayı anlayan, kanıta dayalı düşünen ve geleceği
+              şekilliren bir nesil — Türkiye&apos;den çıkan, dünya standartlarında
+              oyun tabanlı öğrenme deneyimleri.
+            </p>
+          </div>
         </div>
       </section>
 
       <section className="section container" id="urun">
-        <div className="section-heading">
+        <div className="section-heading" data-reveal>
           <div>
             <Eyebrow>İLK ÜRÜNÜMÜZ</Eyebrow>
             <h2>
@@ -342,7 +812,7 @@ function Home() {
             Denge Kasabası’nda çocuklar bu bağlantıları keşfeder.
           </p>
         </div>
-        <article className="product-feature">
+        <article className="product-feature" data-reveal>
           <div className="feature-image">
             <img
               src="/images/game-map.png"
@@ -369,7 +839,7 @@ function Home() {
         </article>
       </section>
       <section id="nasil-oynanir" className="section container how-to">
-        <div className="section-heading">
+        <div className="section-heading" data-reveal>
           <div>
             <Eyebrow>NASIL OYNANIR?</Eyebrow>
             <h2>
@@ -384,7 +854,11 @@ function Home() {
           </p>
         </div>
 
-        <div className="how-to-tutorial">
+        <div className="how-to-pin">
+          <div className="how-to-progress" aria-hidden="true">
+            <span />
+          </div>
+          <div className="how-to-tutorial">
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">01</span>
@@ -580,9 +1054,10 @@ function Home() {
               </figcaption>
             </figure>
           </article>
+          </div>
         </div>
 
-        <div className="how-to-cta">
+        <div className="how-to-cta" data-reveal>
           <p>
             Kısacası: çocuk haritayı inceler, kanıtları okur, karar verir ve
             sonuçları sorgular.
@@ -595,7 +1070,7 @@ function Home() {
 
       <section id="yaklasimimiz" className="approach section">
         <div className="container">
-          <div className="section-heading">
+          <div className="section-heading" data-reveal>
             <div>
               <Eyebrow>YAKLAŞIMIMIZ</Eyebrow>
               <h2>
@@ -609,7 +1084,19 @@ function Home() {
               <br />o düşünceye nasıl ulaştığı da değerli.
             </p>
           </div>
-          <div className="approach-grid">
+          <div className="system-map">
+            <span className="system-label">BİR KARAR, BİRDEN FAZLA ETKİ</span>
+            <div className="system-flow">
+              <span className="sys-node sys-su">Su</span>
+              <span className="sys-link" />
+              <span className="sys-node sys-butce">Bütçe</span>
+              <span className="sys-link" />
+              <span className="sys-node sys-tarim">Tarım</span>
+              <span className="sys-link" />
+              <span className="sys-node sys-cevre">Çevre</span>
+            </div>
+          </div>
+          <div className="approach-grid" data-reveal-group>
             {approaches.map(([title, lead, body], i) => (
               <article key={title}>
                 <span className="index">0{i + 1}</span>
@@ -619,7 +1106,7 @@ function Home() {
               </article>
             ))}
           </div>
-          <p className="method-note">
+          <p className="method-note" data-reveal>
             Bunlar tasarımımızın pedagojik hedefleridir. Öğrenme etkisinin
             kullanıcı testleri ve pedagojik pilotlarla değerlendirilmesi
             hedeflenmektedir.
@@ -627,7 +1114,7 @@ function Home() {
         </div>
       </section>
       <section id="gelecek" className="section container">
-        <div className="section-heading">
+        <div className="section-heading" data-reveal>
           <div>
             <Eyebrow>GELECEK ÇÖZÜMLER</Eyebrow>
             <h2>
@@ -642,7 +1129,7 @@ function Home() {
             alanlarımızdır.
           </p>
         </div>
-        <div className="future-grid">
+        <div className="future-grid" data-reveal-group>
           {futureAreas.map(([n, title, body, icon]) => (
             <article key={n}>
               <div className="future-top">
@@ -657,7 +1144,7 @@ function Home() {
         </div>
       </section>
       <section className="educators container">
-        <div>
+        <div data-reveal>
           <Eyebrow>EĞİTİMCİLER VE KURUMLAR İÇİN</Eyebrow>
           <h2>
             Oyunda başlayan sorular,
@@ -665,7 +1152,7 @@ function Home() {
             sınıfta derinleşen düşünceler.
           </h2>
         </div>
-        <div>
+        <div data-reveal>
           <p>
             Bir oyun deneyimi; kanıt, kaynak kullanımı ve kararlar üzerine ortak
             bir tartışmanın başlangıcı olabilir. Öğretmen rehberliğinde bireysel
@@ -685,94 +1172,37 @@ function Home() {
         </div>
       </section>
       <Contact />
-    </>
+    </div>
   );
 }
 function Product() {
+  const root = useRef<HTMLDivElement>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  useSeqAnimations(root);
+  useReveals(root);
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setMapReady(true);
+    img.onerror = () => setMapReady(true);
+    img.src = "/images/denge-world-map.png";
+  }, []);
 
   return (
-    <>
-      <section className="product-hero container">
-        <a className="breadcrumb" href="/">
-          Atlas <span aria-hidden="true">/</span>
-        </a>
-        <Eyebrow>DENGE KASABASI · İLK SENARYO</Eyebrow>
-        <div className="product-hero-row">
-
-          <div>
-            <h1>
-              Bir kasabanın geleceği.
-            
-              <br />
-              <em>Senin kararların.</em>
-            </h1>
-            <p>
-              Denge Kasabası: Su Krizi, 10–12 yaş çocukları su kaynakları azalan
-              bir kasabada karar verici rolüne yerleştiren oyun tabanlı bir
-              öğrenme prototipidir.
-              </p>
-              <div
-                className="notice-card"
-                onClick={() => setNoticeOpen(true)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setNoticeOpen(true);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="notice-card__layout">
-                  <div className="notice-card__content">
-                    <div className="notice-card__media">
-                      <img
-                        src="/images/denge-world-map.png"
-                        alt="Denge Kasabası genel haritası"
-                      />
-                    </div>
-                    <span className="notice-card__eyebrow">DUYURU</span>
-                    <h3>Yeni sürüm yakında!</h3>
-                    <p>
-                      Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
-                      senaryolarımız çok yakında sizlerle buluşacak.
-                    </p>
-                    <span className="notice-card__cta">Detayları gör</span>
-                  </div>
-                  <div className="notice-card__persona" aria-hidden="true">
-                    <div className="notice-card__bubble">
-                      “Yeni haritamız ve yeni senaryolarımız çok yakında burada!”
-                    </div>
-                    <img src="/images/lina.png" alt="Lina" />
-                  </div>
-                </div>
-              </div>
-          </div>
-          <div className="product-hero-cta">
-            <DemoLink />
-            <span>Oynanabilir prototip · Yeni sekmede açılır</span>
-          </div>
-        </div>
-        <div className="product-banner">
-          <img
-            src="/images/town.jpg"
-            width="512"
-            height="512"
-            alt="Su kaynakları, evler ve tarım alanlarıyla Denge Kasabası’nın mevcut oyun görseli"
-            fetchPriority="high"
-          />
-          <div>
-            <span>İLK SENARYO</span>
-            <strong>Su Krizi</strong>
-            <p>
-              Suyu yönet. Etkileri düşün.
-              <br />
-              Kasabanın dengesini gözet.
-            </p>
-          </div>
-        </div>
-      </section>
+    <div className="product-page" ref={root}>
+      <div
+        className={mapReady ? "site-loader done" : "site-loader"}
+        aria-hidden={mapReady}
+      >
+        <span className="loader-brand">
+          denge<small>KASABASI</small>
+        </span>
+        <span className="loader-bar">
+          <span />
+        </span>
+        <span className="loader-note">Kasaba hazırlanıyor…</span>
+      </div>
+      <SeqCinematic />
       {noticeOpen && (
         <div
           className="notice-modal"
@@ -816,7 +1246,10 @@ function Product() {
       )}
 
       <section className="section container product-intro">
-        <div>
+        <div data-reveal>
+          <a className="breadcrumb" href="/">
+            Atlas <span aria-hidden="true">/</span>
+          </a>
           <Eyebrow>DENGE KASABASI NEDİR?</Eyebrow>
           <h2>
             Birbiriyle bağlantılı
@@ -824,7 +1257,7 @@ function Product() {
             kararların oyun alanı.
           </h2>
         </div>
-        <div>
+        <div data-reveal>
           <p className="about-lead">
             Denge Kasabası, gerçek yaşam problemlerini keşif ve karar verme
             deneyimine dönüştüren ilk ürünümüz.
@@ -848,6 +1281,44 @@ function Product() {
           </div>
         </div>
       </section>
+      <div className="container notice-slot" data-reveal>
+        <div
+          className="notice-card"
+          onClick={() => setNoticeOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setNoticeOpen(true);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="notice-card__layout">
+            <div className="notice-card__content">
+              <div className="notice-card__media">
+                <img
+                  src="/images/denge-world-map.png"
+                  alt="Denge Kasabası genel haritası"
+                />
+              </div>
+              <span className="notice-card__eyebrow">DUYURU</span>
+              <h3>Yeni sürüm yakında!</h3>
+              <p>
+                Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
+                senaryolarımız çok yakında sizlerle buluşacak.
+              </p>
+              <span className="notice-card__cta">Detayları gör</span>
+            </div>
+            <div className="notice-card__persona" aria-hidden="true">
+              <div className="notice-card__bubble">
+                “Yeni haritamız ve yeni senaryolarımız çok yakında burada!”
+              </div>
+              <img src="/images/lina.png" alt="Lina" />
+            </div>
+          </div>
+        </div>
+      </div>
       <section className="section approach">
         <div className="container">
           <Eyebrow>ÖĞRENME YOLCULUĞU</Eyebrow>
@@ -887,7 +1358,7 @@ function Product() {
             arayüzünü gösterir.
           </p>
         </div>
-        <div className="screens">
+        <div className="screens" data-reveal-group>
           <figure>
             <a
               href="/images/game-map.png"
@@ -954,7 +1425,7 @@ function Product() {
         </div>
       </section>
       <section className="pedagogy">
-        <div className="container pedagogy-inner">
+        <div className="container pedagogy-inner" data-reveal-group>
           <div>
             <Eyebrow>PEDAGOJİK YAKLAŞIM</Eyebrow>
             <h2>
@@ -1000,7 +1471,7 @@ function Product() {
             biçimindedir.
           </p>
         </div>
-        <div className="classroom">
+        <div className="classroom" data-reveal-group>
           <article>
             <span>ÖNCE</span>
             <h3>Soruyu açın.</h3>
@@ -1035,7 +1506,7 @@ function Product() {
         </p>
       </section>
       <section id="demo" className="demo-section container">
-        <div>
+        <div data-reveal>
           <Eyebrow>DENEYİMİ KEŞFEDİN</Eyebrow>
           <h2>
             Kasabanın ilk kararını
@@ -1047,10 +1518,19 @@ function Product() {
         <div>
           <DemoLink light />
           <p>Demo ayrı bir sitede, yeni sekmede açılır.</p>
+          <a
+            className="button light preview-link"
+            href="/denge-kasabasi/ongosteri/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Yeni Sürüm Ön Gösterimi <Arrow />
+          </a>
+          <p>Yeni haritalı sürümün erken ön gösterimi — henüz yayında değil.</p>
         </div>
       </section>
       <Contact />
-    </>
+    </div>
   );
 }
 export function App({ path }: { path: string }) {
@@ -1058,8 +1538,13 @@ export function App({ path }: { path: string }) {
   const product = normalized === "/denge-kasabasi";
   const gameRoute =
     normalized === "/denge-kasabasi/oyna" ||
-    normalized.startsWith("/denge-kasabasi/oyna/");
+    normalized.startsWith("/denge-kasabasi/oyna/") ||
+    normalized === "/denge-kasabasi/ongosteri" ||
+    normalized.startsWith("/denge-kasabasi/ongosteri/");
   const known = normalized === "/" || product || gameRoute;
+  useEffect(() => {
+    startSmoothScroll();
+  }, []);
   useEffect(() => {
     const meta = pages[
       known ? (product || gameRoute ? "/denge-kasabasi" : "/") : "/404"
