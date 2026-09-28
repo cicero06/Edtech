@@ -8,7 +8,12 @@ function Arrow({ external = false }: { external?: boolean }) {
 }
 function DemoLink({ light = false }: { light?: boolean }) {
   return (
-    <a className={`button ${light ? "light" : "primary"}`} href={site.demoUrl}>
+    <a
+      className={`button ${light ? "light" : "primary"}`}
+      href={site.demoUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
       Demoyu Oyna <Arrow />
     </a>
   );
@@ -75,6 +80,9 @@ function Header({ product }: { product: boolean }) {
               onClick={() => setOpen(false)}
             >
               {label}
+              {label === "Denge Kasabası" && (
+                <span className="nav-badge">YENİ</span>
+              )}
               {label === "İletişim" && <Arrow />}
             </a>
           ))}
@@ -161,6 +169,8 @@ function Footer() {
       </div>
       <div className="footer-links">
         <a href="/denge-kasabasi">Denge Kasabası</a>
+        <a href="/denge-kasabasi/oyna/">Başvuru sürümü (v1)</a>
+        <a href="/denge-kasabasi/ongosteri/">Ön gösterim (v2)</a>
         <a href="/#yaklasimimiz">Öğrenme yaklaşımımız</a>
         <a href={`mailto:${site.email}`}>
           Bize yazın <Arrow />
@@ -562,14 +572,20 @@ function Home() {
               Nasıl Oynanır? (2 Dk)
             </a>
           </div>
+          <p className="version-note">
+            Başvuru sürümü yayında ·{" "}
+            <a href="/denge-kasabasi/ongosteri/">
+              v2 yeni harita ön gösterimde <Arrow />
+            </a>
+          </p>
           <div className="hero-foot">
             <span className="little-orbit" aria-hidden="true">
               ✓
             </span>
             <span>
-              MEB kazanımlarına uygun,
+              Sosyal Bilgiler ve Fen kazanım
               <br />
-              10–12 yaş için tasarlandı.
+              alanlarıyla ilişkili, 10–12 yaş için.
             </span>
           </div>
         </div>
@@ -680,6 +696,7 @@ function Home() {
               </figcaption>
             </figure>
             <figure className="char-card">
+              <span className="soon-badge">YAKINDA</span>
               <div className="char-fig char-betul">
                 <img
                   src="/images/char-betul.png"
@@ -825,6 +842,10 @@ function Home() {
           </div>
           <div className="feature-copy">
             <span className="pill">10–12 YAŞ · OYNANABİLİR PROTOTİP</span>
+            <div className="version-chips">
+              <span>v1 · ETKİM başvuru sürümü</span>
+              <span>v2 · Ön gösterim</span>
+            </div>
             <h3>Denge Kasabası</h3>
             <p className="scenario-name">İlk senaryo: Su Krizi</p>
             <p>
@@ -851,6 +872,11 @@ function Home() {
           <p>
             Oyun, tek bir doğru cevap bulmak için değil; farklı kaynakları
             değerlendirmek ve sonuçlarını görmek için tasarlandı.
+            <span className="flow-note">
+              Aşağıdaki akış yayınlanan sürüme aittir. Ön gösterim sürümünde
+              profil ekranı, yenilenen belediye toplantısı ve duyuru turuyla
+              akış genişledi.
+            </span>
           </p>
         </div>
 
@@ -1142,6 +1168,11 @@ function Home() {
           </li>
           <li>
             <span className="step-dot" aria-hidden="true" />
+            <strong>Sonuç ekranı &amp; final raporu</strong>
+            <span>“30 gün sonra” sonuçları ve oturum değerlendirmesi</span>
+          </li>
+          <li>
+            <span className="step-dot" aria-hidden="true" />
             <strong>Pilot okul çalışmaları</strong>
             <span>Sınıf içi kullanım ve pedagojik etki ölçümü</span>
           </li>
@@ -1310,6 +1341,9 @@ function Product() {
             <span>denge ekseni: ev · tarım · doğa · su</span>
           </div>
         </div>
+        <p className="container stats-note">
+          İçerik sayıları ön gösterim (v2) sürümüne göredir.
+        </p>
       </section>
       {noticeOpen && (
         <div
@@ -1337,18 +1371,29 @@ function Product() {
               alt="Denge Kasabası genel haritası"
             />
             <span className="notice-modal__eyebrow">DUYURU</span>
-            <h2 id="notice-title">Yeni sürüm yakında!</h2>
+            <h2 id="notice-title">Yeni sürüm ön gösterimde!</h2>
             <p>
-              Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
-              senaryolarımızla çok yakında sizlerle buluşacağız.
+              ETKİM başvurusunda sunduğumuz sürüm (v1) yayında kalıyor;
+              başvurudan bu yana geliştirdiğimiz yeni sürüm (v2) ise ön
+              gösterim olarak açık — yeni harita, bölge bazlı ses sistemi,
+              gerçek yürüme animasyonları, öğrenci profili, yenilenen belediye
+              toplantısı ve duyuru turu içeriyor.
             </p>
-            <button
-              type="button"
-              className="notice-modal__button"
-              onClick={() => setNoticeOpen(false)}
-            >
-              Kapat
-            </button>
+            <div className="notice-modal__actions">
+              <a
+                className="notice-modal__button"
+                href="/denge-kasabasi/ongosteri/"
+              >
+                Ön gösterimi aç <Arrow />
+              </a>
+              <button
+                type="button"
+                className="notice-modal__button ghost"
+                onClick={() => setNoticeOpen(false)}
+              >
+                Kapat
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1387,6 +1432,25 @@ function Product() {
               <strong>Su Krizi</strong>ilk oynanabilir senaryo
             </span>
           </div>
+          <div className="version-box">
+            <div className="version-box__col">
+              <span className="vtag">v1 · Başvuru sürümü</span>
+              <p>ETKİM başvurusunda sunulan oynanabilir prototip.</p>
+              <a href="/denge-kasabasi/oyna/">
+                Bu sürümü oyna <Arrow />
+              </a>
+            </div>
+            <div className="version-box__col">
+              <span className="vtag new">v2 · Aktif geliştirme</span>
+              <p>
+                Başvurudan bu yana geliştirmeye devam ettik — yeni harita, ses
+                sistemi ve genişleyen akış.
+              </p>
+              <a href="/denge-kasabasi/ongosteri/">
+                Ön gösterimi aç <Arrow />
+              </a>
+            </div>
+          </div>
         </div>
       </section>
       <div className="container notice-slot" data-reveal>
@@ -1411,12 +1475,12 @@ function Product() {
                 />
               </div>
               <span className="notice-card__eyebrow">DUYURU</span>
-              <h3>Yeni sürüm yakında!</h3>
+              <h3>Yeni sürüm ön gösterimde!</h3>
               <p>
-                Oyunumuz güncelleme aşamasındadır. Yeni haritamız ve yeni
-                senaryolarımız çok yakında sizlerle buluşacak.
+                Başvurudan sonra da durmadık — yeni harita, ses sistemi ve
+                genişleyen görev akışıyla v2 ön gösterimi yayında.
               </p>
-              <span className="notice-card__cta">Detayları gör</span>
+              <span className="notice-card__cta">Neler değişti?</span>
             </div>
             <div className="notice-card__persona" aria-hidden="true">
               <div className="notice-card__bubble">
@@ -1454,7 +1518,7 @@ function Product() {
       <section className="section container">
         <div className="section-heading">
           <div>
-            <Eyebrow>MEVCUT DEMONUN İÇİNDEN</Eyebrow>
+            <Eyebrow>MEVCUT DEMONUN İÇİNDEN · v1</Eyebrow>
             <h2>
               Araştır. Karşılaştır.
               <br />
@@ -1530,6 +1594,58 @@ function Product() {
               nitel yan etkiler ve düşük yağış tahmini gösterilir.
             </p>
           </article>
+        </div>
+      </section>
+      <section className="section container v2-shots">
+        <div className="section-heading">
+          <div>
+            <Eyebrow>ÖN GÖSTERİMDEN · v2</Eyebrow>
+            <h2>
+              Aynı kasaba,
+              <br />
+              yeni haliyle.
+            </h2>
+          </div>
+          <p>
+            Başvurudan sonra geliştirdiğimiz sürümden gerçek ekranlar — yeni
+            harita, diyalog sistemi ve canlı kasaba görünümü.
+          </p>
+        </div>
+        <div className="screens screens--wide" data-reveal-group>
+          <figure>
+            <a
+              href="/images/v2-lina-map.png"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="/images/v2-lina-map.png"
+                loading="lazy"
+                alt="Ön gösterim sürümünden sinematik giriş — kasabanın genel görünümü ve Lina; görseli yeni sekmede büyüt"
+              />
+            </a>
+            <figcaption>
+              <strong>Sinematik giriş</strong>
+              <span>Video ile kasabaya yaklaşma ve rehber Lina ile tanışma.</span>
+            </figcaption>
+          </figure>
+          <figure>
+            <a
+              href="/images/v2-gameplay.png"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="/images/v2-gameplay.png"
+                loading="lazy"
+                alt="Ön gösterim sürümünden oyun içi görünüm — Merkez Park, diyalog penceresi ve gösterge çubuğu; görseli yeni sekmede büyüt"
+              />
+            </a>
+            <figcaption>
+              <strong>Oyun içi görünüm</strong>
+              <span>Diyaloglar, görev işaretleri ve denge eksenleri.</span>
+            </figcaption>
+          </figure>
         </div>
       </section>
       <section className="pedagogy">
@@ -1644,18 +1760,38 @@ function Product() {
           </h2>
           <p>Su Krizi’nin çalışan prototipini tarayıcınızda deneyin.</p>
         </div>
-        <div>
-          <DemoLink light />
-          <p>Demo ayrı bir sitede, yeni sekmede açılır.</p>
-          <a
-            className="button light preview-link"
-            href="/denge-kasabasi/ongosteri/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Yeni Sürüm Ön Gösterimi <Arrow />
-          </a>
-          <p>Yeni haritalı sürümün erken ön gösterimi — henüz yayında değil.</p>
+        <div className="demo-versions">
+          <div className="demo-version" data-reveal>
+            <span className="vtag">v1 · Başvuru sürümü</span>
+            <p>
+              ETKİM başvurusunda sunduğumuz oynanabilir prototip — aynen
+              başvurudaki haliyle yayında.
+            </p>
+            <DemoLink light />
+            <p className="demo-hint">Bu sitede, yeni sekmede açılır.</p>
+          </div>
+          <div className="demo-version" data-reveal>
+            <span className="vtag new">v2 · Aktif geliştirme</span>
+            <p>
+              Başvurudan sonra yayınladığımız ön gösterim. Aynı öğrenme
+              döngüsü, genişleyen deneyim:
+            </p>
+            <ul className="whats-new">
+              <li>Yeni harita ve bölge bazlı ortam sesleri</li>
+              <li>Gerçek yürüme animasyonları ve canlı kasaba</li>
+              <li>Öğrenci profili ve oturum kaydı</li>
+              <li>Kanıt rozetli belediye toplantısı ve gerekçe adımı</li>
+              <li>Planı halka duyurma turu ve yeni karakterler</li>
+            </ul>
+            <a
+              className="button light preview-link"
+              href="/denge-kasabasi/ongosteri/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ön Gösterimi Aç <Arrow />
+            </a>
+          </div>
         </div>
       </section>
       <Contact />
