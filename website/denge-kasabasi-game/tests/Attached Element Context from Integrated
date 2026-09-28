@@ -1,0 +1,45 @@
+Attached Element Context from Integrated Browser
+
+Element: section.product-hero.container
+
+URL: http://127.0.0.1:5173/denge-kasabasi
+
+HTML Path: main#main > section.product-hero.container
+
+Outer HTML:
+```html
+<section class="product-hero container"><a class="breadcrumb" href="/">Atlas <span aria-hidden="true">/</span></a><p class="eyebrow"><span aria-hidden="true"></span>DENGE KASABASI · İLK SENARYO</p><div class="product-hero-row"><div><h1>Bir kasabanın geleceği.<br><em>Senin kararların.</em></h1><p>Denge Kasabası: Su Krizi, 10–12 yaş çocukları su kaynakları azalan bir kasabada karar verici rolüne yerleştiren oyun tabanlı bir öğrenme prototipidir.</p></div><div class="product-hero-cta"><a class="button primary" href="/denge-kasabasi/oyna/">Demoyu Oyna <span aria-hidden="true">↗</span></a><span>Oynanabilir prototip · Yeni sekmede açılır</span></div></div><div class="product-banner"><img width="512" height="512" alt="Su kaynakları, evler ve tarım alanlarıyla Denge Kasabası’nın mevcut oyun görseli" fetchpriority="high" src="/images/town.jpg"><div><span>İLK SENARYO</span><strong>Su Krizi</strong><p>Suyu yönet. Etkileri düşün.<br>Kasabanın dengesini gözet.</p></div></div></section>
+```
+
+Dimensions:
+- top: 86px
+- left: 0px
+- width: 1387px
+- height: 833px
+
+CSS:
+```css
+* { box-sizing: border-box; }
+.container { width: min(1240px, calc(100% - 96px));
+  margin-inline: auto; }
+.product-hero { padding-top: 32px; }
+
+/* Inherited */
+body { color: #1e293b; font-size: 16px; line-height: 1.6; font-weight: 500 }
+:root { font-family: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #1e293b }
+
+/* Resolved values */
+box-sizing: border-box;
+color: rgb(30, 41, 59);
+display: block;
+font-family: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
+font-size: 16px;
+font-weight: 500;
+height: 833.117px;
+line-height: 25.6px;
+margin-inline-end: 73.5px;
+margin-inline-start: 73.5px;
+padding-top: 32px;
+unicode-bidi: isolate /*UA*/;
+width: 1240px;
+```

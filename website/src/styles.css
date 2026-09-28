@@ -2416,6 +2416,7 @@ section[id] {
   margin-top: 46px;
 }
 .char-card {
+  position: relative;
   margin: 0;
   background: #ffffff;
   border: 2px solid rgba(10, 79, 72, 0.1);
@@ -2595,7 +2596,7 @@ section[id] {
   margin: 40px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 18px;
   counter-reset: step;
 }
@@ -2837,5 +2838,207 @@ section[id] {
   .trust-grid,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Sürüm ayrımı (v1 başvuru / v2 ön gösterim) ---------- */
+.version-note {
+  margin-top: 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4a6260;
+}
+.version-note a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.version-note a svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+}
+
+.nav-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #3d2b00;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  vertical-align: 2px;
+}
+
+.soon-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--amber);
+  color: #3d2b00;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+.flow-note {
+  display: block;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b4d12;
+}
+
+.version-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.version-chips span,
+.vtag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(10, 79, 72, 0.25);
+  background: rgba(10, 79, 72, 0.06);
+  color: #0a4f48;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.version-chips span:last-child,
+.vtag.new {
+  border-color: rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.15);
+  color: #6b4d12;
+}
+
+.stats-note {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.version-box {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.version-box__col {
+  border: 2px solid rgba(10, 79, 72, 0.12);
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: #ffffff;
+}
+.version-box__col p {
+  margin: 10px 0 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #3d5654;
+}
+.version-box__col a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.version-box__col a svg {
+  width: 13px;
+  height: 13px;
+}
+
+.demo-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 320px;
+}
+.demo-version {
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 18px;
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.demo-version .vtag {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  color: #eaf3e0;
+}
+.demo-version .vtag.new {
+  border-color: var(--amber);
+  background: rgba(245, 158, 11, 0.9);
+  color: #3d2b00;
+}
+.demo-version p {
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #c8d6c9;
+}
+.whats-new {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #dbe7d4;
+}
+.demo-hint {
+  font-size: 11px !important;
+  margin-top: 10px !important;
+  opacity: 0.75;
+}
+.demo-version .button {
+  margin-top: 4px;
+}
+
+.notice-modal__actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+}
+.notice-modal__actions .notice-modal__button {
+  margin-top: 0;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.notice-modal__actions .notice-modal__button svg {
+  width: 14px;
+  height: 14px;
+}
+.notice-modal__button.ghost {
+  background: transparent;
+  border: 1.5px solid rgba(17, 59, 51, 0.25);
+  color: #113b33;
+}
+
+@media (max-width: 1080px) {
+  .version-box {
+    grid-template-columns: 1fr;
+  }
+  .demo-versions {
+    min-width: 0;
+    width: 100%;
   }
 }

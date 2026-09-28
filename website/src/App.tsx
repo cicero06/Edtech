@@ -1520,9 +1520,9 @@ function Product() {
           <div>
             <Eyebrow>MEVCUT DEMONUN İÇİNDEN · v1</Eyebrow>
             <h2>
-              Araştır. Karşılaştır.
+              Araştır, Karşılaştır 
               <br />
-              Kendi planını kur.
+              Kendi planını kur 
             </h2>
           </div>
           <p>
