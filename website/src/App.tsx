@@ -1113,6 +1113,50 @@ function Home() {
           </p>
         </div>
       </section>
+      <section className="roadmap container" aria-label="Yol haritası">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>YOL HARİTASI</Eyebrow>
+            <h2>
+              Bugünden başlayan,
+              <br />
+              adım adım büyüyen bir yol.
+            </h2>
+          </div>
+          <p>
+            Atlas için oyun bir ürün değil, bir öğrenme modeli. Denge Kasabası
+            bu modelin ilk kanıtı; her adımı gerçek kullanıcılarla
+            doğrulamayı hedefliyoruz.
+          </p>
+        </div>
+        <ol className="roadmap-steps" data-reveal-group>
+          <li className="done">
+            <span className="step-dot" aria-hidden="true" />
+            <strong>Oynanabilir prototip</strong>
+            <span>Yayında — tarayıcıda ücretsiz demo</span>
+          </li>
+          <li className="done">
+            <span className="step-dot" aria-hidden="true" />
+            <strong>Yeni sürüm ön gösterimi</strong>
+            <span>Yeni harita, karakterler ve görev akışı</span>
+          </li>
+          <li>
+            <span className="step-dot" aria-hidden="true" />
+            <strong>Pilot okul çalışmaları</strong>
+            <span>Sınıf içi kullanım ve pedagojik etki ölçümü</span>
+          </li>
+          <li>
+            <span className="step-dot" aria-hidden="true" />
+            <strong>Öğretmen araçları</strong>
+            <span>Rehber, oturum özetleri ve kurumsal lisanslama</span>
+          </li>
+          <li>
+            <span className="step-dot" aria-hidden="true" />
+            <strong>Yeni öğrenme dünyaları</strong>
+            <span>Enerji, atık, gıda ve kent temaları</span>
+          </li>
+        </ol>
+      </section>
       <section id="gelecek" className="section container">
         <div className="section-heading" data-reveal>
           <div>
@@ -1143,6 +1187,36 @@ function Home() {
           ))}
         </div>
       </section>
+      <section className="trust" aria-label="Güven ve etik">
+        <div className="container trust-inner" data-reveal-group>
+          <div className="trust-head">
+            <Eyebrow>GÜVENLE TASARLANDI</Eyebrow>
+            <h2>
+              Çocuklar keşfederken,
+              <br />
+              yetişkinlerin içi rahat olsun.
+            </h2>
+          </div>
+          <ul className="trust-grid">
+            <li>
+              <strong>Reklamsız deneyim</strong>
+              <span>Reklam, satın alma yönlendirmesi ve dikkat tuzakları yok.</span>
+            </li>
+            <li>
+              <strong>Veri toplamayan tasarım</strong>
+              <span>Oturum yalnızca tarayıcıda tutulur; kişisel veri sunucuya gönderilmez.</span>
+            </li>
+            <li>
+              <strong>Yaşa uygun içerik</strong>
+              <span>10–12 yaş için tasarlanmış dil, tempo ve görsel dünya.</span>
+            </li>
+            <li>
+              <strong>Öğretmen gözetiminde kurgu</strong>
+              <span>Sınıf içi tartışma ve değerlendirmeyle birlikte önerilir.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
       <section className="educators container">
         <div data-reveal>
           <Eyebrow>EĞİTİMCİLER VE KURUMLAR İÇİN</Eyebrow>
@@ -1169,6 +1243,20 @@ function Home() {
           <a className="text-link" href={`mailto:${site.email}`}>
             Kullanım olanaklarını konuşalım <Arrow />
           </a>
+          <div className="pilot-cta">
+            <strong>Pilot programı</strong>
+            <p>
+              Sınıfında denemek isteyen okullarla küçük ölçekli pilot
+              çalışmalar planlıyoruz. İlk pilot okullardan biri olmak
+              isterseniz yazın.
+            </p>
+            <a
+              className="button primary"
+              href={`mailto:${site.email}?subject=${encodeURIComponent("Denge Kasabası Pilot Programı")}`}
+            >
+              Pilot okul olmak istiyoruz <Arrow />
+            </a>
+          </div>
         </div>
       </section>
       <Contact />
@@ -1203,6 +1291,26 @@ function Product() {
         <span className="loader-note">Kasaba hazırlanıyor…</span>
       </div>
       <SeqCinematic />
+      <section className="stats-strip" aria-label="Oyun içeriği özeti">
+        <div className="container stats-grid" data-reveal-group>
+          <div className="stat">
+            <strong>5</strong>
+            <span>keşfedilecek bölge</span>
+          </div>
+          <div className="stat">
+            <strong>10+</strong>
+            <span>farklı gündemli kasabalı</span>
+          </div>
+          <div className="stat">
+            <strong>5</strong>
+            <span>kanıta dayalı müdahale paketi</span>
+          </div>
+          <div className="stat">
+            <strong>4</strong>
+            <span>denge ekseni: ev · tarım · doğa · su</span>
+          </div>
+        </div>
+      </section>
       {noticeOpen && (
         <div
           className="notice-modal"
@@ -1452,6 +1560,27 @@ function Product() {
               puanları veya kanıtlanmış öğrenme sonuçları değildir. Pedagojik
               etkiyi pilot çalışmalarla değerlendirmek hedeflenmektedir.
             </p>
+          </div>
+          <div className="pedagogy-map">
+            <span className="pedagogy-map-title">OYUN MEKANİĞİ → BECERİ</span>
+            <ul>
+              <li>
+                <span>Kanıt kartlarını karşılaştırma</span>
+                <em>Bilgi okuryazarlığı · kaynak sorgulama</em>
+              </li>
+              <li>
+                <span>Bütçeyle müdahale planı kurma</span>
+                <em>Karar verme · önceliklendirme</em>
+              </li>
+              <li>
+                <span>Paydaşları dinleme</span>
+                <em>Empati · çoklu perspektif</em>
+              </li>
+              <li>
+                <span>Yeni kanıtla planı revize etme</span>
+                <em>Yansıtıcı düşünme · uyum</em>
+              </li>
+            </ul>
           </div>
         </div>
       </section>

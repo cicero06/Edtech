@@ -2585,3 +2585,257 @@ section[id] {
 .demo-section .preview-link {
   margin-top: 14px;
 }
+
+/* ---------- Yol haritası ---------- */
+.roadmap {
+  padding-block: 30px 10px;
+}
+.roadmap-steps {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+  counter-reset: step;
+}
+.roadmap-steps li {
+  position: relative;
+  background: #ffffff;
+  border: 2px solid rgba(10, 79, 72, 0.1);
+  border-radius: 20px;
+  padding: 22px 18px 18px;
+  box-shadow: 0 12px 26px rgba(10, 79, 72, 0.06);
+}
+.roadmap-steps li::after {
+  content: "";
+  position: absolute;
+  top: 26px;
+  left: 100%;
+  width: 18px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(10, 79, 72, 0.35) 0 6px,
+    transparent 6px 11px
+  );
+}
+.roadmap-steps li:last-child::after {
+  display: none;
+}
+.step-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid rgba(10, 79, 72, 0.25);
+  background: var(--cream);
+  margin-bottom: 12px;
+}
+.roadmap-steps li.done .step-dot {
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.18);
+}
+.roadmap-steps li.done {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+.roadmap-steps strong {
+  display: block;
+  font-family: "Fredoka", "Arial Rounded MT Bold", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #042b2a;
+}
+.roadmap-steps li span:last-child {
+  display: block;
+  margin-top: 7px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #4a6260;
+  font-weight: 600;
+}
+
+/* ---------- Güven bandı ---------- */
+.trust {
+  padding-block: 60px;
+}
+.trust-inner {
+  background: linear-gradient(160deg, #0b3c35 0%, #0a4f48 100%);
+  border-radius: 30px;
+  padding: 52px 54px;
+  color: #f2f7ef;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 44px;
+  align-items: center;
+}
+.trust-head .eyebrow {
+  color: var(--amber);
+}
+.trust-head h2 {
+  color: #f2f7ef;
+  font-size: clamp(28px, 3vw, 40px);
+}
+.trust-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.trust-grid li {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.trust-grid strong {
+  display: block;
+  font-family: "Fredoka", sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.trust-grid li span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(242, 247, 239, 0.78);
+  font-weight: 600;
+}
+
+/* ---------- Pilot CTA ---------- */
+.pilot-cta {
+  margin-top: 26px;
+  background: #ffffff;
+  border: 2px solid rgba(245, 158, 11, 0.5);
+  border-radius: 22px;
+  padding: 24px 26px;
+  box-shadow: 0 14px 30px rgba(10, 79, 72, 0.09);
+}
+.pilot-cta > strong {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: var(--green-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.pilot-cta p {
+  margin: 14px 0 18px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #41555a;
+  font-weight: 600;
+}
+
+/* ---------- Ürün istatistik şeridi ---------- */
+.stats-strip {
+  padding: 44px 0 8px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.stat {
+  text-align: center;
+  background: #ffffff;
+  border: 2px solid rgba(10, 79, 72, 0.1);
+  border-radius: 20px;
+  padding: 24px 16px 20px;
+  box-shadow: 0 12px 26px rgba(10, 79, 72, 0.07);
+}
+.stat strong {
+  display: block;
+  font-family: "Fredoka", sans-serif;
+  font-size: 40px;
+  font-weight: 600;
+  color: var(--green);
+  line-height: 1;
+}
+.stat span {
+  display: block;
+  margin-top: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #4a6260;
+  line-height: 1.45;
+}
+
+/* ---------- Pedagoji eşlemesi ---------- */
+.pedagogy-map {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  background: #ffffff;
+  border: 2px solid rgba(10, 79, 72, 0.1);
+  border-radius: 20px;
+  padding: 26px 28px;
+  box-shadow: 0 12px 26px rgba(10, 79, 72, 0.07);
+}
+.pedagogy-map-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--green);
+  margin-bottom: 18px;
+}
+.pedagogy-map ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 28px;
+}
+.pedagogy-map li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(10, 79, 72, 0.1);
+}
+.pedagogy-map li span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #042b2a;
+}
+.pedagogy-map li em {
+  font-style: normal;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4a6260;
+}
+
+@media (max-width: 1080px) {
+  .roadmap-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .roadmap-steps li::after {
+    display: none;
+  }
+  .trust-inner {
+    grid-template-columns: 1fr;
+    padding: 40px 30px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pedagogy-map ul {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .roadmap-steps,
+  .trust-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
