@@ -29,6 +29,8 @@ export const GameEvents = {
   OPEN_SOLUTION: 'open-solution',
   /** React -> Phaser: the player submitted a solution package within budget. */
   PLAN_SUBMITTED: 'plan-submitted',
+  /** React -> Phaser: the speaker toggle changed; Phaser mirrors it to its sound manager. */
+  AUDIO_MUTED: 'audio-muted',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -75,6 +77,12 @@ export interface PlanSubmittedPayload {
   solutionIds: string[];
   /** Total cost of the picked solutions, in TL. */
   totalCost: number;
+  /** The player's one-line justification - saved for the final report. */
+  rationale?: string;
+}
+
+export interface AudioMutedPayload {
+  muted: boolean;
 }
 
 /** Maps each event name to its payload type. `void` means "no payload". */
@@ -90,4 +98,5 @@ export interface GameEventPayloads {
   [GameEvents.EVIDENCE_SUBMITTED]: EvidenceSubmittedPayload;
   [GameEvents.OPEN_SOLUTION]: void;
   [GameEvents.PLAN_SUBMITTED]: PlanSubmittedPayload;
+  [GameEvents.AUDIO_MUTED]: AudioMutedPayload;
 }

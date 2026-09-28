@@ -100,6 +100,33 @@ export const TextureKeys = {
 
 export type TextureKey = (typeof TextureKeys)[keyof typeof TextureKeys];
 
+export const SoundKeys = {
+  AMBIENCE_BIRDS: 'ambience-birds',
+  AMBIENCE_FOREST: 'ambience-forest',
+  AMBIENCE_CITY: 'ambience-city',
+  STEP: 'step',
+  DIALOGUE: 'dialogue',
+  TICK: 'tick',
+  COMPLETE: 'complete',
+  ALERT: 'alert',
+  PAGE: 'page',
+} as const;
+
+export type SoundKey = (typeof SoundKeys)[keyof typeof SoundKeys];
+
+/** Files live in `public/assets/audio/`; every sound loads with `this.load.audio()`. */
+export const AUDIO_ASSETS: readonly { key: SoundKey; path: string }[] = [
+  { key: SoundKeys.AMBIENCE_BIRDS, path: 'assets/audio/ambience-birds.mp3' },
+  { key: SoundKeys.AMBIENCE_FOREST, path: 'assets/audio/ambience-forest.mp3' },
+  { key: SoundKeys.AMBIENCE_CITY, path: 'assets/audio/ambience-city.mp3' },
+  { key: SoundKeys.STEP, path: 'assets/audio/step.mp3' },
+  { key: SoundKeys.DIALOGUE, path: 'assets/audio/dialogue.mp3' },
+  { key: SoundKeys.TICK, path: 'assets/audio/tick.mp3' },
+  { key: SoundKeys.COMPLETE, path: 'assets/audio/complete.mp3' },
+  { key: SoundKeys.ALERT, path: 'assets/audio/alert.mp3' },
+  { key: SoundKeys.PAGE, path: 'assets/audio/page.mp3' },
+];
+
 export interface ImageAsset {
   key: TextureKey;
   path: string;
@@ -201,6 +228,9 @@ export interface SpritesheetAsset extends ImageAsset {
   /** Frames per row, for readable frame-index maths. */
   columns: number;
   rows: number;
+  /** Transparent border around the sheet and between frames (anti-bleed). */
+  margin?: number;
+  spacing?: number;
 }
 
 /**
@@ -218,24 +248,24 @@ export interface SpritesheetAsset extends ImageAsset {
 export const SPRITESHEET_ASSETS: readonly SpritesheetAsset[] = [
   {
     key: TextureKeys.PLAYER,
-    path: 'assets/characters/player-boy.png',
-    width: 164,
-    height: 91,
-    frameWidth: 41,
-    frameHeight: 91,
-    columns: 4,
-    rows: 1,
+    path: 'assets/characters/playerboy_walk.png',
+    width: 753,
+    height: 1608,
+    frameWidth: 251,
+    frameHeight: 402,
+    columns: 3,
+    rows: 4,
     smooth: true,
   },
   {
     key: TextureKeys.LINA,
-    path: 'assets/characters/lina.png',
-    width: 176,
-    height: 86,
-    frameWidth: 44,
-    frameHeight: 86,
-    columns: 4,
-    rows: 1,
+    path: 'assets/characters/lina_walk.png',
+    width: 852,
+    height: 1564,
+    frameWidth: 284,
+    frameHeight: 391,
+    columns: 3,
+    rows: 4,
     smooth: true,
   },
   {
@@ -347,10 +377,24 @@ export const PlayerAnims = {
 
 export type PlayerAnimKey = (typeof PlayerAnims)[keyof typeof PlayerAnims];
 
-/** Strip order is [down, right, up, left]; every "animation" is one frame. */
+/**
+ * The 3x4 walk sheets: rows are [down, right, up, left] and each row holds
+ * [left-foot, passing/idle, right-foot]. Playing the row as [0,1,2,1] loops a
+ * smooth gait; the middle frame is the standing pose.
+ */
 export const PLAYER_ANIM_FRAMES = {
-  [PlayerAnims.WALK_DOWN]: { start: 0, end: 0, idle: 0 },
-  [PlayerAnims.WALK_RIGHT]: { start: 1, end: 1, idle: 1 },
-  [PlayerAnims.WALK_UP]: { start: 2, end: 2, idle: 2 },
-  [PlayerAnims.WALK_LEFT]: { start: 3, end: 3, idle: 3 },
+  [PlayerAnims.WALK_DOWN]: { frames: [0, 1, 2, 1], idle: 1 },
+  [PlayerAnims.WALK_RIGHT]: { frames: [3, 4, 5, 4], idle: 4 },
+  [PlayerAnims.WALK_UP]: { frames: [6, 7, 8, 7], idle: 7 },
+  [PlayerAnims.WALK_LEFT]: { frames: [9, 10, 11, 10], idle: 10 },
 } as const;
+
+/** Lina's sheet shares the player's 3x4 layout; keyed by direction name. */
+export const LINA_ANIM_FRAMES = {
+  down: [0, 1, 2, 1],
+  right: [3, 4, 5, 4],
+  up: [6, 7, 8, 7],
+  left: [9, 10, 11, 10],
+} as const;
+
+export const LINA_IDLE_FRAMES = { down: 1, right: 4, up: 7, left: 10 } as const;

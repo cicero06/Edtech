@@ -5,6 +5,7 @@
  */
 
 import { TextureKeys, type TextureKey } from './assets';
+import type { DialogueChoice } from '../events/gameEvents';
 import type { StatChanges } from './stats';
 
 export type InvestigationId = 'belediye' | 'baraj' | 'tarim' | 'konut' | 'park';
@@ -242,6 +243,34 @@ export function investigationCard(id: string): InvestigationCard | undefined {
 /** The municipality's spendable budget. All costs are round multiples of ₺10k. */
 export const SOLUTION_BUDGET = 1_000_000;
 
+/** Stakeholder axis a solution serves - feeds the meeting's balance meter. */
+export type Stakeholder = 'ev' | 'tarim' | 'park' | 'su';
+
+/** When a measure pays off: immediate fix vs long-term infrastructure. */
+export type Horizon = 'hemen' | 'orta' | 'uzun';
+
+export const STAKEHOLDER_LABELS: Record<Stakeholder, string> = {
+  ev: '🏠 Evler',
+  tarim: '🌾 Tarım',
+  park: '🌳 Park',
+  su: '💧 Su',
+};
+
+export const HORIZON_LABELS: Record<Horizon, string> = {
+  hemen: 'Hemen',
+  orta: 'Orta vade',
+  uzun: 'Uzun vade',
+};
+
+/** Short label naming the evidence a solution answers (shown on its card). */
+export const RESOLVES_LABELS: Record<InvestigationId, string> = {
+  belediye: 'Başkan’ın kaygısı',
+  baraj: 'Aylin’in rezervuar verisi',
+  tarim: 'Rıza’nın tarlaları',
+  konut: 'Nuri Amca’nın kaçağı',
+  park: 'Kemal’in fıskiyeleri',
+};
+
 export interface SolutionCard {
   id: string;
   icon: string;
@@ -253,6 +282,12 @@ export interface SolutionCard {
   /** Why it costs what it costs - makes the price meaningful, not abstract. */
   whyCost: string;
   effects: StatChanges;
+  /** The district evidence this measure directly answers. */
+  resolves: InvestigationId;
+  /** Whose needs it serves - drives the balance meter in the panel. */
+  serves: Stakeholder[];
+  /** How soon the town feels it. */
+  horizon: Horizon;
 }
 
 export const SOLUTION_CARDS: readonly SolutionCard[] = [
@@ -264,6 +299,9 @@ export const SOLUTION_CARDS: readonly SolutionCard[] = [
     text: 'Parktaki fıskiyeler ve süs havuzları kısa süreliğine kapatılır.',
     whyCost: 'Neredeyse bedava — sadece vanalar kapatılır.',
     effects: { water: 5, society: -5 },
+    resolves: 'park',
+    serves: ['su'],
+    horizon: 'hemen',
   },
   {
     id: 'saving-campaign',
@@ -273,6 +311,9 @@ export const SOLUTION_CARDS: readonly SolutionCard[] = [
     text: 'Evlerde suyu daha dikkatli kullanmak için kasaba çapında kampanya.',
     whyCost: 'Afiş, broşür ve okul etkinlikleri ucuzdur ama etkisi sınırlıdır.',
     effects: { water: 10, society: 3 },
+    resolves: 'konut',
+    serves: ['ev', 'su'],
+    horizon: 'orta',
   },
   {
     id: 'repair-pipes',
@@ -282,6 +323,9 @@ export const SOLUTION_CARDS: readonly SolutionCard[] = [
     text: 'Sokaklardaki eski borular onarılır; kaybolan su geri kazanılır.',
     whyCost: 'Boru değiştirmek iş makinesi ve ekip ister — orta maliyet.',
     effects: { water: 20, economy: -5 },
+    resolves: 'konut',
+    serves: ['su', 'ev'],
+    horizon: 'hemen',
   },
   {
     id: 'drip-irrigation',
@@ -291,6 +335,9 @@ export const SOLUTION_CARDS: readonly SolutionCard[] = [
     text: 'Tarlalara damla sulama sistemi kurulması için çiftçilere destek.',
     whyCost: 'Her tarlaya boru ve sistem döşenir — pahalı ama kalıcı kazanç.',
     effects: { water: 25, economy: 10, society: 5 },
+    resolves: 'tarim',
+    serves: ['tarim', 'su'],
+    horizon: 'orta',
   },
   {
     id: 'rain-harvest',
@@ -300,5 +347,106 @@ export const SOLUTION_CARDS: readonly SolutionCard[] = [
     text: 'Binaların çatı suları depolanıp bahçe ve park sulamasında kullanılır.',
     whyCost: 'Depo ve tesisat kurulumu en pahalısı — ama uzun vadede en büyük kazanç.',
     effects: { water: 30, environment: 15, economy: -10 },
+    resolves: 'baraj',
+    serves: ['su', 'park'],
+    horizon: 'uzun',
   },
 ] as const;
+
+/**
+ * The mayor's closing remarks, compiled from which stakeholders the plan
+ * actually serves - the player hears how the decision lands on real people.
+ */
+export function mayorReactionPages(solutionIds: readonly string[]): string[] {
+  const picked = new Set(solutionIds);
+  const lines: string[] = [];
+
+  if (picked.has('repair-pipes'))
+    lines.push('Nuri Amca ve mahalle sakinleri sokaktaki kaçağın biteceğini duyunca sevinecek.');
+  if (picked.has('drip-irrigation'))
+    lines.push('Rıza’nın tarlaları rahat bir nefes alacak — hem su kazanırız hem ürünler.');
+  if (picked.has('fountains-off'))
+    lines.push('Kemal fıskiyelerin kapanmasına biraz üzülecek ama park için su ayırdığımızı anlıyor.');
+  if (picked.has('rain-harvest'))
+    lines.push('Yağmur suyu depoları uzun vadede en büyük kazanç — Kemal parkı onlarla sulayacak.');
+  if (picked.has('saving-campaign'))
+    lines.push('Evlerde tasarruf kampanyası küçük görünür ama herkesi bu işe ortak eder.');
+
+  const gaps: string[] = [];
+  if (!picked.has('repair-pipes') && !picked.has('saving-campaign'))
+    gaps.push('evler ve sokak kaçakları bekleyebilir');
+  if (!picked.has('drip-irrigation')) gaps.push('tarlalar zorlanabilir');
+  if (!picked.has('rain-harvest') && !picked.has('fountains-off'))
+    gaps.push('parklar susuz kalabilir');
+  if (gaps.length) lines.push(`Yalnız dikkat: ${gaps.join(', ')} — onları da düşünmemiz gerekecek.`);
+
+  lines.push('Güzel düşünülmüş bir plan. Şimdi git, kararı kasaba halkına sen duyur — panoya da afişi asmayı unutma!');
+  return lines;
+}
+
+// =========================================================================
+// ANNOUNCEMENT ROUND — chapter close: the plan meets the people
+// =========================================================================
+
+/** The four residents the player must tell about the approved plan. */
+export const ANNOUNCE_NPC_IDS: readonly string[] = [
+  'muhendis-aylin',
+  'ciftci-riza',
+  'nuri-amca',
+  'isci-kemal',
+] as const;
+
+/** The civic notice board where the plan poster is hung (next to the municipality). */
+export const NOTICE_BOARD = { x: 1090, y: 1215, radius: 90 } as const;
+
+/**
+ * Each resident reacts to what the submitted plan actually picked - chosen
+ * measures get joy, missed ones get patient disappointment. Returns null for
+ * NPCs outside the announcement round.
+ */
+export function npcPlanReaction(npcId: string, solutionIds: readonly string[]): string | null {
+  const picked = new Set(solutionIds);
+  switch (npcId) {
+    case 'muhendis-aylin':
+      return picked.has('rain-harvest')
+        ? 'Yağmur suyu depoları ha? Rezervi uzun vadede en çok rahatlatacak hamle bu - akıllıca seçim. Seviyeyi birlikte izleyeceğiz.'
+        : 'Plan uygulamaya geçti, ölçümlere devam edeceğim. Rezervin toparlanması zaman alır ama doğru adım attın.';
+    case 'ciftci-riza':
+      return picked.has('drip-irrigation')
+        ? 'Damla sulama desteği! Tam da umduğum şey - suyu köke veririz, hem tarla hem cebimiz rahatlar. Sağ ol evladım!'
+        : 'Damla sulama bu sefer olmadı demek... Olsun, suyu yine idareli kullanırız. Belki bir sonraki bütçede.';
+    case 'nuri-amca':
+      if (picked.has('repair-pipes'))
+        return 'Sokaktaki kaçak onarılacak mı? Vay be! Kırk yıldır kimse el atmadı şu boruya. Eline sağlık evladım!';
+      if (picked.has('saving-campaign'))
+        return 'Tasarruf kampanyası ha? Ben üzerime düşeni yaparım - musluklar kapanacak, bahçe az sulanacak.';
+      return 'Kaçak hâlâ akıyor ama bekleriz artık. Sen elinden geleni yaptın evladım.';
+    case 'isci-kemal':
+      if (picked.has('rain-harvest'))
+        return 'Çatı suları parka mı gelecek? Ağaçlar bayram edecek! Vanaları ben ayarlarım, sen merak etme.';
+      if (picked.has('fountains-off'))
+        return 'Fıskiyeler kapanıyor... Biraz üzülüyorum ama ağaçlara su ayırdığınızı biliyorum - doğru karar.';
+      return 'Plan ne oldu bakalım? Parkı günlük sulamaya devam edeceğiz ama idareli olacağım, söz.';
+    default:
+      return null;
+  }
+}
+
+/** Lina's reflective closer - asked once every resident knows the plan. */
+export const LINA_CLOSING_PAGES: readonly string[] = [
+  'Herkese haberi verdin, afiş de panoda! Kasaba artık planı biliyor.',
+  'Karar vermek kolay değildi, değil mi? Söyle bakalım - bu planı hazırlarken seni en çok ne düşündürdü?',
+] as const;
+
+export const LINA_CLOSING_CHOICES: readonly DialogueChoice[] = [
+  { id: 'closing-budget', text: 'Bütçe yetmedi, hepsini yapamadım' },
+  { id: 'closing-fairness', text: 'Herkesi memnun edemedim' },
+  { id: 'closing-evidence', text: 'Kanıtlar olmasa karar veremezdim' },
+] as const;
+
+/** Lina's spoken reply to each reflective pick - shown as a toast over her. */
+export const LINA_CLOSING_FEEDBACK: Record<string, string> = {
+  'closing-budget': 'Aynen öyle - sınırlı kaynakla seçim yapmak gerçek hayattaki en zor iş!',
+  'closing-fairness': 'Kimseyi dışarıda bırakmak istemezdin, biliyorum. Denge işte tam da bu demek.',
+  'closing-evidence': 'İşte bu! Kanıt olmadan verilen karar tahmindir - sen gerçek bir araştırmacı gibi davrandın.',
+};

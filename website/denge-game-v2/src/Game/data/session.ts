@@ -18,6 +18,7 @@ export type QuestStage =
   | 'investigate'
   | 'report'
   | 'meeting'
+  | 'announce'
   | 'done';
 
 export interface PlayerProfile {
@@ -35,6 +36,8 @@ export interface NotebookEntry {
 export interface SubmittedPlan {
   solutionIds: string[];
   totalCost: number;
+  /** The student's own justification for the package. */
+  rationale?: string;
 }
 
 export interface GameSession {
@@ -44,7 +47,13 @@ export interface GameSession {
   notebook: NotebookEntry[];
   evidence: string[];
   plan: SubmittedPlan | null;
+  /** Announce round: residents already told about the plan. */
+  announcedNpcIds: string[];
+  /** Announce round: the plan poster was hung on the civic notice board. */
+  posterHung: boolean;
   stats: GameStats;
+  /** Speaker toggle - remembered across sessions. */
+  muted: boolean;
   savedAt: number;
 }
 
@@ -98,7 +107,10 @@ export function newSession(player: PlayerProfile): GameSession {
     notebook: [],
     evidence: [],
     plan: null,
+    announcedNpcIds: [],
+    posterHung: false,
     stats: { ...INITIAL_STATS },
+    muted: false,
     savedAt: Date.now(),
   };
 }

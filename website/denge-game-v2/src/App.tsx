@@ -28,6 +28,8 @@ import {
   type NotebookEntry,
   type PlayerProfile,
 } from './Game/data/session';
+import { isMuted, playSfx, setMuted } from './Game/audio';
+import { SoundKeys } from './Game/data/assets';
 
 /**
  * React owns all UI: the HUD, the dialogue card and the decision buttons.
@@ -49,6 +51,7 @@ function App() {
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [district, setDistrict] = useState<string>('—');
+  const [muted, setMutedState] = useState(isMuted());
 
   /** Merge-write into the mock session store; no-op until a profile exists. */
   const persist = (patch: Partial<GameSession>) => {
@@ -116,10 +119,12 @@ function App() {
       persist({ notebook: next });
     }
     setInvestigation(null);
+    playSfx(SoundKeys.COMPLETE, 0.8);
     EventBus.emit(GameEvents.INVESTIGATION_COMPLETED, { cardId });
   };
 
   const toggleEvidence = (cardId: string) => {
+    playSfx(SoundKeys.TICK, 0.7);
     setEvidencePicked((previous) => {
       const next = new Set(previous);
       if (next.has(cardId)) next.delete(cardId);
@@ -136,15 +141,20 @@ function App() {
     EventBus.emit(GameEvents.EVIDENCE_SUBMITTED, { confirmedIds });
   };
 
-  const submitPlan = (selected: SolutionCard[], totalCost: number) => {
+  const submitPlan = (selected: SolutionCard[], totalCost: number, rationale: string) => {
     const nextStats = applyStatChanges(stats, ...selected.map((c) => c.effects));
     setStats(nextStats);
     setSolutionOpen(false);
     persist({
-      plan: { solutionIds: selected.map((c) => c.id), totalCost },
+      plan: { solutionIds: selected.map((c) => c.id), totalCost, rationale },
       stats: nextStats,
     });
-    EventBus.emit(GameEvents.PLAN_SUBMITTED, { solutionIds: selected.map((c) => c.id), totalCost });
+    playSfx(SoundKeys.ALERT, 0.9);
+    EventBus.emit(GameEvents.PLAN_SUBMITTED, {
+      solutionIds: selected.map((c) => c.id),
+      totalCost,
+      rationale,
+    });
   };
 
   /** Mock login: a fresh session starts when the profile form is submitted. */
@@ -164,6 +174,8 @@ function App() {
     setNotebook(session.notebook);
     setStats(session.stats);
     setEvidencePicked(new Set(session.evidence));
+    setMuted(session.muted);
+    setMutedState(session.muted);
     setIntroStage('complete');
   };
 
@@ -227,11 +239,26 @@ function App() {
             className="notebook-button"
             aria-label="Kanıt defterini aç"
             aria-expanded={notebookOpen}
-            onClick={() => setNotebookOpen((open) => !open)}
+            onClick={() => {
+              playSfx(SoundKeys.PAGE, 0.8);
+              setNotebookOpen((open) => !open);
+            }}
           >
             📒<span className="notebook-count">{notebook.length}</span>
           </button>
         )}
+
+        <button
+          className="mute-button"
+          aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}
+          aria-pressed={muted}
+          onClick={() => {
+            setMuted(!muted);
+            setMutedState(!muted);
+          }}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
 
         {notebookOpen && (
           <aside className="notebook-panel" aria-label="Kanıt defteri">

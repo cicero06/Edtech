@@ -837,6 +837,28 @@ canvas {
   font-weight: 800;
 }
 
+.mute-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(12, 30, 24, 0.72);
+  backdrop-filter: blur(5px);
+  font-size: 18px;
+}
+
+/* The speaker always sits top-right; the notebook slides left when present. */
+.notebook-button {
+  right: 66px;
+}
+
 .notebook-panel {
   position: absolute;
   top: 62px;
@@ -1328,6 +1350,125 @@ canvas {
   background: #0d7a5f;
   border-color: #0d7a5f;
   color: #fff;
+}
+
+/* --- meeting extras: balance meter, card badges, rationale step --- */
+
+.balance-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin: 0 0 10px;
+  border-radius: 12px;
+  background: rgba(13, 122, 95, 0.06);
+  border: 1.5px dashed #b9cfc4;
+}
+
+.balance-meter-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #5a7a6e;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-right: 4px;
+}
+
+.balance-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid #d8e3dc;
+  background: #f4f8f5;
+  color: #9aa8a0;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.balance-chip.lit {
+  background: #0d7a5f;
+  border-color: #0d7a5f;
+  color: #fff;
+}
+
+.solution-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.badge-evidence {
+  background: #fff3d6;
+  color: #7a5b12;
+}
+
+.badge-horizon {
+  background: #e3f0fb;
+  color: #20567e;
+}
+
+.rationale-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1.5px solid #e5ece8;
+}
+
+.rationale-question {
+  margin: 0;
+  font-size: 14px;
+  color: #24332d;
+}
+
+.rationale-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rationale-chip {
+  text-align: left;
+  padding: 9px 14px;
+  border: 1.5px solid #cfe0d6;
+  border-radius: 10px;
+  background: #f8fbf9;
+  color: #24332d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rationale-chip.picked {
+  border-color: #0d7a5f;
+  background: #e6f4ef;
+}
+
+.rationale-input {
+  padding: 9px 12px;
+  border: 1.5px solid #cfe0d6;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.rationale-input:focus {
+  border-color: #0d7a5f;
+}
+
+.rationale-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 /* ================================= */
