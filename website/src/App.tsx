@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { site, pages } from "./config";
-import { approaches, futureAreas, flow } from "./content";
+import {
+  approaches,
+  futureAreas,
+  flow,
+  partnerModels,
+  partnerAudiences,
+  partnerSteps,
+  posts,
+  type Post,
+} from "./content";
 import { gsap, prefersReducedMotion, startSmoothScroll } from "./motion";
 
 function Arrow({ external = false }: { external?: boolean }) {
@@ -41,9 +50,11 @@ const links = [
   ["Yaklaşımımız", "/#yaklasimimiz"],
   ["Ekip", "/#hakkimizda"],
   ["Eğitimciler", "/#egitimciler"],
+  ["Kurumlar", "/kurumlar"],
+  ["Blog", "/blog"],
   ["İletişim", "/#iletisim"],
 ];
-function Header({ product }: { product: boolean }) {
+function Header({ current }: { current: string }) {
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   return (
@@ -74,9 +85,7 @@ function Header({ product }: { product: boolean }) {
             <a
               key={href}
               href={href}
-              aria-current={
-                product && href === "/denge-kasabasi" ? "page" : undefined
-              }
+              aria-current={current === href ? "page" : undefined}
               onClick={() => setOpen(false)}
             >
               {label}
@@ -178,6 +187,8 @@ function Footer() {
           <span className="footer-head">ŞİRKET</span>
           <a href="/#hakkimizda">Hakkımızda &amp; Ekip</a>
           <a href="/#yaklasimimiz">Öğrenme yaklaşımımız</a>
+          <a href="/kurumlar">Kurumlarla iş birliği</a>
+          <a href="/blog">Blog &amp; notlar</a>
           <a href={`mailto:${site.email}`}>
             Bize yazın <Arrow />
           </a>
@@ -1256,6 +1267,11 @@ function Home() {
             </article>
           ))}
         </div>
+        <p className="method-note" data-reveal>
+          Denge Kasabası tek başına son ürün değil; uzun vadede ortak bir Atlas
+          hesabı ve öğretmen araçlarıyla birleşen bir öğrenme dünyası vizyonunun
+          ilk adımıdır.
+        </p>
       </section>
       <section className="trust" aria-label="Güven ve etik">
         <div className="container trust-inner" data-reveal-group>
@@ -1328,6 +1344,38 @@ function Home() {
             </a>
           </div>
         </div>
+      </section>
+      <section id="kurumlar" className="section container partners-teaser">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>KURUMLARLA İŞ BİRLİĞİ</Eyebrow>
+            <h2>
+              Öğrenme dünyalarını
+              <br />
+              <em>birlikte kuralım.</em>
+            </h2>
+          </div>
+          <p>
+            Belediyeler, şirketler, üniversiteler ve STK&apos;lar için sponsorlu
+            senaryolar ve kuruma özel öğrenme deneyimleri tasarlıyoruz.
+          </p>
+        </div>
+        <div className="partner-cards" data-reveal-group>
+          {partnerModels.slice(0, 3).map(([title, lead, body]) => (
+            <article key={title}>
+              <h3>{title}</h3>
+              <p className="lead">{lead}</p>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+        <p className="method-note" data-reveal>
+          Bunlar hedeflediğimiz iş birliği modelleridir; kapsam ve koşullar
+          kurum görüşmeleriyle şekillenir.
+        </p>
+        <a className="text-link" href="/kurumlar" data-reveal>
+          İş birliği olanaklarını inceleyin <Arrow />
+        </a>
       </section>
       <Contact />
     </div>
@@ -1837,6 +1885,224 @@ function Product() {
     </div>
   );
 }
+function Partners() {
+  const root = useRef<HTMLDivElement>(null);
+  useReveals(root);
+  return (
+    <div className="partners-page" ref={root}>
+      <section className="section container product-intro">
+        <div data-reveal>
+          <a className="breadcrumb" href="/">
+            Atlas <span aria-hidden="true">/</span>
+          </a>
+          <Eyebrow>KURUMLARLA İŞ BİRLİĞİ</Eyebrow>
+          <h1>
+            Öğrenme deneyimini
+            <br />
+            birlikte tasarlayalım.
+          </h1>
+        </div>
+        <div data-reveal>
+          <p className="about-lead">
+            Atlas&apos;ın oyun tabanlı öğrenme altyapısı; belediyeler,
+            şirketler, üniversiteler ve eğitim kurumları için yeni öğrenme
+            dünyalarına dönüşebilir.
+          </p>
+          <p>
+            Denge Kasabası ile kurduğumuz harita, senaryo ve görev altyapısını
+            yalnızca kendi ürünümüz için değil; ortak bir öğrenme hedefi olan
+            kurumlar için de kullanmayı hedefliyoruz. Temel ilkemiz net:
+            çocuklara yönelik ekranlarda reklam gösterilmez; kurum katkısı
+            &quot;eğitim partnerliği&quot; olarak konumlanır.
+          </p>
+          <p>
+            Bu sayfadaki modeller hedeflediğimiz iş birliği biçimleridir; her
+            projenin kapsamı, takvimi ve koşulları kurum görüşmeleriyle
+            şekillenir.
+          </p>
+        </div>
+      </section>
+
+      <section className="section container partner-models">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>İŞ BİRLİĞİ MODELLERİ</Eyebrow>
+            <h2>
+              Birlikte neler
+              <br />
+              yapabiliriz?
+            </h2>
+          </div>
+          <p>
+            Aynı altyapı; farklı kurumlar, farklı temalar ve farklı öğrenme
+            hedefleri için yeniden kurgulanabilir.
+          </p>
+        </div>
+        <div className="partner-cards four" data-reveal-group>
+          {partnerModels.map(([title, lead, body], i) => (
+            <article key={title}>
+              <span className="index">0{i + 1}</span>
+              <h3>{title}</h3>
+              <p className="lead">{lead}</p>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section container partner-fit">
+        <div className="partner-fit-inner" data-reveal-group>
+          <div>
+            <Eyebrow>KİMLERLE?</Eyebrow>
+            <h2>
+              Ortak bir öğrenme hedefi olan
+              <br />
+              her kurumla.
+            </h2>
+            <ul className="partner-audience">
+              {partnerAudiences.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="partner-example">
+            <span className="vtag">ÖRNEK KONSEPT</span>
+            <h3>Enerji Kasabası</h3>
+            <p>
+              Bir enerji şirketiyle geliştirilebilecek sponsorlu senaryo:
+              yenilenebilir üretim, kaynak dağıtımı ve şehir planlama
+              kararları üzerine bir öğrenme dünyası.
+            </p>
+            <p>
+              Sürdürülebilirlik, dijital vatandaşlık, finansal okuryazarlık
+              veya sağlıklı yaşam gibi alanlarda benzer dünyalar tasarlanabilir.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section container partner-process">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>SÜREÇ NASIL İLERLER?</Eyebrow>
+            <h2>
+              Tanışmadan kullanıma,
+              <br />
+              dört adımda.
+            </h2>
+          </div>
+        </div>
+        <ol className="flow partner-flow" data-reveal-group>
+          {partnerSteps.map(([title, body], i) => (
+            <li key={title}>
+              <span>
+                {String(i + 1).padStart(2, "0")}{" "}
+                <span aria-hidden="true">→</span>
+              </span>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="pilot-cta" data-reveal>
+          <strong>Birlikte tasarlayalım</strong>
+          <p>
+            Kurumunuzun konusu, hedef kitlesi veya eğitim ihtiyacı üzerine bir
+            senaryo fikri mi var? Kısa bir e-posta ile başlayalım.
+          </p>
+          <a
+            className="button primary"
+            href={`mailto:${site.email}?subject=${encodeURIComponent("Kurumsal iş birliği")}`}
+          >
+            İş birliği için yazın <Arrow />
+          </a>
+        </div>
+      </section>
+      <Contact />
+    </div>
+  );
+}
+function BlogIndex() {
+  const root = useRef<HTMLDivElement>(null);
+  useReveals(root);
+  return (
+    <div ref={root}>
+      <section className="section container blog-index">
+        <div data-reveal>
+          <a className="breadcrumb" href="/">
+            Atlas <span aria-hidden="true">/</span>
+          </a>
+          <Eyebrow>ATLAS BLOG</Eyebrow>
+          <h1>Sahadan notlar.</h1>
+          <p className="blog-intro">
+            Tasarım kararlarımızı, pedagojik yaklaşımımızı ve geliştirme
+            sürecini şeffaf şekilde burada paylaşıyoruz.
+          </p>
+        </div>
+        <div className="blog-list" data-reveal-group>
+          {posts.map((p) => (
+            <a className="blog-card" key={p.slug} href={`/blog/${p.slug}`}>
+              <div className="blog-card__meta">
+                <span className="vtag">{p.tag}</span>
+                <time dateTime="2026-09">{p.date}</time>
+              </div>
+              <h2>{p.title}</h2>
+              <p>{p.excerpt}</p>
+              <span className="blog-card__cta">
+                Yazıyı oku <Arrow />
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
+      <Contact />
+    </div>
+  );
+}
+function BlogPost({ post }: { post: Post }) {
+  const root = useRef<HTMLDivElement>(null);
+  useReveals(root);
+  return (
+    <div ref={root}>
+      <article className="section container post">
+        <div data-reveal>
+          <a className="breadcrumb" href="/blog">
+            Blog <span aria-hidden="true">/</span>
+          </a>
+          <Eyebrow>{post.tag.toLocaleUpperCase("tr")}</Eyebrow>
+          <h1>{post.title}</h1>
+          <p className="post-meta">
+            <time dateTime="2026-09">{post.date}</time> · Atlas Ekibi
+          </p>
+        </div>
+        <div className="post-body" data-reveal>
+          {post.body.map((b, i) =>
+            "h" in b ? (
+              <h2 key={i}>{b.h}</h2>
+            ) : "ul" in b ? (
+              <ul key={i}>
+                {b.ul.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p key={i}>{b.p}</p>
+            ),
+          )}
+        </div>
+        <div className="post-foot" data-reveal>
+          <a className="text-link" href="/blog">
+            Tüm yazılara dön <Arrow />
+          </a>
+          <a className="text-link" href={`mailto:${site.email}`}>
+            Bu konuda bize yazın <Arrow />
+          </a>
+        </div>
+      </article>
+      <Contact />
+    </div>
+  );
+}
 export function App({ path }: { path: string }) {
   const normalized = path.replace(/\/+$/, "") || "/";
   const product = normalized === "/denge-kasabasi";
@@ -1845,14 +2111,30 @@ export function App({ path }: { path: string }) {
     normalized.startsWith("/denge-kasabasi/oyna/") ||
     normalized === "/denge-kasabasi/ongosteri" ||
     normalized.startsWith("/denge-kasabasi/ongosteri/");
-  const known = normalized === "/" || product || gameRoute;
+  const partners = normalized === "/kurumlar";
+  const blogIndex = normalized === "/blog";
+  const post = normalized.startsWith("/blog/")
+    ? posts.find((p) => normalized === `/blog/${p.slug}`)
+    : undefined;
+  const known =
+    normalized === "/" ||
+    product ||
+    gameRoute ||
+    partners ||
+    blogIndex ||
+    !!post;
+  const current = product || gameRoute
+    ? "/denge-kasabasi"
+    : partners
+      ? "/kurumlar"
+      : blogIndex || post
+        ? "/blog"
+        : "";
   useEffect(() => {
     startSmoothScroll();
   }, []);
   useEffect(() => {
-    const meta = pages[
-      known ? (product || gameRoute ? "/denge-kasabasi" : "/") : "/404"
-    ];
+    const meta = pages[known ? (current || normalized) : "/404"];
     document.title = meta.title;
     let tag = document.querySelector('meta[name="description"]');
     if (!tag) {
@@ -1861,19 +2143,23 @@ export function App({ path }: { path: string }) {
       document.head.append(tag);
     }
     tag.setAttribute("content", meta.description);
-  }, [known, product, gameRoute]);
+  }, [known, current, normalized]);
   return (
     <>
       <a className="skip-link" href="#main">
         İçeriğe geç
       </a>
-      <Header product={product} />
+      <Header current={current} />
       <main id="main">
         {known ? (
-          product ? (
+          product || gameRoute ? (
             <Product />
-          ) : gameRoute ? (
-            <Product />
+          ) : partners ? (
+            <Partners />
+          ) : blogIndex ? (
+            <BlogIndex />
+          ) : post ? (
+            <BlogPost post={post} />
           ) : (
             <Home />
           )

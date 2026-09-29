@@ -26,10 +26,14 @@ await writeFile(
   "dist/robots.txt",
   `User-agent: *\nAllow: /\nSitemap: ${site.origin}/sitemap.xml\n`,
 );
+const urls = Object.keys(pages)
+  .filter((path) => path !== "/404")
+  .map((path) => `<url><loc>${site.origin}${path}</loc></url>`)
+  .join("");
 await writeFile(
   "dist/sitemap.xml",
-  `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${site.origin}/</loc></url><url><loc>${site.origin}/denge-kasabasi</loc></url></urlset>`,
+  `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`,
 );
 console.log(
-  "Önceden oluşturuldu: /, /denge-kasabasi, 404.html, robots.txt, sitemap.xml",
+  `Önceden oluşturuldu: ${Object.keys(pages).join(", ")}, robots.txt, sitemap.xml`,
 );

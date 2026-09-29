@@ -10,7 +10,12 @@
     { "source": "/denge-kasabasi/oyna", "destination": "/denge-kasabasi/oyna/index.html" },
     { "source": "/denge-kasabasi/oyna/", "destination": "/denge-kasabasi/oyna/index.html" },
     { "source": "/denge-kasabasi/ongosteri", "destination": "/denge-kasabasi/ongosteri/index.html" },
-    { "source": "/denge-kasabasi/ongosteri/", "destination": "/denge-kasabasi/ongosteri/index.html" }
+    { "source": "/denge-kasabasi/ongosteri/", "destination": "/denge-kasabasi/ongosteri/index.html" },
+    { "source": "/kurumlar", "destination": "/kurumlar/index.html" },
+    { "source": "/kurumlar/", "destination": "/kurumlar/index.html" },
+    { "source": "/blog", "destination": "/blog/index.html" },
+    { "source": "/blog/", "destination": "/blog/index.html" },
+    { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" }
   ],
   "headers": [
     {

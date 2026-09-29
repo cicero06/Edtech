@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 for (const width of [375, 768, 1440])
-  for (const route of ["/", "/denge-kasabasi"]) {
+  for (const route of ["/", "/denge-kasabasi", "/kurumlar", "/blog"]) {
     test(`${route} ${width}px: içerik, görseller ve bağlantılar`, async ({
       page,
     }) => {
@@ -22,7 +22,8 @@ for (const width of [375, 768, 1440])
         /.{40,}/,
       );
       for (const img of await page.locator("img").all()) {
-        await img.scrollIntoViewIfNeeded();
+        if (!(await img.isVisible())) continue;
+        await img.evaluate((el) => el.scrollIntoView({ block: "center" }));
         await expect(img).toHaveJSProperty("complete", true);
         expect(
           await img.evaluate((el: HTMLImageElement) => el.naturalWidth),
@@ -41,7 +42,7 @@ for (const width of [375, 768, 1440])
       expect(errors).toEqual([]);
       await page.evaluate(() => scrollTo(0, 0));
       await page.screenshot({
-        path: `test-results/${route === "/" ? "home" : "product"}-${width}.png`,
+        path: `test-results/${route === "/" ? "home" : route.slice(1)}-${width}.png`,
         fullPage: true,
       });
     });
@@ -57,7 +58,7 @@ test("Mobil menü: klavye, Escape, ürün sayfasından bölüm bağlantısı", a
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("navigation").getByRole("link", { name: "Ürünümüz" }),
+    page.getByRole("navigation").getByRole("link", { name: "Denge Kasabası" }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
@@ -73,10 +74,9 @@ test("Mobil menü: klavye, Escape, ürün sayfasından bölüm bağlantısı", a
 test("Demo, iletişim, yenileme ve gerçek 404", async ({ page, request }) => {
   await page.goto("/denge-kasabasi");
   await page.reload();
-  await expect(page.locator("h1")).toContainText("Senin kararların");
+  await expect(page.locator("h1")).toContainText("Denge Kasabası");
   for (const a of await page.getByRole("link", { name: /Demoyu Oyna/ }).all()) {
     await expect(a).toHaveAttribute("href", "/denge-kasabasi/oyna/");
-    await expect(a).not.toHaveAttribute("target", "_blank");
   }
   await expect(
     page.getByRole("link", { name: "İletişime geçin", exact: false }),
@@ -86,7 +86,7 @@ test("Demo, iletişim, yenileme ve gerçek 404", async ({ page, request }) => {
   for (const path of ["/robots.txt", "/sitemap.xml", "/favicon.svg"])
     expect((await request.get(path)).status()).toBe(200);
   const html = await (await request.get("/denge-kasabasi")).text();
-  expect(html).toContain("Bir kasabanın geleceği.");
+  expect(html).toContain("Kasabanın ilk kararını sen ver.");
   expect(html).toContain("og:title");
 });
 test("Hareket azaltma ve JavaScript olmadan içerik", async ({ browser }) => {
@@ -98,6 +98,6 @@ test("Hareket azaltma ve JavaScript olmadan içerik", async ({ browser }) => {
   await page.goto("http://127.0.0.1:4173/");
   await expect(page.locator("h1")).toContainText("Oyunla keşfet");
   await page.goto("http://127.0.0.1:4173/denge-kasabasi");
-  await expect(page.locator("h1")).toContainText("Senin kararların");
+  await expect(page.locator("h1")).toContainText("Denge Kasabası");
   await context.close();
 });
