@@ -37,11 +37,11 @@ function Brand() {
 }
 
 const links = [
-  ["Oyunlarımız", "/denge-kasabasi"],
-  ["Denge Kasabası", "/#urun"],
-  ["Düşünme Güçleri", "/#yaklasimimiz"],
-  ["Gelecek Dünyalar", "/#gelecek"],
-  ["Öğretmenler & Okul", "/#hakkimizda"],
+  ["Denge Kasabası", "/denge-kasabasi"],
+  ["Yaklaşımımız", "/#yaklasimimiz"],
+  ["Ekip", "/#hakkimizda"],
+  ["Eğitimciler", "/#egitimciler"],
+  ["İletişim", "/#iletisim"],
 ];
 function Header({ product }: { product: boolean }) {
   const [open, setOpen] = useState(false);
@@ -1280,7 +1280,7 @@ function Home() {
           </ul>
         </div>
       </section>
-      <section className="educators container">
+      <section id="egitimciler" className="educators container">
         <div data-reveal>
           <Eyebrow>EĞİTİMCİLER VE KURUMLAR İÇİN</Eyebrow>
           <h2>
