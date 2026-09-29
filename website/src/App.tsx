@@ -698,37 +698,58 @@ function Home() {
           <div className="team-summary">
             <span className="eyebrow">ATLAS EKİBİ</span>
             <p>
-              Atlas ekibi, yazılım, pedagojik tasarım ve kullanıcı deneyimi
-              alanlarını aynı hedef için bir araya getiren tamamlayıcı bir
-              yapıya sahiptir.
+              Üç kişilik çekirdek ekibimiz, bir edtech ürününün üç kritik
+              ayağını — mühendislik, pedagoji ve tasarımı — doğrudan
+              karşılıyor. Denge Kasabası'nın fikirden oynanabilir iki sürüme
+              uzanan geliştirmesi bu ekibin işi.
             </p>
           </div>
 
           <div className="team-grid" data-reveal-group>
             <article className="team-card">
+              <img
+                className="team-avatar team-avatar--photo"
+                src="/images/team/huseyin.jpg"
+                alt="Hüseyin Deniz"
+                loading="lazy"
+              />
               <h3>Hüseyin Deniz</h3>
-              <p className="team-role">Kurucu · Ürün</p>
+              <p className="team-role">Kurucu · Ürün &amp; Yazılım</p>
               <p>
-                Ürün geliştirme, teknik mimari ve prototipleme sürecini
-                yönlendirerek fikri işlevsel çözümlere taşır.
+                Ürün vizyonu, teknik mimari ve oyunun geliştirme sürecini
+                yürütür; Denge Kasabası'nın oynanabilir prototipinden canlı ön
+                gösterime uzanan mühendisliğin sahibi.
               </p>
             </article>
 
             <article className="team-card">
+              <img
+                className="team-avatar team-avatar--photo"
+                src="/images/team/fadime.jpg"
+                alt="Fadime Aksoy"
+                loading="lazy"
+              />
               <h3>Fadime Aksoy</h3>
-              <p className="team-role">Pedagoji</p>
+              <p className="team-role">Pedagoji &amp; Öğrenme Tasarımı</p>
               <p>
-                Öğrenme hedeflerini oyun mekanikleriyle bağlayan ve içeriği yaş
-                grubuna uygun şekilde tasarlayan ekip üyesidir.
+                Öğrenme hedeflerini oyun mekaniklerine çevirir; kanıt
+                değerlendirme ve yansıtma döngüsünün pedagojik temellerini
+                kurar.
               </p>
             </article>
 
             <article className="team-card">
+              <img
+                className="team-avatar team-avatar--photo"
+                src="/images/team/deniz.jpg"
+                alt="Deniz Aşçıoğlu"
+                loading="lazy"
+              />
               <h3>Deniz Aşçıoğlu</h3>
-              <p className="team-role">Tasarım · UX</p>
+              <p className="team-role">Tasarım &amp; Deneyim</p>
               <p>
-                Görsel dil ve arayüz akışını çocukların kolay anlayabileceği
-                şekilde geliştirmeye odaklanır.
+                Görsel dünya, karakter tasarımı ve çocukların kolay
+                anlayabileceği arayüz akışlarından sorumlu.
               </p>
             </article>
           </div>

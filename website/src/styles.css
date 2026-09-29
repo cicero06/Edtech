@@ -3101,3 +3101,49 @@ section[id] {
     gap: 40px;
   }
 }
+
+/* ---------- Ekip avatarları (monogram) ---------- */
+.team-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  background: linear-gradient(145deg, #0e5a50 0%, #0a4f48 60%, #08332e 100%);
+  color: #e8f0dc;
+  font-family: "Fredoka", "Arial Rounded MT Bold", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 4.5px rgba(10, 79, 72, 0.18),
+    0 8px 16px rgba(10, 79, 72, 0.14);
+}
+.team-avatar.tone-amber {
+  background: linear-gradient(145deg, #f2b04a 0%, #e08a1e 60%, #a8640f 100%);
+  color: #3d2b00;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 4.5px rgba(224, 138, 30, 0.25),
+    0 8px 16px rgba(168, 100, 15, 0.18);
+}
+.team-avatar.tone-sky {
+  background: linear-gradient(145deg, #2a7fa8 0%, #1f5f8f 60%, #164a70 100%);
+  color: #eaf4fb;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 4.5px rgba(42, 127, 168, 0.22),
+    0 8px 16px rgba(31, 95, 143, 0.16);
+}
+
+/* ---------- Ekip fotoğrafları ---------- */
+.team-avatar--photo {
+  display: inline-block;
+  object-fit: cover;
+  object-position: top center;
+  font-size: 0;
+  color: transparent;
+}
