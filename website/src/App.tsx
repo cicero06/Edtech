@@ -167,18 +167,25 @@ function Footer() {
           Geleceği şekillendir.
         </p>
       </div>
-      <div className="footer-links">
-        <a href="/denge-kasabasi">Denge Kasabası</a>
-        <a href="/denge-kasabasi/oyna/">Başvuru sürümü (v1)</a>
-        <a href="/denge-kasabasi/ongosteri/">Ön gösterim (v2)</a>
-        <a href="/#yaklasimimiz">Öğrenme yaklaşımımız</a>
-        <a href={`mailto:${site.email}`}>
-          Bize yazın <Arrow />
-        </a>
+      <div className="footer-cols">
+        <div className="footer-links">
+          <span className="footer-head">ÜRÜN</span>
+          <a href="/denge-kasabasi">Denge Kasabası</a>
+          <a href="/denge-kasabasi/oyna/">Başvuru sürümü (v1)</a>
+          <a href="/denge-kasabasi/ongosteri/">Ön gösterim (v2)</a>
+        </div>
+        <div className="footer-links">
+          <span className="footer-head">ŞİRKET</span>
+          <a href="/#hakkimizda">Hakkımızda &amp; Ekip</a>
+          <a href="/#yaklasimimiz">Öğrenme yaklaşımımız</a>
+          <a href={`mailto:${site.email}`}>
+            Bize yazın <Arrow />
+          </a>
+        </div>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 Atlas Learning Technologies</span>
-        <span>Merakla başlar. Düşünerek ilerler.</span>
+        <span>© 2026 Atlas Learning Technologies · Türkiye</span>
+        <span>Çerez ve izleme araçları kullanılmaz.</span>
       </div>
     </footer>
   );
@@ -626,94 +633,27 @@ function Home() {
           <img src="/images/tree-blossom.png" alt="" />
         </span>
       </section>
-      <section className="chars" aria-labelledby="chars-title">
-        <div className="container">
-          <div className="section-heading" data-reveal>
-            <div>
-              <Eyebrow>KASABANIN SAKİNLERİ</Eyebrow>
-              <h2>
-                Kasabada tanışacağın
-                <br />
-                <em>sesler.</em>
-              </h2>
-            </div>
-            <p>
-              Her karakter farklı bir çıkar, farklı bir gündem, farklı bir
-              kanıt taşır. Karar verirken hepsi masada olacak.
-            </p>
+      <section className="glance" aria-label="Bir bakışta Atlas">
+        <div className="container glance-grid" data-reveal-group>
+          <div>
+            <strong>Eğitim teknolojisi</strong>
+            <span>odak alanımız</span>
           </div>
-          <div className="chars-grid" data-reveal-group>
-            <figure className="char-card">
-              <div className="char-fig char-lina">
-                <img
-                  src="/images/char-lina.png"
-                  alt="Lina karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Lina</strong>
-                <span>Senin Rehberin</span>
-                <p>“Kasabayı gezelim, önce kimlerin ne istediğine bakalım.”</p>
-              </figcaption>
-            </figure>
-            <figure className="char-card">
-              <div className="char-fig char-riza">
-                <img
-                  src="/images/char-riza.png"
-                  alt="Çiftçi Rıza karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Çiftçi Rıza</strong>
-                <span>Tarım Kestanesi</span>
-                <p>“Su kesilirse mahsul gider, mahsul giderse kasaba aç kalır.”</p>
-              </figcaption>
-            </figure>
-            <figure className="char-card">
-              <div className="char-fig char-aylin">
-                <img
-                  src="/images/char-aylin.png"
-                  alt="Mühendis Aylin karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Mühendis Aylin</strong>
-                <span>Altyapı ve Kanıt</span>
-                <p>“Hissetmek yetmez; veri, ölçüm ve planla konuşuruz.”</p>
-              </figcaption>
-            </figure>
-            <figure className="char-card">
-              <div className="char-fig char-nuri">
-                <img
-                  src="/images/char-nuri.png"
-                  alt="Nuri Amca karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Nuri Amca</strong>
-                <span>Kasabanın Hafızası</span>
-                <p>“Ben bu kasabada üç kuraklık gördüm; üçü de aynı hatayla başladı.”</p>
-              </figcaption>
-            </figure>
-            <figure className="char-card">
-              <span className="soon-badge">YAKINDA</span>
-              <div className="char-fig char-betul">
-                <img
-                  src="/images/char-betul.png"
-                  alt="Dr. Betül karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Dr. Betül</strong>
-                <span>Kasabanın Doktoru</span>
-                <p>“Sağlıklı bir kasaba temiz suyla başlar — değerleri takip et!”</p>
-              </figcaption>
-            </figure>
+          <div>
+            <strong>Oyun tabanlı öğrenme</strong>
+            <span>temel yaklaşımımız</span>
           </div>
-          <div className="chars-cta" data-reveal>
-            <a className="button primary" href="/denge-kasabasi">
-              Kasabayı Ziyaret Et <Arrow />
-            </a>
+          <div>
+            <strong>10–12 yaş</strong>
+            <span>hedef kitle</span>
+          </div>
+          <div>
+            <strong>1 oynanabilir ürün</strong>
+            <span>2 sürümü yayında</span>
+          </div>
+          <div>
+            <strong>Türkiye</strong>
+            <span>yerleşik ekip</span>
           </div>
         </div>
       </section>
@@ -809,6 +749,98 @@ function Home() {
               şekilliren bir nesil — Türkiye&apos;den çıkan, dünya standartlarında
               oyun tabanlı öğrenme deneyimleri.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="chars" aria-labelledby="chars-title">
+        <div className="container">
+          <div className="section-heading" data-reveal>
+            <div>
+              <Eyebrow>KASABANIN SAKİNLERİ</Eyebrow>
+              <h2>
+                Kasabada tanışacağın
+                <br />
+                <em>sesler.</em>
+              </h2>
+            </div>
+            <p>
+              Her karakter farklı bir çıkar, farklı bir gündem, farklı bir
+              kanıt taşır. Karar verirken hepsi masada olacak.
+            </p>
+          </div>
+          <div className="chars-grid" data-reveal-group>
+            <figure className="char-card">
+              <div className="char-fig char-lina">
+                <img
+                  src="/images/char-lina.png"
+                  alt="Lina karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Lina</strong>
+                <span>Senin Rehberin</span>
+                <p>“Kasabayı gezelim, önce kimlerin ne istediğine bakalım.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-riza">
+                <img
+                  src="/images/char-riza.png"
+                  alt="Çiftçi Rıza karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Çiftçi Rıza</strong>
+                <span>Tarım Kestanesi</span>
+                <p>“Su kesilirse mahsul gider, mahsul giderse kasaba aç kalır.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-aylin">
+                <img
+                  src="/images/char-aylin.png"
+                  alt="Mühendis Aylin karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Mühendis Aylin</strong>
+                <span>Altyapı ve Kanıt</span>
+                <p>“Hissetmek yetmez; veri, ölçüm ve planla konuşuruz.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <div className="char-fig char-nuri">
+                <img
+                  src="/images/char-nuri.png"
+                  alt="Nuri Amca karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Nuri Amca</strong>
+                <span>Kasabanın Hafızası</span>
+                <p>“Ben bu kasabada üç kuraklık gördüm; üçü de aynı hatayla başladı.”</p>
+              </figcaption>
+            </figure>
+            <figure className="char-card">
+              <span className="soon-badge">YAKINDA</span>
+              <div className="char-fig char-betul">
+                <img
+                  src="/images/char-betul.png"
+                  alt="Dr. Betül karakteri"
+                />
+              </div>
+              <figcaption>
+                <strong>Dr. Betül</strong>
+                <span>Kasabanın Doktoru</span>
+                <p>“Sağlıklı bir kasaba temiz suyla başlar — değerleri takip et!”</p>
+              </figcaption>
+            </figure>
+          </div>
+          <div className="chars-cta" data-reveal>
+            <a className="button primary" href="/denge-kasabasi">
+              Kasabayı Ziyaret Et <Arrow />
+            </a>
           </div>
         </div>
       </section>
