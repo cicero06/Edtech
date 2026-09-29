@@ -1,0 +1,22 @@
+# Bağımlılıklar ve build çıktıları
+node_modules/
+dist/
+.ssr/
+test-results/
+playwright-report/
+
+# Ortam ve sistem
+.env
+.env.*
+*.log
+.DS_Store
+.vercel
+
+# Özel başvuru ve çalışma dokümanları (repoda tutulmaz)
+*.docx
+*.pdf
+researchdocs/
+smoke*.mjs
+shot*.mjs
+cap*.mjs
+Attached*
