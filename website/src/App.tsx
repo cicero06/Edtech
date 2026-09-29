@@ -843,20 +843,6 @@ function Home() {
                 <p>“Ben bu kasabada üç kuraklık gördüm; üçü de aynı hatayla başladı.”</p>
               </figcaption>
             </figure>
-            <figure className="char-card">
-              <span className="soon-badge">YAKINDA</span>
-              <div className="char-fig char-betul">
-                <img
-                  src="/images/char-betul.png"
-                  alt="Dr. Betül karakteri"
-                />
-              </div>
-              <figcaption>
-                <strong>Dr. Betül</strong>
-                <span>Kasabanın Doktoru</span>
-                <p>“Sağlıklı bir kasaba temiz suyla başlar — değerleri takip et!”</p>
-              </figcaption>
-            </figure>
           </div>
           <div className="chars-cta" data-reveal>
             <a className="button primary" href="/denge-kasabasi">
