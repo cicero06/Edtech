@@ -66,6 +66,8 @@ export const TextureKeys = {
   DAM_STRUCTURE: 'dam-structure',
   TREATMENT_PLANT: 'treatment-plant',
   DOCK: 'dock',
+  STREET_LEAK: 'street-leak',
+  PIPE_TRENCH: 'pipe-trench',
 
   // props
   CHEST: 'chest',
@@ -83,6 +85,7 @@ export const TextureKeys = {
   CRATE: 'crate',
   BARREL_WOOD: 'barrel-wood',
   BARREL_WOOD_2: 'barrel-wood-2',
+  RAIN_TANK: 'rainwater-tank',
 
   // characters
   PLAYER: 'player',
@@ -203,6 +206,9 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.DAM_STRUCTURE, path: 'assets/water/dam-structure.png', width: 345, height: 223, smooth: true },
   { key: TextureKeys.TREATMENT_PLANT, path: 'assets/water/treatment-plant.png', width: 274, height: 213, smooth: true },
   { key: TextureKeys.DOCK, path: 'assets/props/dock.png', width: 94, height: 127, smooth: true },
+  // Chapter-2 street states: the leak beside Nuri's street, then the open trench.
+  { key: TextureKeys.STREET_LEAK, path: 'assets/water/street-leak.png', width: 1254, height: 1254, smooth: true },
+  { key: TextureKeys.PIPE_TRENCH, path: 'assets/water/pipe-trench.png', width: 1254, height: 1254, smooth: true },
 
   // --- props ---
   { key: TextureKeys.CHEST, path: 'assets/props/chest.png', width: 13, height: 12 },
@@ -220,6 +226,7 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.CRATE, path: 'assets/props/crate.png', width: 66, height: 70, smooth: true },
   { key: TextureKeys.BARREL_WOOD, path: 'assets/props/barrel-wood.png', width: 40, height: 55, smooth: true },
   { key: TextureKeys.BARREL_WOOD_2, path: 'assets/props/barrel-wood-2.png', width: 43, height: 57, smooth: true },
+  { key: TextureKeys.RAIN_TANK, path: 'assets/props/rainwater-tank.png', width: 1254, height: 1254, smooth: true },
 ] as const;
 
 export interface SpritesheetAsset extends ImageAsset {

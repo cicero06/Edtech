@@ -2,6 +2,8 @@
 
 17 Eylül 2026. Bu çalışma yalnızca yerel geliştirmedir; deployment, DNS değişikliği, push veya yayınlama yapılmadı.
 
+Bu rapor 17 Eylül'deki çalışmanın tarihsel kaydıdır; aşağıdaki yollar ve durum tespitleri o tarihe aittir. Güncel yapı ve çalıştırma komutları için [website rehberine](../README.md) ve [depo rehberine](../../README.md) bakın. Araştırma belgeleri artık `bilgi-belge-dokumanlar/arastirma/`, başvuru PDF'si `bilgi-belge-dokumanlar/basvuru/`, pedagojik DOCX ise `bilgi-belge-dokumanlar/tasarim/` altındadır.
+
 ## Repository ve koruma
 
 Gerçek Git kökü: `/Users/macbook/Desktop/etkim apply document 2`.

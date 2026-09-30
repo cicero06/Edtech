@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { SPRITESHEET_ASSETS } from '../Game/data/assets';
 import type { InvestigationCard as CardData } from '../Game/data/story';
+import ChartView from './ChartView';
 
 type InvestigationCardProps = {
   card: CardData;
@@ -93,6 +94,8 @@ export default function InvestigationCard({ card, onComplete }: InvestigationCar
             )}
           </div>
         )}
+
+        {card.chart && <ChartView chart={card.chart} />}
 
         {card.checkQuestion && (
           <div className="card-question">

@@ -10,7 +10,10 @@ import {
   type Stakeholder,
 } from '../Game/data/story';
 
+import type { SolutionPanelMode } from '../Game/events/gameEvents';
+
 type SolutionPanelProps = {
+  mode?: SolutionPanelMode;
   onSubmit: (selected: SolutionCard[], totalCost: number, rationale: string) => void;
 };
 
@@ -24,7 +27,8 @@ const RATIONALE_CHOICES = [
   'Uzun vadede en kalıcı çözümleri seçtim',
 ];
 
-export default function SolutionPanel({ onSubmit }: SolutionPanelProps) {
+export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPanelProps) {
+  const isRetry = mode === 'retry';
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [askingWhy, setAskingWhy] = useState(false);
   const [rationale, setRationale] = useState('');
@@ -52,8 +56,12 @@ export default function SolutionPanel({ onSubmit }: SolutionPanelProps) {
     <div className="investigation-overlay" role="dialog" aria-label="Belediye toplantısı - çözüm paketi">
       <div className="investigation-card solution-card-panel">
         <header className="investigation-header">
-          <h2>🏛️ BELEDİYE TOPLANTISI</h2>
-          <p>Başkan: &quot;Defterindeki kanıtlarla bir çözüm paketi hazırla. Bütçemiz sınırlı — hepsini seçemezsin, iyi düşün!&quot;</p>
+          <h2>{isRetry ? '🔄 ALTERNATİF PLAN' : '🏛️ BELEDİYE TOPLANTISI'}</h2>
+          <p>
+            {isRetry
+              ? 'Lina: "Aynı gün, aynı bütçe, aynı koşullar — sadece kararın farklı. Neyi değiştirirdin?"'
+              : 'Başkan: "Defterindeki kanıtlarla bir çözüm paketi hazırla. Bütçemiz sınırlı — hepsini seçemezsin, iyi düşün!"'}
+          </p>
         </header>
 
         <div className="solution-budget">

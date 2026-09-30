@@ -13,12 +13,20 @@ import type { InvestigationId } from './story';
 
 /** Mirrors the stage machine inside GameScene. */
 export type QuestStage =
+  // chapter 1 - understand the problem, decide a plan, tell the town
   | 'lina-intro'
   | 'meet-mayor'
   | 'investigate'
   | 'report'
   | 'meeting'
   | 'announce'
+  // chapter 2 - the plan meets reality: 30 days, findings, second chance
+  | 'expectation'
+  | 'implement'
+  | 'revisit'
+  | 'debrief'
+  | 'retry'
+  | 'finale'
   | 'done';
 
 export interface PlayerProfile {
@@ -27,10 +35,13 @@ export interface PlayerProfile {
 }
 
 export interface NotebookEntry {
-  cardId: InvestigationId;
+  /** Investigation id for chapter-1 hints, `finding-*` ids for chapter-2 observations. */
+  cardId: string;
   icon: string;
   text: string;
   datum?: string;
+  /** `'finding'` marks a chapter-2 review observation (selectable in the town report). */
+  kind?: 'finding';
 }
 
 export interface SubmittedPlan {
@@ -51,6 +62,27 @@ export interface GameSession {
   announcedNpcIds: string[];
   /** Announce round: the plan poster was hung on the civic notice board. */
   posterHung: boolean;
+  /** The public announcement the player composed for the town. */
+  announcement?: { icon: string; headline: string; message: string };
+  // ---- chapter 2 ------------------------------------------------------------
+  /** The player's prediction, picked right after the announcement. */
+  expectation?: string;
+  /** Implementation timeline stop reached: 0 start, 1 mid-month, 2 day 30. */
+  implPhase?: number;
+  /** Residents whose post-implementation review talk was heard. */
+  reviewedNpcIds?: string[];
+  /** Stats snapshot taken right before the first plan was submitted. */
+  baseStats?: GameStats;
+  /** Stats right after plan 1 was applied - the "first run" result. */
+  planStats?: GameStats;
+  /** The debrief report: findings grouped by what worked vs. what still hurts. */
+  report?: { workedIds: string[]; problemIds: string[] };
+  /** The second-chance package, if the player tried an alternative. */
+  altPlan?: SubmittedPlan | null;
+  /** Stats after the alternative plan - the "second run" result. */
+  altStats?: GameStats;
+  /** The closing "Bugün karar versem…" sentence. */
+  finalStatement?: string;
   stats: GameStats;
   /** Speaker toggle - remembered across sessions. */
   muted: boolean;
@@ -69,7 +101,7 @@ export const AVATARS: readonly TextureKey[] = [
   TextureKeys.WORKER_KEMAL,
 ] as const;
 
-const STORAGE_KEY = 'denge-kasabasi-session-v1';
+const STORAGE_KEY = 'denge-kasabasi-session-v2';
 
 export function loadSession(): GameSession | null {
   try {

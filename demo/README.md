@@ -1,6 +1,8 @@
 # Denge Kasabası — Su Krizi PoC
 
-Uygulama kökü bu `demo/` dizinidir. Frontend ve backend ayrı npm projeleridir; ek veya iç içe bir proje kökü yoktur.
+Bu dizin önceki PoC'nin frontend'ini ve mevcut backend'i içerir. Frontend ve backend ayrı npm projeleridir.
+
+`demo/frontend/` referans olarak korunur; başvuru sürümünün güncel kaynağı [website/denge-kasabasi-game](../website/denge-kasabasi-game/), aktif v2 geliştirmesi ise [website/denge-game-v2](../website/denge-game-v2/) altındadır. Backend yerinde kalır; kökteki `render.yaml`, `demo/backend` yolunu kullanır. Aşağıdaki PoC açıklamaları ana sitenin güncel yayın durumu değildir.
 
 Sekiz ekranlı React uygulaması, anonim session state, tek plan revizyon döngüsü ve gözlenebilir event akışı uygulanmıştır. NestJS REST API, Prisma `Session`/`Event` modelleri ve PostgreSQL persistence mevcuttur. Deployment henüz oluşturulmamıştır.
 
@@ -58,7 +60,7 @@ demo/
 └── README.md
 ```
 
-`../researchdocs/` uygulama dışında kalır. Akademik ve pazar araştırması belgeleri taşınmamış veya değiştirilmemiştir.
+Akademik ve pazar araştırması belgeleri `../bilgi-belge-dokumanlar/arastirma/` altında, uygulama ve Git dışında tutulur.
 
 ## Kurulum
 

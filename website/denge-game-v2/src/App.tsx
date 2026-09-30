@@ -1,22 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import PhaserGame from './components/PhaserGame';
 import IntroSequence from './components/IntroSequence';
 import InvestigationCard from './components/InvestigationCard';
 import SolutionPanel from './components/SolutionPanel';
+import FinaleCard from './components/FinaleCard';
+import AnnouncementCard from './components/AnnouncementCard';
+import MiniMap from './components/MiniMap';
+import ChartView from './components/ChartView';
+import TimeShift from './components/TimeShift';
 import { advanceIntro, type IntroStage } from './Game/data/intro';
 import { EventBus } from './Game/events/EventBus';
 import { GameEvents } from './Game/events/gameEvents';
 import type {
+  DayChangedPayload,
   DialoguePayload,
   DistrictChangedPayload,
+  FindingAddedPayload,
   InvestigationPayload,
+  MarkersChangedPayload,
+  MinimapMarker,
   ObjectivePayload,
+  OpenSolutionPayload,
+  OverviewChangedPayload,
+  PlayerMovedPayload,
+  SolutionPanelMode,
 } from './Game/events/gameEvents';
 import { applyDecision, applyStatChanges, INITIAL_STATS, STAT_META, type GameStats } from './Game/data/stats';
 import {
   EVIDENCE_IDS,
   EVIDENCE_PROMPT,
+  REPORT_PROMPT,
   investigationCard,
   type SolutionCard,
 } from './Game/data/story';
@@ -29,6 +43,7 @@ import {
   type PlayerProfile,
 } from './Game/data/session';
 import { isMuted, playSfx, setMuted } from './Game/audio';
+import { playRecordedVoice, setVoiceMuted, stopVoice } from './Game/speech';
 import { SoundKeys } from './Game/data/assets';
 
 /**
@@ -41,6 +56,8 @@ function App() {
   const [savedName] = useState(() => loadSession()?.player.name);
   const [dialogue, setDialogue] = useState<DialoguePayload | null>(null);
   const [dialoguePage, setDialoguePage] = useState(0);
+  /** Typewriter: how many characters of the current line are visible. */
+  const [typed, setTyped] = useState(0);
   const [investigation, setInvestigation] = useState<InvestigationPayload | null>(null);
   const [objective, setObjective] = useState<string | null>(null);
   const [notebook, setNotebook] = useState<NotebookEntry[]>([]);
@@ -48,7 +65,25 @@ function App() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [evidenceMode, setEvidenceMode] = useState(false);
   const [evidencePicked, setEvidencePicked] = useState<Set<string>>(new Set());
+  const [reportMode, setReportMode] = useState(false);
+  /** Debrief classification: findings the player filed under each report column. */
+  const [reportWorked, setReportWorked] = useState<Set<string>>(new Set());
+  const [reportProblems, setReportProblems] = useState<Set<string>>(new Set());
   const [solutionOpen, setSolutionOpen] = useState(false);
+  const [solutionMode, setSolutionMode] = useState<SolutionPanelMode>('initial');
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [timeShift, setTimeShift] = useState<{
+    from: { date: string; time: string };
+    to: { date: string; time: string };
+    label: string;
+    direction: 'forward' | 'back';
+  } | null>(null);
+  const [dayTint, setDayTint] = useState<string | null>(null);
+  const lastTime = useRef<{ date: string; time: string } | null>(null);
+  const [finaleOpen, setFinaleOpen] = useState(false);
+  const [playerPos, setPlayerPos] = useState<{ x: number; y: number } | null>(null);
+  const [mapMarkers, setMapMarkers] = useState<MinimapMarker[]>([]);
+  const [mapOverview, setMapOverview] = useState(false);
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [district, setDistrict] = useState<string>('—');
   const [muted, setMutedState] = useState(isMuted());
@@ -64,6 +99,7 @@ function App() {
     const onOpenDialogue = (payload: DialoguePayload) => {
       setDialogue(payload);
       setDialoguePage(0);
+      setTyped(0);
     };
     const onDistrictChanged = (payload: DistrictChangedPayload) => setDistrict(payload.label);
     const onOpenInvestigation = (payload: InvestigationPayload) => setInvestigation(payload);
@@ -75,7 +111,45 @@ function App() {
       setNotebookOpen(true);
       setEvidenceMode(true);
     };
-    const onOpenSolution = () => setSolutionOpen(true);
+    const onOpenSolution = (payload: OpenSolutionPayload) => {
+      setSolutionMode(payload.mode);
+      setSolutionOpen(true);
+    };
+    const onFindingAdded = (payload: FindingAddedPayload) => {
+      setNotebook((previous) => {
+        if (previous.some((entry) => entry.cardId === payload.entry.cardId)) return previous;
+        const next = [...previous, payload.entry];
+        persist({ notebook: next });
+        return next;
+      });
+      playSfx(SoundKeys.PAGE, 0.7);
+    };
+    const onDayChanged = (payload: DayChangedPayload) => {
+      const arrived = { date: payload.date, time: payload.time };
+      if (payload.direction === 'restore') {
+        // Session resume: tint quietly, just remember where the clock is.
+        lastTime.current = arrived;
+        setDayTint(payload.tint);
+        return;
+      }
+      setTimeShift({
+        from: lastTime.current ?? arrived,
+        to: arrived,
+        label: payload.label,
+        direction: payload.direction,
+      });
+      lastTime.current = arrived;
+      setDayTint(payload.tint);
+    };
+    const onOpenReport = () => {
+      setNotebookOpen(true);
+      setReportMode(true);
+    };
+    const onOpenFinale = () => setFinaleOpen(true);
+    const onOpenAnnounce = () => setAnnounceOpen(true);
+    const onPlayerMoved = (payload: PlayerMovedPayload) => setPlayerPos(payload);
+    const onMarkersChanged = (payload: MarkersChangedPayload) => setMapMarkers(payload.markers);
+    const onOverviewChanged = (payload: OverviewChangedPayload) => setMapOverview(payload.active);
 
     EventBus.on(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
     EventBus.on(GameEvents.DISTRICT_CHANGED, onDistrictChanged);
@@ -83,6 +157,14 @@ function App() {
     EventBus.on(GameEvents.OBJECTIVE_CHANGED, onObjectiveChanged);
     EventBus.on(GameEvents.OPEN_EVIDENCE, onOpenEvidence);
     EventBus.on(GameEvents.OPEN_SOLUTION, onOpenSolution);
+    EventBus.on(GameEvents.FINDING_ADDED, onFindingAdded);
+    EventBus.on(GameEvents.DAY_CHANGED, onDayChanged);
+    EventBus.on(GameEvents.OPEN_REPORT, onOpenReport);
+    EventBus.on(GameEvents.OPEN_FINALE, onOpenFinale);
+    EventBus.on(GameEvents.OPEN_ANNOUNCE, onOpenAnnounce);
+    EventBus.on(GameEvents.PLAYER_MOVED, onPlayerMoved);
+    EventBus.on(GameEvents.MARKERS_CHANGED, onMarkersChanged);
+    EventBus.on(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
 
     return () => {
       EventBus.off(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
@@ -91,8 +173,47 @@ function App() {
       EventBus.off(GameEvents.OBJECTIVE_CHANGED, onObjectiveChanged);
       EventBus.off(GameEvents.OPEN_EVIDENCE, onOpenEvidence);
       EventBus.off(GameEvents.OPEN_SOLUTION, onOpenSolution);
+      EventBus.off(GameEvents.FINDING_ADDED, onFindingAdded);
+      EventBus.off(GameEvents.DAY_CHANGED, onDayChanged);
+      EventBus.off(GameEvents.OPEN_REPORT, onOpenReport);
+      EventBus.off(GameEvents.OPEN_FINALE, onOpenFinale);
+      EventBus.off(GameEvents.OPEN_ANNOUNCE, onOpenAnnounce);
+      EventBus.off(GameEvents.PLAYER_MOVED, onPlayerMoved);
+      EventBus.off(GameEvents.MARKERS_CHANGED, onMarkersChanged);
+      EventBus.off(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
     };
   }, []);
+
+  const typeTimer = useRef<number | null>(null);
+
+  // Typewriter + karakter sesi: satır harf harf akarken konuşanın mırıltı
+  // dosyası loop'ta çalar; satır bitince ya da kart kapanınca durur.
+  useEffect(() => {
+    if (!dialogue) return;
+    const text = [dialogue.text, ...(dialogue.pages ?? [])][dialoguePage] ?? '';
+    let i = 0;
+    typeTimer.current = window.setInterval(() => {
+      i += 1;
+      setTyped(i);
+      if (i >= text.length) {
+        window.clearInterval(typeTimer.current ?? undefined);
+        typeTimer.current = null;
+      }
+    }, 30);
+    return () => {
+      window.clearInterval(typeTimer.current ?? undefined);
+      typeTimer.current = null;
+    };
+  }, [dialogue, dialoguePage]);
+
+  useEffect(() => {
+    playRecordedVoice(dialogue?.voiceFiles?.[dialoguePage]);
+    return stopVoice;
+  }, [dialogue, dialoguePage]);
+
+  useEffect(() => {
+    setVoiceMuted(muted);
+  }, [muted]);
 
   // ---- React -> Phaser -----------------------------------------------------
   const closeDialogue = () => {
@@ -141,20 +262,69 @@ function App() {
     EventBus.emit(GameEvents.EVIDENCE_SUBMITTED, { confirmedIds });
   };
 
-  const submitPlan = (selected: SolutionCard[], totalCost: number, rationale: string) => {
-    const nextStats = applyStatChanges(stats, ...selected.map((c) => c.effects));
-    setStats(nextStats);
-    setSolutionOpen(false);
-    persist({
-      plan: { solutionIds: selected.map((c) => c.id), totalCost, rationale },
-      stats: nextStats,
+  /** Toggle a finding into/out of one of the two report columns. */
+  const toggleReportFinding = (kind: 'worked' | 'problem', cardId: string) => {
+    playSfx(SoundKeys.TICK, 0.7);
+    const set = kind === 'worked' ? setReportWorked : setReportProblems;
+    set((previous) => {
+      const next = new Set(previous);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
     });
+  };
+
+  const submitReport = () => {
+    const report = { workedIds: [...reportWorked], problemIds: [...reportProblems] };
+    setReportMode(false);
+    setNotebookOpen(false);
+    persist({ report });
+    EventBus.emit(GameEvents.REPORT_SUBMITTED, report);
+  };
+
+  const submitPlan = (selected: SolutionCard[], totalCost: number, rationale: string) => {
+    const plan = { solutionIds: selected.map((c) => c.id), totalCost, rationale };
+    setSolutionOpen(false);
     playSfx(SoundKeys.ALERT, 0.9);
+
+    const session = loadSession();
+    if (session?.quest === 'retry') {
+      // Second-chance run: same starting conditions, so the alt plan applies
+      // to the pre-plan snapshot - not on top of the first run's results.
+      const baseStats = session.baseStats ?? stats;
+      const nextStats = applyStatChanges(baseStats, ...selected.map((c) => c.effects));
+      setStats(nextStats);
+      persist({ altPlan: plan, altStats: nextStats, stats: nextStats });
+    } else {
+      const nextStats = applyStatChanges(stats, ...selected.map((c) => c.effects));
+      setStats(nextStats);
+      persist({
+        plan,
+        stats: nextStats,
+        baseStats: stats,
+        planStats: nextStats,
+      });
+    }
+
     EventBus.emit(GameEvents.PLAN_SUBMITTED, {
-      solutionIds: selected.map((c) => c.id),
+      solutionIds: plan.solutionIds,
       totalCost,
       rationale,
     });
+  };
+
+  const submitFinale = (statement: string) => {
+    setFinaleOpen(false);
+    persist({ finalStatement: statement });
+    EventBus.emit(GameEvents.FINALE_SUBMITTED, { statement });
+  };
+
+  /** The composed announcement is saved, then the scene hangs the poster. */
+  const submitAnnouncement = (icon: string, headline: string, message: string) => {
+    setAnnounceOpen(false);
+    playSfx(SoundKeys.ALERT, 0.9);
+    persist({ announcement: { icon, headline, message } });
+    EventBus.emit(GameEvents.ANNOUNCE_SUBMITTED, { icon, headline, message });
   };
 
   /** Mock login: a fresh session starts when the profile form is submitted. */
@@ -181,6 +351,17 @@ function App() {
 
   const dialogueLines = dialogue ? [dialogue.text, ...(dialogue.pages ?? [])] : [];
   const isLastPage = dialoguePage >= dialogueLines.length - 1;
+  const currentLine = dialogueLines[dialoguePage] ?? '';
+  const typing = dialogue !== null && typed < currentLine.length;
+
+  /** Undertale skip: show the whole line and silence the voice at once. */
+  const skipTyping = () => {
+    if (typeTimer.current !== null) {
+      window.clearInterval(typeTimer.current);
+      typeTimer.current = null;
+    }
+    setTyped(currentLine.length);
+  };
 
   if (introStage !== 'complete') {
     return (
@@ -234,6 +415,18 @@ function App() {
 
         {objective && <div className="objective-pill">🎯 {objective}</div>}
 
+        {/* Time-of-day tint sits over the world, under the HUD. */}
+        <div className="day-tint" style={{ background: dayTint ?? 'transparent' }} />
+        {timeShift && (
+          <TimeShift
+            from={timeShift.from}
+            to={timeShift.to}
+            label={timeShift.label}
+            direction={timeShift.direction}
+            onDone={() => setTimeShift(null)}
+          />
+        )}
+
         {notebook.length > 0 && (
           <button
             className="notebook-button"
@@ -248,11 +441,25 @@ function App() {
           </button>
         )}
 
+        <MiniMap
+          player={playerPos}
+          markers={mapMarkers}
+          overview={mapOverview}
+          onToggle={() => EventBus.emit(GameEvents.MAP_TOGGLED)}
+        />
+
+        {mapOverview && (
+          <div className="map-mode-pill">
+            🗺️ Kasaba Haritası — <kbd>M</kbd> ile oyuna dön
+          </div>
+        )}
+
         <button
           className="mute-button"
           aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}
           aria-pressed={muted}
           onClick={() => {
+            setVoiceMuted(!muted);
             setMuted(!muted);
             setMutedState(!muted);
           }}
@@ -264,17 +471,48 @@ function App() {
           <aside className="notebook-panel" aria-label="Kanıt defteri">
             <h2>{player ? `${player.name} • Kanıt Defteri` : 'Kanıt Defteri'}</h2>
             {evidenceMode && <p className="evidence-prompt">{EVIDENCE_PROMPT}</p>}
+            {reportMode && <p className="evidence-prompt">{REPORT_PROMPT}</p>}
             <ul>
               {notebook.map((entry) => {
-                const markable = EVIDENCE_IDS.includes(entry.cardId);
-                const checked = evidencePicked.has(entry.cardId);
+                const reportMarkable = reportMode && entry.kind === 'finding';
+                const evidenceMarkable =
+                  !reportMode &&
+                  evidenceMode &&
+                  (EVIDENCE_IDS as readonly string[]).includes(entry.cardId);
                 return (
-                  <li key={entry.cardId} className={evidenceMode && markable ? 'markable' : ''}>
-                    {evidenceMode && markable ? (
+                  <li key={entry.cardId} className={reportMarkable || evidenceMarkable ? 'markable' : ''}>
+                    {reportMarkable ? (
+                      <div className="report-row">
+                        <span className="report-text">
+                          {entry.icon} {entry.text}
+                          {entry.datum && <em className="notebook-datum">{entry.datum}</em>}
+                        </span>
+                        <span className="report-chips">
+                          <button
+                            type="button"
+                            className={`report-chip worked${reportWorked.has(entry.cardId) ? ' on' : ''}`}
+                            aria-pressed={reportWorked.has(entry.cardId)}
+                            title="İşe yaradı"
+                            onClick={() => toggleReportFinding('worked', entry.cardId)}
+                          >
+                            ✅
+                          </button>
+                          <button
+                            type="button"
+                            className={`report-chip problem${reportProblems.has(entry.cardId) ? ' on' : ''}`}
+                            aria-pressed={reportProblems.has(entry.cardId)}
+                            title="Sorun sürüyor"
+                            onClick={() => toggleReportFinding('problem', entry.cardId)}
+                          >
+                            ⚠️
+                          </button>
+                        </span>
+                      </div>
+                    ) : evidenceMarkable ? (
                       <label className="evidence-row">
                         <input
                           type="checkbox"
-                          checked={checked}
+                          checked={evidencePicked.has(entry.cardId)}
                           onChange={() => toggleEvidence(entry.cardId)}
                         />
                         <span>
@@ -300,9 +538,23 @@ function App() {
               >
                 ✔ Nedenleri işaretledim
               </button>
+            ) : reportMode ? (
+              <>
+                <p className="notebook-progress report-legend">
+                  ✅ işe yaradı · ⚠️ sorun sürüyor — ikisinde de en az bir bulgu olmalı
+                </p>
+                <button
+                  className="startup-button evidence-submit"
+                  disabled={reportWorked.size === 0 || reportProblems.size === 0}
+                  onClick={submitReport}
+                >
+                  ✔ Raporu hazırladım
+                </button>
+              </>
             ) : (
               <p className="notebook-progress">
-                {Math.max(0, notebook.length - 1)}/4 bölge incelendi
+                {Math.max(0, notebook.filter((e) => e.kind !== 'finding').length - 1)}/4 bölge
+                incelendi
               </p>
             )}
           </aside>
@@ -311,11 +563,25 @@ function App() {
         {/* ---------------- DIALOGUE ---------------- */}
         {dialogue && (
           <div className="dialogue-overlay">
-            <div className="dialogue-card">
-              <div className="npc-name">{dialogue.name}</div>
-              <p className="dialogue-text">{dialogueLines[dialoguePage]}</p>
+            <div
+              className="dialogue-card"
+              onClick={() => {
+                if (typing) skipTyping();
+              }}
+            >
 
-              {dialogue.choices && dialogue.choices.length > 0 && isLastPage ? (
+              <div className="npc-name">{dialogue.name}</div>
+              <p className="dialogue-text">
+                {currentLine.slice(0, typed)}
+                {typing && <span className="tw-cursor">▌</span>}
+              </p>
+              {isLastPage && !typing && dialogue.chart && (
+                <div className="dialogue-chart">
+                  <ChartView chart={dialogue.chart} />
+                </div>
+              )}
+
+              {dialogue.choices && dialogue.choices.length > 0 && isLastPage && !typing ? (
                 <div className="dialogue-choices">
                   {dialogue.choices.map((choice) => (
                     <button
@@ -330,9 +596,16 @@ function App() {
               ) : (
                 <button
                   className="continue-button"
-                  onClick={() => (isLastPage ? closeDialogue() : setDialoguePage(dialoguePage + 1))}
+                  onClick={() => {
+                    if (typing) skipTyping();
+                    else if (isLastPage) closeDialogue();
+                    else {
+                      setDialoguePage(dialoguePage + 1);
+                      setTyped(0);
+                    }
+                  }}
                 >
-                  {isLastPage ? 'Devam Et' : 'Dinlemeye devam et →'}
+                  {typing ? '⏩' : isLastPage ? 'Devam Et' : 'Dinlemeye devam et →'}
                 </button>
               )}
             </div>
@@ -345,12 +618,16 @@ function App() {
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}
 
-        {solutionOpen && <SolutionPanel onSubmit={submitPlan} />}
+        {solutionOpen && <SolutionPanel mode={solutionMode} onSubmit={submitPlan} />}
 
-        {!dialogue && !investigation && !solutionOpen && (
+        {announceOpen && <AnnouncementCard player={player} onSubmit={submitAnnouncement} />}
+
+        {finaleOpen && <FinaleCard onSubmit={submitFinale} />}
+
+        {!dialogue && !investigation && !solutionOpen && !finaleOpen && !announceOpen && !mapOverview && (
           <p className="controls">
             WASD / Yön tuşları ile hareket et · NPC'nin yanında <kbd>E</kbd> ile konuş ·{' '}
-            <kbd>`</kbd> ile çarpışma kutularını göster
+            <kbd>M</kbd> ile kasaba haritası · <kbd>`</kbd> ile çarpışma kutularını göster
           </p>
         )}
       </div>

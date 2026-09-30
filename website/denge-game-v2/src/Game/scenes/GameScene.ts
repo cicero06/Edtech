@@ -32,6 +32,7 @@ import {
 import { DECISION_FEEDBACK, NPCS, type NpcDefinition } from '../data/npcs';
 import {
   districtAt,
+  PARK_CENTER,
   PLAYER_SPAWN,
   WORLD,
   type District,
@@ -40,33 +41,69 @@ import {
 import {
   COLLISION_ZONES,
   GROUND_LAYERS,
+  GroundDepth,
   WORLD_OBJECTS,
   type CollisionBox,
 } from '../data/worldObjects';
 import { EventBus } from '../events/EventBus';
-import { GameEvents } from '../events/gameEvents';
+import {
+  GameEvents,
+  type DialoguePayload,
+  type MinimapMarker,
+} from '../events/gameEvents';
 import {
   ANNOUNCE_NPC_IDS,
+  DAY_STOPS,
+  EXPECTATION_CHOICES,
+  EXPECTATION_FEEDBACK,
+  IMPLEMENTATION_PROPS,
+  IMPLEMENT_END_PAGES,
+  IMPLEMENT_MID_PAGES,
   LINA_CLOSING_CHOICES,
   LINA_CLOSING_FEEDBACK,
   LINA_CLOSING_PAGES,
+  LINA_EXPECTATION_PAGES,
   LINA_INTRO_PAGES,
   LINA_REPORT_TEXT,
+  LINA_RETRY_PAGES,
+  MAYOR_DEBRIEF_PAGES,
+  MAYOR_FOLLOWUP_FEEDBACK,
+  MAYOR_FOLLOWUP_QUESTION,
   NOTICE_BOARD,
+  RETRY_CHOICES,
+  RETRY_KEEP_FEEDBACK,
+  REVIEW_NPC_IDS,
+  implementationTwist,
+  implementationTwistSpot,
+  linaComparePages,
+  mayorFinalePages,
+  mayorFollowUpChoices,
   mayorReactionPages,
   npcPlanReaction,
+  npcReviewOutcome,
   type InvestigationId,
 } from '../data/story';
+import {
+  announceVoice,
+  compareVoiceFiles,
+  finaleVoiceFiles,
+  implementVoiceFiles,
+  mayorReactionVoiceFiles,
+  reviewVoice,
+  smallTalkVoice,
+} from '../data/voices';
 import { loadSession, saveSession, type QuestStage } from '../data/session';
 import { VISIBLE_WORLD_HEIGHT } from '../config';
 
 type Facing = 'down' | 'up' | 'left' | 'right';
 
 /**
- * Chapter 1 quest flow:
- *   lina-intro -> meet-mayor -> investigate -> report -> meeting -> announce -> done
+ * Quest flow:
+ *   lina-intro -> meet-mayor -> investigate -> report -> meeting -> announce
+ *   -> expectation -> implement (3 day stops) -> revisit -> debrief
+ *   -> retry -> finale -> done
  * Phaser owns progression (it sees proximity + E presses); React owns the
- * modal cards, the notebook and the objective pill.
+ * modal cards, the notebook, the report picker and the finale card.
  */
 
 const DISTRICT_CARDS: readonly InvestigationId[] = ['baraj', 'tarim', 'konut', 'park'];
@@ -104,6 +141,15 @@ const STEP_MARKERS = [
 ];
 const STEP_INTERVAL_MS = 220;
 
+/** NPC strips hold one pose per direction: [down, right, up, left]. */
+const NPC_FACE_FRAME: Record<Facing, number> = { down: 0, right: 1, up: 2, left: 3 };
+const OPPOSITE_FACING: Record<Facing, Facing> = {
+  left: 'right',
+  right: 'left',
+  up: 'down',
+  down: 'up',
+};
+
 interface Npc {
   definition: NpcDefinition;
   sprite: Phaser.GameObjects.Sprite;
@@ -116,7 +162,7 @@ export default class GameScene extends Phaser.Scene {
   private hint!: Phaser.GameObjects.Text;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private keys!: Record<'W' | 'A' | 'S' | 'D' | 'E' | 'DEBUG', Phaser.Input.Keyboard.Key>;
+  private keys!: Record<'W' | 'A' | 'S' | 'D' | 'E' | 'M' | 'DEBUG', Phaser.Input.Keyboard.Key>;
 
   private facing: Facing = 'down';
   private dialogueOpen = false;
@@ -144,6 +190,45 @@ export default class GameScene extends Phaser.Scene {
   /** "!" over the notice board while the poster is pending. */
   private boardMarker: Phaser.GameObjects.Text | null = null;
 
+  // ---- Chapter 2: the plan meets reality ------------------------------------
+  /** Implementation stop reached: 0 start, 1 mid-month, 2 day 30. -1 = not yet. */
+  private implPhase = -1;
+  /** Residents whose day-30 review talk was heard. */
+  private reviewedBy = new Set<string>();
+  /** Sprites/colliders spawned by the implementation - rebuilt on plan retry. */
+  private implObjects: Phaser.GameObjects.GameObject[] = [];
+  /** World sprites by data id, so the chapter can restyle them (dry fountain). */
+  private worldSprites = new Map<string, Phaser.GameObjects.Image>();
+  /** Solution ids the world currently shows - switches to the alt plan on retry. */
+  private worldPlanIds: string[] = [];
+  /**
+   * Persistent dressing driven by applyWorldDressing - deliberately NOT part
+   * of implObjects so a plan retry only flips visibility, never re-creates.
+   */
+  private leakDecal: Phaser.GameObjects.Image | null = null;
+  private trenchDecal: Phaser.GameObjects.Image | null = null;
+  private patchDecal: Phaser.GameObjects.Image | null = null;
+  private barrierSprites: Phaser.GameObjects.Image[] = [];
+  private fieldHoses: Phaser.GameObjects.Graphics | null = null;
+  private leakEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private fountainEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  /** Second-chance package ids, if the player ran one. */
+  private altPlanIds: string[] | null = null;
+  /** Review finding waiting for the dialogue to close before it is logged. */
+  private pendingFinding: {
+    npcId: string;
+    entry: { cardId: string; icon: string; text: string; datum?: string; kind: 'finding' };
+  } | null = null;
+
+  // ---- Map view + mini-map feed ---------------------------------------------
+  /** true = the camera shows the whole town instead of following the player. */
+  private overview = false;
+  /** Last emitted mini-map marker signature - only changes are re-sent. */
+  private markerSignature = '';
+  /** Throttle for the PLAYER_MOVED feed. */
+  private lastPosEmit = 0;
+
   /**
    * The strips have one pose per direction - no walk cycle - so a gentle
    * side-to-side waddle sells the movement instead.
@@ -162,6 +247,12 @@ export default class GameScene extends Phaser.Scene {
   private ambience: Phaser.Sound.BaseSound | null = null;
   private ambienceKey: SoundKey | null = null;
   private stepTimer = 0;
+
+  // ---- Conversation acting --------------------------------------------------
+  /** Wiggle tween running while the active NPC "talks". */
+  private talkTween: Phaser.Tweens.Tween | null = null;
+  /** The sprite being wiggled - kept so its angle can be restored on close. */
+  private talkSprite: Phaser.GameObjects.Sprite | null = null;
 
   constructor() {
     super('GameScene');
@@ -207,6 +298,19 @@ export default class GameScene extends Phaser.Scene {
       this.planIds = saved.plan?.solutionIds ?? [];
       for (const npcId of saved.announcedNpcIds ?? []) this.announcedTo.add(npcId);
       this.posterHung = saved.posterHung ?? false;
+      this.implPhase = saved.implPhase ?? -1;
+      for (const npcId of saved.reviewedNpcIds ?? []) this.reviewedBy.add(npcId);
+      this.altPlanIds = saved.altPlan?.solutionIds ?? null;
+      // The world dresses for the most recent run - the alt plan replaces the
+      // first one's props once the player retries.
+      this.worldPlanIds = saved.altPlan?.solutionIds ?? this.planIds;
+      // A stage past the implementation implies the whole timeline ran.
+      if (
+        this.implPhase < 0 &&
+        ['revisit', 'debrief', 'retry', 'finale', 'done'].includes(this.quest)
+      ) {
+        this.implPhase = 2;
+      }
     }
 
     this.obstacles = this.physics.add.staticGroup();
@@ -226,6 +330,20 @@ export default class GameScene extends Phaser.Scene {
     this.createQuestMarkers();
     this.createBoardMarker();
     this.createGuideArrow();
+    this.createImplTextures();
+    this.createChapterTwoDressing();
+    // Restored chapter-2 sessions get their construction sites back.
+    this.rebuildImplementation();
+
+    // ...and the time-of-day tint matching the stop they paused at (no
+    // calendar animation on resume - 'restore' applies it silently).
+    if (this.implPhase >= 0) {
+      const stops = [DAY_STOPS.start, DAY_STOPS.mid, DAY_STOPS.end] as const;
+      EventBus.emit(GameEvents.DAY_CHANGED, {
+        ...stops[Math.min(this.implPhase, stops.length - 1)],
+        direction: 'restore',
+      });
+    }
 
     // Report the starting district so the HUD is correct before the first move.
     this.updateDistrict(true);
@@ -294,6 +412,7 @@ export default class GameScene extends Phaser.Scene {
       if (object.collision) {
         this.addObstacle(object.collision, object.x, object.y, object.id);
       }
+      this.worldSprites.set(object.id, sprite);
     }
   }
 
@@ -315,8 +434,13 @@ export default class GameScene extends Phaser.Scene {
    * Arcade Physics is AABB only - no polygons - which is why every obstacle is
    * a rectangle placed at the object's feet.
    */
-  private addObstacle(box: CollisionBox, baseX: number, baseY: number, id: string): void {
-    this.addObstacleRect(
+  private addObstacle(
+    box: CollisionBox,
+    baseX: number,
+    baseY: number,
+    id: string,
+  ): Phaser.GameObjects.Rectangle {
+    return this.addObstacleRect(
       baseX + (box.offsetX ?? 0),
       baseY + (box.offsetY ?? -box.height / 2),
       box.width,
@@ -331,7 +455,7 @@ export default class GameScene extends Phaser.Scene {
     width: number,
     height: number,
     id: string,
-  ): void {
+  ): Phaser.GameObjects.Rectangle {
     const rect = this.add
       .rectangle(centerX, centerY, width, height, 0xff2f6d, 0.35)
       .setOrigin(0.5, 0.5)
@@ -343,6 +467,12 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.existing(rect, true);
     this.obstacles.add(rect);
     this.debugShapes.push(rect);
+    // Implementation colliders can be rebuilt (plan retry) - keep the debug
+    // overlay list free of destroyed entries.
+    rect.once('destroy', () => {
+      this.debugShapes = this.debugShapes.filter((shape) => shape !== rect);
+    });
+    return rect;
   }
 
   private createPlayerAnimations(): void {
@@ -474,6 +604,7 @@ export default class GameScene extends Phaser.Scene {
       S: Phaser.Input.Keyboard.KeyCodes.S,
       D: Phaser.Input.Keyboard.KeyCodes.D,
       E: Phaser.Input.Keyboard.KeyCodes.E,
+      M: Phaser.Input.Keyboard.KeyCodes.M,
       DEBUG: Phaser.Input.Keyboard.KeyCodes.BACKTICK,
     }) as typeof this.keys;
   }
@@ -482,9 +613,39 @@ export default class GameScene extends Phaser.Scene {
     const camera = this.cameras.main;
     camera.setBounds(0, 0, WORLD.width, WORLD.height);
     camera.startFollow(this.player, true, 0.1, 0.1);
-    const fitZoom = () => camera.setZoom(this.scale.height / VISIBLE_WORLD_HEIGHT);
+    const fitZoom = () => camera.setZoom(this.cameraZoom());
     fitZoom();
     this.scale.on('resize', fitZoom);
+  }
+
+  /** Close-up follows the player; the overview must fit the whole town. */
+  private cameraZoom(): number {
+    if (this.overview) {
+      return Math.min(this.scale.height / WORLD.height, this.scale.width / WORLD.width);
+    }
+    return this.scale.height / VISIBLE_WORLD_HEIGHT;
+  }
+
+  /** M key / mini-map click: pull the camera out to the whole-town view. */
+  private toggleOverview(): void {
+    if (this.dialogueOpen) return;
+    this.overview = !this.overview;
+    const camera = this.cameras.main;
+    if (this.overview) {
+      this.hint.setVisible(false);
+      this.player.setVelocity(0, 0);
+      this.stopWaddle();
+      camera.stopFollow();
+      // Wider-than-world bounds let centerOn actually center the town when
+      // the zoomed-out view is broader than the map itself.
+      camera.setBounds(-2000, -2000, WORLD.width + 4000, WORLD.height + 4000);
+      camera.centerOn(WORLD.width / 2, WORLD.height / 2);
+    } else {
+      camera.setBounds(0, 0, WORLD.width, WORLD.height);
+      camera.startFollow(this.player, true, 0.1, 0.1);
+    }
+    camera.zoomTo(this.cameraZoom(), 650, 'Sine.easeInOut');
+    EventBus.emit(GameEvents.OVERVIEW_CHANGED, { active: this.overview });
   }
 
   /**
@@ -577,6 +738,47 @@ export default class GameScene extends Phaser.Scene {
       }
     }
     this.boardMarker?.setVisible(this.quest === 'announce' && !this.posterHung);
+    this.emitMinimapMarkers();
+  }
+
+  /**
+   * Feeds the React mini-map: quest "!"s (at live positions, so follower Lina
+   * tracks correctly), one pin per implemented measure, and a warning pin for
+   * the mid-month twist. Emitted only when the set actually changes - this
+   * runs every frame via refreshQuestMarkers.
+   */
+  private emitMinimapMarkers(): void {
+    const markers: MinimapMarker[] = [];
+
+    for (const [id, marker] of this.questMarkers) {
+      if (!marker.visible) continue;
+      const npc = this.npcs.find((n) => n.definition.id === id);
+      if (npc) markers.push({ x: npc.sprite.x, y: npc.sprite.y, kind: 'quest' });
+    }
+    if (this.boardMarker?.visible) {
+      markers.push({ x: NOTICE_BOARD.x, y: NOTICE_BOARD.y, kind: 'quest' });
+    }
+
+    if (this.implPhase >= 0) {
+      const spots = new Map<string, { x: number; y: number }>();
+      for (let phase = 0; phase <= Math.min(this.implPhase, IMPLEMENTATION_PROPS.length - 1); phase++) {
+        for (const prop of IMPLEMENTATION_PROPS[phase]) {
+          if (!this.worldPlanIds.includes(prop.solutionId) || spots.has(prop.solutionId)) continue;
+          spots.set(prop.solutionId, { x: prop.x, y: prop.y });
+        }
+      }
+      for (const spot of spots.values()) markers.push({ ...spot, kind: 'impl' });
+    }
+
+    if (this.implPhase >= 1) {
+      const twist = implementationTwistSpot(this.worldPlanIds);
+      if (twist) markers.push({ ...twist, kind: 'warning' });
+    }
+
+    const signature = JSON.stringify(markers);
+    if (signature === this.markerSignature) return;
+    this.markerSignature = signature;
+    EventBus.emit(GameEvents.MARKERS_CHANGED, { markers });
   }
 
   private isQuestTarget(npc: Npc): boolean {
@@ -593,9 +795,23 @@ export default class GameScene extends Phaser.Scene {
       case 'announce':
         if (npc.definition.id === 'lina') return this.announceComplete();
         return ANNOUNCE_NPC_IDS.includes(npc.definition.id) && !this.announcedTo.has(npc.definition.id);
+      case 'expectation':
+      case 'implement':
+      case 'retry':
+        return npc.definition.id === 'lina';
+      case 'revisit':
+        return REVIEW_NPC_IDS.includes(npc.definition.id) && !this.reviewedBy.has(npc.definition.id);
+      case 'debrief':
+      case 'finale':
+        return id === 'belediye';
       default:
         return false;
     }
+  }
+
+  /** All four day-30 review talks heard - time to report to the mayor. */
+  private reviewComplete(): boolean {
+    return REVIEW_NPC_IDS.every((id) => this.reviewedBy.has(id));
   }
 
   /** Every resident told + poster hung - Lina gets the closing word. */
@@ -617,15 +833,21 @@ export default class GameScene extends Phaser.Scene {
   private questTarget(): { x: number; y: number } | null {
     if (this.quest === 'lina-intro' || this.quest === 'done' || this.dialogueOpen) return null;
 
-    if (this.quest === 'report') {
+    if (
+      this.quest === 'report' ||
+      this.quest === 'expectation' ||
+      this.quest === 'implement' ||
+      this.quest === 'retry'
+    ) {
       return this.lina ? { x: this.lina.sprite.x, y: this.lina.sprite.y } : null;
     }
 
-    if (this.quest === 'announce') {
+    if (this.quest === 'announce' || this.quest === 'revisit') {
       const spots: { x: number; y: number }[] = this.npcs
         .filter((n) => this.isQuestTarget(n))
         .map((n) => ({ x: n.sprite.x, y: n.sprite.y }));
-      if (!this.posterHung) spots.push({ x: NOTICE_BOARD.x, y: NOTICE_BOARD.y });
+      if (this.quest === 'announce' && !this.posterHung)
+        spots.push({ x: NOTICE_BOARD.x, y: NOTICE_BOARD.y });
       if (spots.length === 0) return null;
       return spots.reduce((a, b) =>
         Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y) <
@@ -706,38 +928,31 @@ export default class GameScene extends Phaser.Scene {
       completedCards: [...this.completedCards],
       announcedNpcIds: [...this.announcedTo],
       posterHung: this.posterHung,
+      implPhase: this.implPhase,
+      reviewedNpcIds: [...this.reviewedBy],
     });
   }
 
   private startLinaIntro(): void {
     if (this.quest !== 'lina-intro' || !this.lina) return;
-    this.dialogueOpen = true;
-    this.activeNpc = this.lina;
-    this.playDialogueCue();
+    this.beginConversation(this.lina, false);
     EventBus.emit(GameEvents.OPEN_DIALOGUE, {
       npcId: 'lina',
       name: 'Lina',
       text: LINA_INTRO_PAGES[0],
       pages: [...LINA_INTRO_PAGES.slice(1)],
+      voiceFiles: ['lina-intro-01.mp3', 'lina-intro-02.mp3', 'lina-intro-03.mp3'],
     });
   }
 
   private openInvestigation(npc: Npc, cardId: InvestigationId): void {
-    this.dialogueOpen = true;
-    this.activeNpc = npc;
-    this.player.setVelocity(0, 0);
-    this.player.anims.stop();
-    this.stopWaddle();
-    this.setIdleFrame();
-    this.hint.setVisible(false);
-    this.playDialogueCue();
+    this.beginConversation(npc);
     EventBus.emit(GameEvents.OPEN_INVESTIGATION, { cardId });
   }
 
   private handleInvestigationCompleted(cardId: string): void {
     const anchor = this.activeNpc?.sprite ?? this.player;
-    this.dialogueOpen = false;
-    this.activeNpc = null;
+    this.endConversation();
     const id = cardId as InvestigationId;
     this.completedCards.add(id);
 
@@ -777,10 +992,30 @@ export default class GameScene extends Phaser.Scene {
           break;
         }
         const parts = [`Planı halka duyur (${this.announcedTo.size}/${ANNOUNCE_NPC_IDS.length})`];
-        if (!this.posterHung) parts.push('afişi panoya as');
+        if (!this.posterHung) parts.push('duyuruyu panoda paylaş');
         this.setObjective(parts.join(' + '));
         break;
       }
+      case 'expectation':
+        this.setObjective('Lina ile konuş');
+        break;
+      case 'implement':
+        this.setObjective('Uygulamayı izle - Lina ile konuş');
+        break;
+      case 'revisit':
+        this.setObjective(
+          `Kasabayı yeniden incele: değişenleri dinle (${this.reviewedBy.size}/${REVIEW_NPC_IDS.length})`,
+        );
+        break;
+      case 'debrief':
+        this.setObjective('Belediyeye dön ve ilk raporunu sun');
+        break;
+      case 'retry':
+        this.setObjective('Lina ile konuş');
+        break;
+      case 'finale':
+        this.setObjective('Başkan ile konuş - final sunumu');
+        break;
       case 'done':
         this.setObjective(null);
         break;
@@ -834,7 +1069,11 @@ export default class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.INVESTIGATION_COMPLETED, this.onInvestigationCompleted, this);
     EventBus.on(GameEvents.EVIDENCE_SUBMITTED, this.handleEvidenceSubmitted, this);
     EventBus.on(GameEvents.PLAN_SUBMITTED, this.handlePlanSubmitted, this);
+    EventBus.on(GameEvents.REPORT_SUBMITTED, this.handleReportSubmitted, this);
+    EventBus.on(GameEvents.FINALE_SUBMITTED, this.handleFinaleSubmitted, this);
     EventBus.on(GameEvents.AUDIO_MUTED, this.handleAudioMuted, this);
+    EventBus.on(GameEvents.MAP_TOGGLED, this.toggleOverview, this);
+    EventBus.on(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
 
     // Scenes outlive neither the game nor React, so unbind on shutdown to avoid
     // stacking duplicate handlers if the scene is ever restarted.
@@ -844,7 +1083,11 @@ export default class GameScene extends Phaser.Scene {
       EventBus.off(GameEvents.INVESTIGATION_COMPLETED, this.onInvestigationCompleted, this);
       EventBus.off(GameEvents.EVIDENCE_SUBMITTED, this.handleEvidenceSubmitted, this);
       EventBus.off(GameEvents.PLAN_SUBMITTED, this.handlePlanSubmitted, this);
+      EventBus.off(GameEvents.REPORT_SUBMITTED, this.handleReportSubmitted, this);
+      EventBus.off(GameEvents.FINALE_SUBMITTED, this.handleFinaleSubmitted, this);
       EventBus.off(GameEvents.AUDIO_MUTED, this.handleAudioMuted, this);
+      EventBus.off(GameEvents.MAP_TOGGLED, this.toggleOverview, this);
+      EventBus.off(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
     });
   }
 
@@ -866,8 +1109,17 @@ export default class GameScene extends Phaser.Scene {
       !this.announcedTo.has(this.activeNpc.definition.id)
         ? this.activeNpc.definition.id
         : null;
-    this.dialogueOpen = false;
-    this.activeNpc = null;
+    const wasImplementTalk =
+      this.quest === 'implement' && this.activeNpc?.definition.id === 'lina';
+    const wasReview =
+      this.quest === 'revisit' &&
+      this.pendingFinding !== null &&
+      this.activeNpc?.definition.id === this.pendingFinding.npcId;
+    const wasDebrief =
+      this.quest === 'debrief' && this.activeNpc?.definition.id === 'mayor';
+    const wasFinaleTalk =
+      this.quest === 'finale' && this.activeNpc?.definition.id === 'mayor';
+    this.endConversation();
 
     if (wasIntro) {
       this.quest = 'meet-mayor';
@@ -883,7 +1135,49 @@ export default class GameScene extends Phaser.Scene {
       if (this.announceComplete()) this.playSlice(SoundKeys.COMPLETE, 0, 1800, 0.6);
       this.refreshQuestMarkers();
       this.emitObjective();
+    } else if (wasImplementTalk) {
+      this.advanceImplementation();
+    } else if (wasReview) {
+      this.completeReviewTalk();
+    } else if (wasDebrief) {
+      // React opens the notebook so the player picks the findings to cite.
+      EventBus.emit(GameEvents.OPEN_REPORT);
+    } else if (wasFinaleTalk) {
+      // React shows the run comparison + the closing statement card.
+      EventBus.emit(GameEvents.OPEN_FINALE);
     }
+  }
+
+  /** The 30-day timeline advances one story stop each time Lina is heard. */
+  private advanceImplementation(): void {
+    this.implPhase += 1;
+    if (this.implPhase === 1) {
+      this.spawnImplementationPhase(1);
+      EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.mid, direction: 'forward' });
+    } else if (this.implPhase >= 2) {
+      this.implPhase = 2;
+      EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.end, direction: 'forward' });
+      this.quest = 'revisit';
+    }
+    this.refreshQuestMarkers();
+    this.emitObjective();
+  }
+
+  /** The review talk ended: log its finding, then maybe open the debrief. */
+  private completeReviewTalk(): void {
+    const pending = this.pendingFinding;
+    this.pendingFinding = null;
+    if (!pending) return;
+
+    this.reviewedBy.add(pending.npcId);
+    EventBus.emit(GameEvents.FINDING_ADDED, { entry: pending.entry });
+    this.showToast('Bulgu deftere eklendi! 📒', this.player.x, this.player.y - 90);
+    if (this.reviewComplete()) {
+      this.playSlice(SoundKeys.COMPLETE, 0, 1800, 0.6);
+      this.quest = 'debrief';
+    }
+    this.refreshQuestMarkers();
+    this.emitObjective();
   }
 
   private handleEvidenceSubmitted(): void {
@@ -894,35 +1188,108 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private handlePlanSubmitted(payload: { solutionIds: string[] }): void {
+    // Second-chance run: the world re-dresses for the new plan and Lina
+    // narrates the comparison; the finale follows.
+    if (this.quest === 'retry') {
+      this.altPlanIds = payload.solutionIds;
+      this.worldPlanIds = payload.solutionIds;
+      this.implPhase = Math.max(this.implPhase, 0);
+      this.rebuildImplementation();
+      this.quest = 'finale';
+      this.refreshQuestMarkers();
+      this.emitObjective();
+      EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.retry, direction: 'back' });
+
+      const pages = linaComparePages(this.planIds, this.altPlanIds);
+      if (this.lina) this.beginConversation(this.lina);
+      EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+        npcId: 'lina',
+        name: 'Lina',
+        text: pages[0],
+        pages: pages.slice(1),
+        voiceFiles: compareVoiceFiles(this.planIds, this.altPlanIds),
+      });
+      return;
+    }
+
     if (this.quest !== 'meeting') return;
     this.quest = 'announce';
     this.planIds = payload.solutionIds;
+    this.worldPlanIds = payload.solutionIds;
     this.refreshQuestMarkers();
     this.emitObjective();
 
     // The mayor reacts to the package: who it serves, what was left out.
     const mayor = this.npcs.find((npc) => npc.definition.id === 'mayor');
-    this.activeNpc = mayor ?? null;
-    this.dialogueOpen = true;
+    if (mayor) this.beginConversation(mayor);
     this.showToast('Çözüm planın belediyeye teslim edildi! 🎉', this.player.x, this.player.y - 90);
-    this.playDialogueCue();
     EventBus.emit(GameEvents.OPEN_DIALOGUE, {
       npcId: 'mayor',
       name: 'Belediye Başkanı',
       text: mayorReactionPages(payload.solutionIds)[0],
       pages: mayorReactionPages(payload.solutionIds).slice(1),
+      voiceFiles: mayorReactionVoiceFiles(payload.solutionIds),
     });
   }
 
   private handleDialogueChoice(choiceId: string): void {
-    // Lina's reflective closer ends the chapter.
+    // Lina's reflective closer now opens chapter 2 instead of ending the game.
     if (choiceId in LINA_CLOSING_FEEDBACK) {
       const anchor = this.activeNpc?.sprite ?? this.player;
       this.showToast(LINA_CLOSING_FEEDBACK[choiceId], anchor.x, anchor.y - anchor.displayHeight - 10);
       this.playSlice(SoundKeys.COMPLETE, 0, 2000, 0.7);
-      this.quest = 'done';
-      this.dialogueOpen = false;
+      this.quest = 'expectation';
+      this.endConversation();
+      this.refreshQuestMarkers();
+      this.emitObjective();
+      return;
+    }
+
+    // The player's prediction - stored so the finale can revisit it.
+    if (choiceId in EXPECTATION_FEEDBACK) {
+      const anchor = this.activeNpc?.sprite ?? this.player;
+      this.showToast(EXPECTATION_FEEDBACK[choiceId], anchor.x, anchor.y - anchor.displayHeight - 10);
+      const text = EXPECTATION_CHOICES.find((c) => c.id === choiceId)?.text;
+      const saved = loadSession();
+      if (saved && text) saveSession({ ...saved, expectation: text });
+
+      this.quest = 'implement';
+      this.implPhase = 0;
+      this.spawnImplementationPhase(0);
+      this.endConversation();
+      EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.start, direction: 'forward' });
+      this.refreshQuestMarkers();
+      this.emitObjective();
+      return;
+    }
+
+    // The mayor's debrief follow-up - whichever gap the player named.
+    if (choiceId in MAYOR_FOLLOWUP_FEEDBACK) {
+      const anchor = this.activeNpc?.sprite ?? this.player;
+      this.showToast(MAYOR_FOLLOWUP_FEEDBACK[choiceId], anchor.x, anchor.y - anchor.displayHeight - 10);
+      this.playSlice(SoundKeys.COMPLETE, 0, 1600, 0.6);
+      this.quest = 'retry';
+      this.endConversation();
+      this.refreshQuestMarkers();
+      this.emitObjective();
+      return;
+    }
+
+    // Lina's second-chance offer.
+    if (choiceId === 'retry-alt') {
+      // The solution panel reopens in retry mode; the player stays frozen
+      // (dialogueOpen) until the package is submitted.
+      this.stopConversationFx();
       this.activeNpc = null;
+      EventBus.emit(GameEvents.OPEN_SOLUTION, { mode: 'retry' });
+      return;
+    }
+    if (choiceId === 'retry-keep') {
+      const anchor = this.activeNpc?.sprite ?? this.player;
+      this.showToast(RETRY_KEEP_FEEDBACK, anchor.x, anchor.y - anchor.displayHeight - 10);
+      this.playSlice(SoundKeys.COMPLETE, 0, 1800, 0.6);
+      this.quest = 'finale';
+      this.endConversation();
       this.refreshQuestMarkers();
       this.emitObjective();
       return;
@@ -934,8 +1301,359 @@ export default class GameScene extends Phaser.Scene {
     const anchor = this.activeNpc?.sprite ?? this.player;
     this.showToast(message, anchor.x, anchor.y - anchor.displayHeight - 10);
 
+    this.endConversation();
+  }
+
+  /** The debrief findings were picked: the mayor asks the follow-up. */
+  private handleReportSubmitted(): void {
+    if (this.quest !== 'debrief') return;
+    const mayor = this.npcs.find((npc) => npc.definition.id === 'mayor');
+    if (mayor) this.beginConversation(mayor);
+    EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+      npcId: 'mayor',
+      name: 'Belediye Başkanı',
+      text: MAYOR_FOLLOWUP_QUESTION,
+      choices: mayorFollowUpChoices(this.planIds),
+      voiceFiles: ['mayor-followup.mp3'],
+    });
+  }
+
+  /** The closing statement was written - the chapter is truly over. */
+  private handleFinaleSubmitted(): void {
+    if (this.quest !== 'finale') return;
+    this.quest = 'done';
+    this.endConversation();
+    this.playSlice(SoundKeys.COMPLETE, 0, 2200, 0.7);
+    this.showToast(
+      'Kapanış değerlendirmen kaydedildi - Denge Kasabası iyi düşünen birine emanet! 🎉',
+      this.player.x,
+      this.player.y - 90,
+    );
+    this.refreshQuestMarkers();
+    this.emitObjective();
+  }
+
+  // ---- Chapter 2 world dressing ---------------------------------------------
+
+  /** Spawn the props one implementation stop adds (they accumulate). */
+  private spawnImplementationPhase(phase: number): void {
+    const props = IMPLEMENTATION_PROPS[phase] ?? [];
+    for (const prop of props) {
+      if (!this.worldPlanIds.includes(prop.solutionId)) continue;
+      const sprite = this.add
+        .image(prop.x, prop.y, prop.textureKey)
+        .setOrigin(0.5, 1)
+        .setScale(prop.scale ?? 1)
+        .setAlpha(0);
+      if (prop.ground) {
+        sprite.setDepth(GroundDepth.DECAL + 10);
+      } else {
+        sprite.setDepth(prop.y);
+      }
+      this.tweens.add({ targets: sprite, alpha: 1, duration: 600 });
+      this.implObjects.push(sprite);
+      if (prop.collision) {
+        this.implObjects.push(
+          this.addObstacle(prop.collision, prop.x, prop.y, `impl-${prop.solutionId}-${prop.x}`),
+        );
+      }
+    }
+    this.applyWorldDressing();
+  }
+
+  /**
+   * Clears and respawns every implementation prop. Used on restore and when
+   * the retry replaces the world with the alternative plan's timeline.
+   */
+  private rebuildImplementation(): void {
+    for (const object of this.implObjects) object.destroy();
+    this.implObjects = [];
+    if (this.implPhase < 0) {
+      this.applyWorldDressing();
+      return;
+    }
+    for (let phase = 0; phase <= Math.min(this.implPhase, IMPLEMENTATION_PROPS.length - 1); phase++) {
+      this.spawnImplementationPhase(phase);
+    }
+  }
+
+  /** Nuri's street, on the avenue's south edge - the leak lives here. */
+  private static readonly LEAK_SPOT = { x: 1500, y: 786 } as const;
+
+  /** One-time canvas textures for chapter-2 dressing: barrier, patch, particles. */
+  private createImplTextures(): void {
+    const g = this.add.graphics();
+
+    // Striped worksite barrier: pale legs + white board with red stripes.
+    g.fillStyle(0xb8b2a4);
+    g.fillRect(8, 14, 5, 20);
+    g.fillRect(51, 14, 5, 20);
+    g.fillStyle(0xf4f0e6).fillRoundedRect(0, 0, 64, 16, 3);
+    g.fillStyle(0xc9503d);
+    for (let i = 0; i < 4; i++) g.fillRect(5 + i * 15, 2, 7, 12);
+    g.lineStyle(1.5, 0x8f887a).strokeRoundedRect(0, 0, 64, 16, 3);
+    g.generateTexture('impl-barrier', 64, 34);
+    g.clear();
+
+    // Fresh asphalt patch where the trench was closed.
+    g.fillStyle(0x50555c).fillEllipse(55, 18, 110, 36);
+    g.lineStyle(2, 0x43474d).strokeEllipse(55, 18, 110, 36);
+    g.lineStyle(1, 0x62676e, 0.7);
+    g.lineBetween(20, 14, 90, 22);
+    g.lineBetween(30, 24, 80, 10);
+    g.generateTexture('street-patch', 110, 36);
+    g.clear();
+
+    // Water drop + dust puff particles.
+    g.fillStyle(0x7ec4e8).fillCircle(4, 4, 3);
+    g.generateTexture('fx-drop', 8, 8);
+    g.clear();
+    g.fillStyle(0xc9b891, 0.9).fillCircle(6, 6, 6);
+    g.generateTexture('fx-dust', 12, 12);
+    g.destroy();
+  }
+
+  /** Persistent chapter-2 dressing; applyWorldDressing flips its visibility. */
+  private createChapterTwoDressing(): void {
+    const { x: lx, y: ly } = GameScene.LEAK_SPOT;
+
+    // The leak is a pre-existing problem - on stage from chapter 1.
+    this.leakDecal = this.add
+      .image(lx, ly, TextureKeys.STREET_LEAK)
+      .setOrigin(0.5)
+      .setScale(0.15)
+      .setDepth(GroundDepth.DECAL + 5);
+    this.trenchDecal = this.add
+      .image(lx, ly, TextureKeys.PIPE_TRENCH)
+      .setOrigin(0.5)
+      .setScale(0.15)
+      .setDepth(GroundDepth.DECAL + 5)
+      .setVisible(false);
+    this.patchDecal = this.add
+      .image(lx, ly, 'street-patch')
+      .setOrigin(0.5)
+      .setDepth(GroundDepth.DECAL + 5)
+      .setVisible(false);
+
+    for (const dx of [-70, 70]) {
+      this.barrierSprites.push(
+        this.add
+          .image(lx + dx, ly + 16, 'impl-barrier')
+          .setOrigin(0.5, 1)
+          .setScale(0.9)
+          .setDepth(ly + 16)
+          .setVisible(false),
+      );
+    }
+
+    this.leakEmitter = this.add
+      .particles(lx, ly + 2, 'fx-drop', {
+        speedY: { min: -46, max: -22 },
+        speedX: { min: -14, max: 14 },
+        lifespan: 650,
+        frequency: 420,
+        scale: { start: 1, end: 0.3 },
+        alpha: { start: 0.9, end: 0 },
+      })
+      .setDepth(GroundDepth.DECAL + 6);
+
+    this.dustEmitter = this.add
+      .particles(lx, ly + 8, 'fx-dust', {
+        speed: { min: 8, max: 24 },
+        angle: { min: 200, max: 340 },
+        lifespan: 1700,
+        frequency: 420,
+        scale: { start: 0.5, end: 1.6 },
+        alpha: { start: 0.3, end: 0 },
+      })
+      .setDepth(GroundDepth.DECAL + 7);
+    this.dustEmitter.stop();
+
+    // Drips falling from the fountain's upper tiers - the "running" state.
+    this.fountainEmitter = this.add
+      .particles(PARK_CENTER.x, 728, 'fx-drop', {
+        speedY: { min: 26, max: 55 },
+        speedX: { min: -20, max: 20 },
+        lifespan: 850,
+        frequency: 130,
+        scale: { start: 0.9, end: 0.3 },
+        alpha: { start: 0.8, end: 0.1 },
+      })
+      .setDepth(792);
+
+    // Drip hoses trace the field's vertical crop rows; emitter dots mark them.
+    const hoses = this.add.graphics().setDepth(GroundDepth.DECAL + 2).setVisible(false);
+    hoses.lineStyle(3, 0x24301a, 0.9);
+    for (const hx of [340, 368, 396, 424, 452]) hoses.lineBetween(hx, 936, hx, 1084);
+    hoses.lineStyle(4, 0x24301a, 0.9);
+    hoses.lineBetween(336, 1088, 470, 1088);
+    hoses.lineBetween(470, 930, 470, 1088);
+    hoses.fillStyle(0x88c7e8, 1);
+    for (const hx of [340, 368, 396, 424, 452]) {
+      for (const hy of [960, 1010, 1060]) hoses.fillCircle(hx, hy, 2.2);
+    }
+    this.fieldHoses = hoses;
+  }
+
+  /**
+   * Plan consequences on the world: leak -> trench -> repaired patch on
+   * Nuri's street, fountain running/dry, drip hoses and field tinting.
+   * Derived purely from worldPlanIds + implPhase, so restores and the
+   * alternative-plan retry always land on a consistent state.
+   */
+  private applyWorldDressing(): void {
+    const started = this.implPhase >= 0;
+    const settled = this.implPhase >= 1;
+    const pipes = this.worldPlanIds.includes('repair-pipes');
+    const fountainsOff = started && this.worldPlanIds.includes('fountains-off');
+    const drip = this.worldPlanIds.includes('drip-irrigation');
+
+    const leakVisible = !pipes || !started;
+    this.leakDecal?.setVisible(leakVisible);
+    if (this.leakEmitter) {
+      this.leakEmitter.setVisible(leakVisible);
+      if (leakVisible) this.leakEmitter.start();
+      else this.leakEmitter.stop();
+    }
+
+    const worksite = pipes && started && !settled;
+    this.trenchDecal?.setVisible(worksite);
+    for (const barrier of this.barrierSprites) barrier.setVisible(worksite);
+    if (this.dustEmitter) {
+      this.dustEmitter.setVisible(worksite);
+      if (worksite) this.dustEmitter.start();
+      else this.dustEmitter.stop();
+    }
+
+    this.patchDecal?.setVisible(pipes && settled);
+
+    const fountain = this.worldSprites.get('park-fountain');
+    if (fountain) {
+      if (fountainsOff) fountain.setTint(0x8d9aa3);
+      else fountain.clearTint();
+    }
+    if (this.fountainEmitter) {
+      this.fountainEmitter.setVisible(!fountainsOff);
+      if (fountainsOff) this.fountainEmitter.stop();
+      else this.fountainEmitter.start();
+    }
+
+    this.fieldHoses?.setVisible(drip && settled);
+    const field = this.worldSprites.get('field-veg');
+    if (field) {
+      if (!drip && this.implPhase >= 2) field.setTint(0xc9ae72);
+      else field.clearTint();
+    }
+  }
+
+  /** Shared freeze + emit for every NPC dialogue card. */
+  // ---- Conversation acting --------------------------------------------------
+  // Every talk runs through these helpers so NPCs consistently turn to the
+  // player, step closer like Lina's intro, and gesture while the card is open.
+
+  private beginConversation(npc: Npc, playCue = true): void {
+    this.dialogueOpen = true;
+    this.activeNpc = npc;
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.stopWaddle();
+    this.faceEachOther(npc);
+    this.hint.setVisible(false);
+    this.startTalkAnim(npc);
+    if (playCue) this.playDialogueCue();
+  }
+
+  /** The NPC turns toward the player; the player turns back. */
+  private faceEachOther(npc: Npc): void {
+    const dx = this.player.x - npc.sprite.x;
+    const dy = this.player.y - npc.sprite.y;
+    const facing: Facing =
+      Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+    if (npc.definition.followsPlayer) {
+      // Lina's sheet is animated - freeze her on the matching idle frame.
+      this.linaFacing = facing;
+      npc.sprite.anims.stop();
+      npc.sprite.setFrame(LINA_IDLE_FRAMES[facing]);
+    } else {
+      npc.sprite.setFrame(NPC_FACE_FRAME[facing]);
+    }
+    this.facing = OPPOSITE_FACING[facing];
+    this.setIdleFrame();
+  }
+
+  /**
+   * Lina'nın girişteki gibi: NPC birkaç adım oyuncuya doğru gelir, açı
+   * wiggle'ı yürüyüş hissi verir; kart açık kaldıkça jest yapmayı sürdürür.
+   */
+  private startTalkAnim(npc: Npc): void {
+    this.stopTalkAnim();
+    this.talkSprite = npc.sprite;
+
+    // Follower Lina zaten oyuncunun dibinde - sabit NPC'ler yaklaşır.
+    if (!npc.definition.followsPlayer) {
+      const dx = this.player.x - npc.sprite.x;
+      const dy = this.player.y - npc.sprite.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(18, dist * 0.25);
+      this.tweens.add({
+        targets: npc.sprite,
+        x: npc.sprite.x + (dx / dist) * step,
+        y: npc.sprite.y + (dy / dist) * step,
+        duration: 320,
+        ease: 'Quad.easeOut',
+        onUpdate: () => npc.sprite.setDepth(npc.sprite.y),
+      });
+    }
+
+    this.talkTween = this.tweens.add({
+      targets: npc.sprite,
+      angle: { from: -2.4, to: 2.4 },
+      duration: 240,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private stopTalkAnim(): void {
+    this.talkTween?.stop();
+    this.talkTween = null;
+    this.talkSprite?.setAngle(0);
+    this.talkSprite = null;
+  }
+
+  /** The NPC walks back to its spot; follower Lina just resumes trailing. */
+  private returnNpcHome(npc: Npc): void {
+    if (npc.definition.followsPlayer) return;
+    const { x, y, frame } = npc.definition;
+    if (Math.abs(npc.sprite.x - x) < 1 && Math.abs(npc.sprite.y - y) < 1) return;
+    this.tweens.add({
+      targets: npc.sprite,
+      x,
+      y,
+      duration: 340,
+      ease: 'Quad.easeInOut',
+      onUpdate: () => npc.sprite.setDepth(npc.sprite.y),
+      onComplete: () => npc.sprite.setFrame(frame),
+    });
+  }
+
+  /** Stop the acting (wiggle) but keep the conversation flags. */
+  private stopConversationFx(): void {
+    this.stopTalkAnim();
+  }
+
+  private endConversation(): void {
+    const npc = this.activeNpc;
+    this.stopConversationFx();
     this.dialogueOpen = false;
     this.activeNpc = null;
+    if (npc) this.returnNpcHome(npc);
+  }
+
+  private presentDialogue(npc: Npc, payload: DialoguePayload): void {
+    this.beginConversation(npc);
+    EventBus.emit(GameEvents.OPEN_DIALOGUE, payload);
   }
 
   private openDialogue(npc: Npc): void {
@@ -957,32 +1675,18 @@ export default class GameScene extends Phaser.Scene {
 
     // In the meeting stage the mayor opens the solution package panel.
     if (cardId === 'belediye' && this.quest === 'meeting') {
-      this.dialogueOpen = true;
-      this.activeNpc = npc;
-      this.player.setVelocity(0, 0);
-      this.player.anims.stop();
-      this.stopWaddle();
-      this.setIdleFrame();
-      this.hint.setVisible(false);
-      this.playDialogueCue();
-      EventBus.emit(GameEvents.OPEN_SOLUTION);
+      this.beginConversation(npc);
+      EventBus.emit(GameEvents.OPEN_SOLUTION, { mode: 'initial' });
       return;
     }
 
     // In the report stage Lina closes the chapter instead of small talk.
     if (npc.definition.id === 'lina' && this.quest === 'report') {
-      this.dialogueOpen = true;
-      this.activeNpc = npc;
-      this.player.setVelocity(0, 0);
-      this.player.anims.stop();
-      this.stopWaddle();
-      this.setIdleFrame();
-      this.hint.setVisible(false);
-      this.playDialogueCue();
-      EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+      this.presentDialogue(npc, {
         npcId: 'lina',
         name: 'Lina',
         text: LINA_REPORT_TEXT,
+        voiceFiles: ['lina-report.mp3'],
       });
       return;
     }
@@ -995,18 +1699,11 @@ export default class GameScene extends Phaser.Scene {
     ) {
       const reaction = npcPlanReaction(npc.definition.id, this.planIds);
       if (reaction) {
-        this.dialogueOpen = true;
-        this.activeNpc = npc;
-        this.player.setVelocity(0, 0);
-        this.player.anims.stop();
-        this.stopWaddle();
-        this.setIdleFrame();
-        this.hint.setVisible(false);
-        this.playDialogueCue();
-        EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+        this.presentDialogue(npc, {
           npcId: npc.definition.id,
           name: npc.definition.name,
           text: reaction,
+          voiceFiles: announceVoice(npc.definition.id, this.planIds),
         });
         return;
       }
@@ -1014,39 +1711,129 @@ export default class GameScene extends Phaser.Scene {
 
     // Once every resident knows, Lina asks the reflective closing question.
     if (npc.definition.id === 'lina' && this.quest === 'announce' && this.announceComplete()) {
-      this.dialogueOpen = true;
-      this.activeNpc = npc;
-      this.player.setVelocity(0, 0);
-      this.player.anims.stop();
-      this.stopWaddle();
-      this.setIdleFrame();
-      this.hint.setVisible(false);
-      this.playDialogueCue();
-      EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+      this.presentDialogue(npc, {
         npcId: 'lina',
         name: 'Lina',
         text: LINA_CLOSING_PAGES[0],
         pages: [...LINA_CLOSING_PAGES.slice(1)],
         choices: [...LINA_CLOSING_CHOICES],
+        voiceFiles: ['lina-closing-01.mp3', 'lina-closing-02.mp3'],
       });
       return;
     }
 
-    this.dialogueOpen = true;
-    this.activeNpc = npc;
+    // ---- Chapter 2 ----------------------------------------------------------
 
-    this.player.setVelocity(0, 0);
-    this.player.anims.stop();
-    this.stopWaddle();
-    this.setIdleFrame();
-    this.hint.setVisible(false);
-    this.playDialogueCue();
+    // Lina asks what the player expects before the month starts.
+    if (npc.definition.id === 'lina' && this.quest === 'expectation') {
+      this.presentDialogue(npc, {
+        npcId: 'lina',
+        name: 'Lina',
+        text: LINA_EXPECTATION_PAGES[0],
+        pages: [...LINA_EXPECTATION_PAGES.slice(1)],
+        choices: [...EXPECTATION_CHOICES],
+        voiceFiles: ['lina-expect-01.mp3', 'lina-expect-02.mp3'],
+      });
+      return;
+    }
 
-    EventBus.emit(GameEvents.OPEN_DIALOGUE, {
+    // Each Lina talk during the implementation advances to the next day stop.
+    if (npc.definition.id === 'lina' && this.quest === 'implement') {
+      const twist = this.implPhase === 0 ? implementationTwist(this.planIds) : null;
+      const pages =
+        this.implPhase === 0
+          ? [...IMPLEMENT_MID_PAGES, ...(twist ? [twist] : [])]
+          : [...IMPLEMENT_END_PAGES];
+      this.presentDialogue(npc, {
+        npcId: 'lina',
+        name: 'Lina',
+        text: pages[0],
+        pages: pages.slice(1),
+        voiceFiles: implementVoiceFiles(this.implPhase, this.planIds),
+      });
+      return;
+    }
+
+    // Review round: same residents, new question - what changed?
+    if (
+      this.quest === 'revisit' &&
+      REVIEW_NPC_IDS.includes(npc.definition.id) &&
+      !this.reviewedBy.has(npc.definition.id)
+    ) {
+      const outcome = npcReviewOutcome(npc.definition.id, this.planIds);
+      if (outcome) {
+        this.pendingFinding = {
+          npcId: npc.definition.id,
+          entry: {
+            cardId: `finding-${npc.definition.id}`,
+            kind: 'finding',
+            ...outcome.finding,
+          },
+        };
+        this.presentDialogue(npc, {
+          npcId: npc.definition.id,
+          name: npc.definition.name,
+          text: outcome.text,
+          chart: outcome.chart,
+          voiceFiles: reviewVoice(npc.definition.id, this.planIds),
+        });
+        return;
+      }
+    }
+
+    // The mayor opens the town report - findings get picked after this talk.
+    if (cardId === 'belediye' && this.quest === 'debrief') {
+      this.presentDialogue(npc, {
+        npcId: 'mayor',
+        name: 'Belediye Başkanı',
+        text: MAYOR_DEBRIEF_PAGES[0],
+        pages: [...MAYOR_DEBRIEF_PAGES.slice(1)],
+        voiceFiles: ['mayor-debrief-01.mp3', 'mayor-debrief-02.mp3'],
+      });
+      return;
+    }
+
+    // Lina offers the second chance: same start, different decision.
+    if (npc.definition.id === 'lina' && this.quest === 'retry') {
+      this.presentDialogue(npc, {
+        npcId: 'lina',
+        name: 'Lina',
+        text: LINA_RETRY_PAGES[0],
+        pages: [...LINA_RETRY_PAGES.slice(1)],
+        choices: [...RETRY_CHOICES],
+        voiceFiles: ['lina-retry-01.mp3', 'lina-retry-02.mp3'],
+      });
+      return;
+    }
+
+    // The mayor's evaluation opens the finale card on close.
+    if (cardId === 'belediye' && this.quest === 'finale') {
+      this.presentDialogue(npc, {
+        npcId: 'mayor',
+        name: 'Belediye Başkanı',
+        text: mayorFinalePages(this.altPlanIds !== null)[0],
+        pages: mayorFinalePages(this.altPlanIds !== null).slice(1),
+        voiceFiles: finaleVoiceFiles(this.altPlanIds !== null),
+      });
+      return;
+    }
+
+    // The chapter-1 demo decisions retire once the real plan exists - in
+    // chapter 2 residents only talk, they no longer offer stat choices.
+    const chapterOne =
+      this.quest === 'lina-intro' ||
+      this.quest === 'meet-mayor' ||
+      this.quest === 'investigate' ||
+      this.quest === 'report' ||
+      this.quest === 'meeting' ||
+      this.quest === 'announce';
+
+    this.presentDialogue(npc, {
       npcId: npc.definition.id,
       name: npc.definition.name,
       text: npc.definition.dialogue.text,
-      choices: npc.definition.dialogue.choices,
+      choices: chapterOne ? npc.definition.dialogue.choices : [],
+      voiceFiles: smallTalkVoice(npc.definition.id),
     });
   }
 
@@ -1146,21 +1933,29 @@ export default class GameScene extends Phaser.Scene {
   // UPDATE
   // =========================================================================
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
     if (!this.player || !this.keys) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.DEBUG)) this.toggleDebug();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.M)) this.toggleOverview();
 
-    this.updateNearestNpc();
     this.updateGuideArrow();
     this.refreshQuestMarkers();
 
-    if (this.dialogueOpen) {
-      // React owns the interaction; freeze the player but keep rendering.
+    // ~8 Hz is plenty for the mini-map's player dot.
+    if (time - this.lastPosEmit > 120) {
+      this.lastPosEmit = time;
+      EventBus.emit(GameEvents.PLAYER_MOVED, { x: this.player.x, y: this.player.y });
+    }
+
+    if (this.dialogueOpen || this.overview) {
+      // React or the map view owns the moment; freeze but keep rendering.
       this.player.setVelocity(0, 0);
+      this.hint.setVisible(false);
       return;
     }
 
+    this.updateNearestNpc();
     this.updateMovement();
     this.updateFollower(delta);
     this.player.setDepth(this.player.y);
@@ -1176,7 +1971,11 @@ export default class GameScene extends Phaser.Scene {
       // Lina shadows the player, so her proximity hint would never leave the
       // screen - it only makes sense once she actually has something to say.
       const linaHasSomethingToSay =
-        this.quest === 'report' || (this.quest === 'announce' && this.announceComplete());
+        this.quest === 'report' ||
+        this.quest === 'expectation' ||
+        this.quest === 'implement' ||
+        this.quest === 'retry' ||
+        (this.quest === 'announce' && this.announceComplete());
       if (npc.definition.followsPlayer && !linaHasSomethingToSay) continue;
 
       const distance = Phaser.Math.Distance.Between(
@@ -1202,7 +2001,7 @@ export default class GameScene extends Phaser.Scene {
 
     if ((nearest || nearestBoard) && !this.dialogueOpen) {
       this.hint
-        .setText(nearestBoard ? 'Planı panoya as (E)' : nearest!.definition.hint)
+        .setText(nearestBoard ? 'Duyuruyu hazırla (E)' : nearest!.definition.hint)
         .setPosition(
           nearestBoard ? NOTICE_BOARD.x : nearest!.sprite.x,
           nearestBoard
@@ -1212,7 +2011,7 @@ export default class GameScene extends Phaser.Scene {
         .setVisible(true);
 
       if (Phaser.Input.Keyboard.JustDown(this.keys.E)) {
-        if (nearestBoard) this.hangPoster();
+        if (nearestBoard) this.openAnnouncement();
         else this.openDialogue(nearest!);
       }
     } else {
@@ -1220,12 +2019,28 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Mini-task: pinning the approved plan to the civic notice board. */
-  private hangPoster(): void {
+  /** The board opens the announcement composer instead of instant-hanging. */
+  private openAnnouncement(): void {
+    this.dialogueOpen = true;
+    this.hint.setVisible(false);
+    this.player.setVelocity(0, 0);
+    this.stopWaddle();
+    this.setIdleFrame();
+    this.playDialogueCue();
+    EventBus.emit(GameEvents.OPEN_ANNOUNCE);
+  }
+
+  /** React posted the town announcement - now it actually goes on the board. */
+  private handleAnnounceSubmitted(payload: { icon: string; headline: string }): void {
     this.posterHung = true;
+    this.dialogueOpen = false;
     this.hint.setVisible(false);
     this.playSlice(SoundKeys.TICK, 0, 600, 0.6);
-    this.showToast('Plan kasaba panosuna asıldı! 📋', NOTICE_BOARD.x, NOTICE_BOARD.y - 60);
+    this.showToast(
+      `${payload.icon} "${payload.headline}" — kasaba panosunda!`,
+      NOTICE_BOARD.x,
+      NOTICE_BOARD.y - 60,
+    );
     if (this.announceComplete()) this.playSlice(SoundKeys.COMPLETE, 0, 1800, 0.6);
     this.refreshQuestMarkers();
     this.emitObjective();

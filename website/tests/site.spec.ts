@@ -1,4 +1,43 @@
 import { test, expect } from "@playwright/test";
+import { posts } from "../src/content";
+
+for (const post of posts) {
+  test(`Blog yazısı: ${post.slug}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const response = await page.goto(`/blog/${post.slug}`);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator("h1")).toHaveText(post.title);
+    await expect(page.locator("link[rel=canonical]")).toHaveAttribute(
+      "href",
+      `https://atlaslearningtech.com/blog/${post.slug}`,
+    );
+    await expect(page.locator('nav a[aria-current="page"]')).toHaveAttribute(
+      "href",
+      "/blog",
+    );
+    await page.getByRole("link", { name: /Tüm yazılara dön/ }).click();
+    await expect(page).toHaveURL(/\/blog$/);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("Ürün duyurusu açılır ve kapanır", async ({ page }) => {
+  await page.goto("/denge-kasabasi");
+  await page.locator(".notice-card").click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("link", { name: /Ön gösterimi aç/ }))
+    .toHaveAttribute("href", "/denge-kasabasi/ongosteri/");
+  await dialog.getByRole("button", { name: "Duyuruyu kapat" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test("Bilinmeyen blog yazısı gerçek 404 döndürür", async ({ page }) => {
+  expect((await page.goto("/blog/bulunamayan-yazi"))?.status()).toBe(404);
+  await expect(page.locator("h1")).toContainText("Bu yol");
+});
+
 for (const width of [375, 768, 1440])
   for (const route of ["/", "/denge-kasabasi", "/kurumlar", "/blog"]) {
     test(`${route} ${width}px: içerik, görseller ve bağlantılar`, async ({

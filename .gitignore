@@ -16,6 +16,8 @@ playwright-report/
 *.docx
 *.pdf
 researchdocs/
+bilgi-belge-dokumanlar/arastirma/
+bilgi-belge-dokumanlar/basvuru/
 smoke*.mjs
 shot*.mjs
 cap*.mjs

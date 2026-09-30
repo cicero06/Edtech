@@ -4,8 +4,10 @@ Türkçe, eğitim amaçlı 2D "serious game". Kasaba bir **su krizi** ile karş�
 oyuncu kasabayı gezerek bilgi toplar, kararlar verir ve bu kararların
 **çevre / ekonomi / toplum / su** dengesi üzerindeki sonuçlarını görür.
 
-> **Durum:** PNG tabanlı oynanabilir dünya temeli hazır. Senaryo, görev ve kanıt
-> sistemleri henüz yok. Ayrıntılar için aşağıdaki *Uygulama durumu* bölümüne bakın.
+> **Durum:** PNG tabanlı dünya + iki bölümlük senaryo oynanabilir. Birinci bölümde
+> oyuncu kanıt toplar, bütçeyle çözüm paketi sunar ve planı halka duyurur; ikinci
+> bölümde plan uygulanır, 30 gün üç durakta geçer, kasaba yeniden dinlenir, ilk
+> rapor sunulur ve istenirse aynı koşullarla alternatif plan denenir.
 
 ---
 
@@ -88,7 +90,14 @@ geçmeden önce saç/el kenarları ve kareler arası maske tutarlılığı kontr
 | --- | --- |
 | `WASD` / Yön tuşları | Hareket (çapraz hareket normalize, zıt tuşlar birbirini iptal eder) |
 | `E` | NPC'nin yanındayken konuş |
+| `M` | Kasaba haritasını aç/kapat (kamera tüm dünyaya zoom-out yapar; mini-haritaya tıklamak da aynı işi yapar) |
 | `` ` `` (backtick) | Çarpışma kutularını göster/gizle (debug) |
+
+Sağ alttaki **mini harita** (React, `src/components/MiniMap.tsx`) beş bölgeyi
+renkli gösterir; sahne `player-moved` ile oyuncu noktasını (~8 Hz throttle),
+`markers-changed` ile görev `!` işaretlerini, uygulama şantiye pimlerini ve
+ay-ortası güçlüğünün ⚠ konumunu besler. İşaret listesi sahne içinde imza
+kıyasıyla yalnızca değiştiğinde yayınlanır.
 
 ---
 
@@ -104,10 +113,22 @@ event-adı string'i yazılmaz.
 
 | Event | Yön | Payload |
 | --- | --- | --- |
-| `open-dialogue` | Phaser → React | `{ npcId, name, text, choices[] }` |
+| `open-dialogue` | Phaser → React | `{ npcId, name, text, pages?, voiceFiles?, choices?, chart? }` — React sayfaya ait MP3 kaydını bir kez doğal hızında çalar; sahnede NPC oyuncuya dönüp yaklaşır ve jest yapar |
 | `dialogue-closed` | React → Phaser | — |
 | `dialogue-choice` | React → Phaser | `choiceId: string` |
 | `district-changed` | Phaser → React | `{ id, label }` |
+| `open-investigation` / `investigation-completed` | ↔ | `{ cardId }` |
+| `objective-changed` | Phaser → React | `{ text, stage }` |
+| `open-evidence` / `evidence-submitted` | ↔ | `{ confirmedIds }` |
+| `open-solution` / `plan-submitted` | ↔ | `{ mode }` / `{ solutionIds, totalCost, rationale }` |
+| `finding-added` | Phaser → React | `{ entry }` (bölüm-2 bulgusu deftere eklenir) |
+| `day-changed` | Phaser → React | `{ label, date, time, direction: 'forward'\|'back'\|'restore', tint }` — takvim+saat geçişi (`TimeShift`) ve gün-tonu (`day-tint`) |
+| `open-report` / `report-submitted` | ↔ | bulgu sınıflandırması `{ workedIds, problemIds }` |
+| `open-finale` / `finale-submitted` | ↔ | `{ statement }` |
+| `map-toggled` / `overview-changed` | ↔ | — / `{ active }` (tam-kasaba görünümü) |
+| `player-moved` | Phaser → React | `{ x, y }` (mini harita beslemesi, throttled) |
+| `markers-changed` | Phaser → React | `{ markers: [{ x, y, kind }] }` (`quest`/`impl`/`warning`) |
+| `open-announce` / `announce-submitted` | ↔ | — / `{ icon, headline, message }` (kasaba panosu paylaşımı) |
 
 Kaynak: `src/Game/events/gameEvents.ts` (adlar + payload tipleri),
 `src/Game/events/EventBus.ts` (tipli sarmalayıcı).
@@ -263,21 +284,24 @@ kamera takibi · dünya sınırları · statik çarpışma + ayak kutusu · Y-ta
 derinlik · **7 NPC** (Elif Teyze / Lina / Belediye Başkanı / Mühendis Aylin /
 Çiftçi Rıza / Nuri Amca / Belediye Çalışanı Kemal) · yakınlık ipucu ·
 `E` etkileşimi · React diyalog · karar → istatistik · diyalog kapanışı →
-kontrol geri · `district-changed` HUD göstergesi · çarpışma debug toggle
+kontrol geri · `district-changed` HUD göstergesi · çarpışma debug toggle ·
+ses/ambiyans (bölge bazlı, crossfade) · yerel oturum kaydı (localStorage)
 
-**Henüz yok:** görev sistemi · kanıt/bilgi kartları · senaryo ilerlemesi ·
-kazanma/kaybetme · NPC yürüme animasyonu (sallantı var) · ses · kayıt/yükleme ·
-backend · kapsamlı oyun testleri
+**Bölüm 1 akışı:** Lina tanıtımı → başkanla görev → 4 bölge inceleme kartı →
+kanıt işaretleme → belediye toplantısında bütçeli çözüm paketi → halka duyuru +
+panoya afiş → Lina'nın kapanış sorusu.
 
-### Hedeflenen (henüz kurulmamış) oynanış döngüsü
+**Bölüm 2 akışı:** Lina beklentiyi sorar → plan kasabada görünür olur
+(`IMPLEMENTATION_PROPS`, seçilen çözüme göre şantiye/malzeme/tabela/depo +
+"fıskiyeler kapalı" çeşme tonlaması) → 30 gün üç durakta geçer (Lina konuşması
+ilerletir; ay ortasında plana bağlı bir güçlük/yeni ihtiyaç ortaya çıkar) →
+aynı dört kişi yeniden dinlenir, bulgular deftere eklenir → başkana rapor:
+bulgular defterden seçilir + takip sorusu → Lina ikinci şansı sunar: aynı
+koşullarla alternatif plan (`SolutionPanel` retry modu) ya da planı koruma →
+finalde iki denemenin istatistik karşılaştırması ve kapanış cümlesi.
 
-```
-KEŞFET → KANIT TOPLA → BİLGİYİ KARŞILAŞTIR → PLAN YAP
-       → PLANI SAVUN → SONUÇLARI GÖR → YENİ KANIT → YENİDEN DEĞERLENDİR → YANSIT
-```
-
-Kod bu sistemler eklenirken dünyanın yeniden yazılmasını gerektirmeyecek
-şekilde ayrıldı: bölgeler, NPC'ler, diyaloglar ve istatistikler zaten veri.
+**Henüz yok:** backend · kapsamlı oyun testleri · yan görevler · Elif Teyze'nin
+derinleşmiş rolü
 
 ---
 

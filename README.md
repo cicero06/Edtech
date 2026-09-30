@@ -33,18 +33,48 @@ Sonuçları Gör → Yeniden Değerlendir
 
 ## Depo yapısı
 
+```text
+website/                         Kurumsal site ve iki oyunun yayın kökü
+  src/pages/                     Ana sayfa, ürün, kurumlar ve blog sayfaları
+  src/components/                Ortak arayüz ve tanıtım bileşenleri
+  src/hooks/                     Sayfa animasyonları
+  public/                        Sitenin yayınlanan görselleri
+  scripts/                       Build birleştirme, prerender ve önizleme
+  tests/                         Site tarayıcı testleri
+  docs/                          Siteye ait tarihli teknik kayıtlar
+  denge-kasabasi-game/            v1 — başvuru sürümünün kaynak kodu
+  denge-game-v2/                  v2 — aktif oyun geliştirmesi (Phaser)
+demo/                            Önceki PoC ve mevcut backend
+  frontend/                      Eski frontend; referans, aktif v1 değil
+  backend/                       NestJS + Prisma; Render yolu korunur
+  docs/                          PoC kapsamı, senaryosu ve tasarım belgeleri
+bilgi-belge-dokumanlar/
+  mimari/                        Depo ve backend değerlendirmeleri
+  tasarim/                       Oyun tasarımı ve geliştirme notları
+  arastirma/                     Özel akademik/pazar belgeleri; Git dışında
+  basvuru/                       Özel başvuru belgeleri; Git dışında
+render.yaml                      Mevcut backend yayın tanımı
 ```
-website/               Kurumsal site + ürün sayfası (React 19, Vite, TS, GSAP)
-  denge-kasabasi-game/ v1 — başvuruya konu oynanabilir prototip
-  denge-game-v2/       v2 — aktif geliştirme ön gösterimi (Phaser)
-demo/                  Erken backend denemesi (NestJS + Prisma, Render)
-```
+
+### Nerede çalışmalıyım?
+
+- Site sayfaları ve blog görünümü: `website/src/pages/`.
+- Blog yazıları ve ortak metin dizileri: `website/src/content.ts`.
+- Marka, adresler ve metadata: `website/src/config.ts`.
+- Aktif oyun geliştirmesi: `website/denge-game-v2/src/`.
+- Başvuru sürümü: `website/denge-kasabasi-game/src/`; `demo/frontend/` ile karıştırmayın.
+- [Mimari ve backend değerlendirmesi](bilgi-belge-dokumanlar/mimari/depo-mimarisi-ve-backend-degerlendirmesi.md).
+- [Kapsamlı tasarım konuşması](bilgi-belge-dokumanlar/tasarim/denge-kasabasi-v2-gelisim-konusmasi-ve-tasarim-notlari.md) ve [v2 sonrası notlar](bilgi-belge-dokumanlar/tasarim/v2-sonrasi-tasarim-notlari.md).
+
+`dist/`, `.ssr/`, `node_modules/` ve `test-results/` kaynak değildir; elle düzenlenmez ve Git'e eklenmez. `dist/` içindeki HTML dosyaları build sırasında yeniden oluşturulur. DOCX/PDF belgeleri Git dışında tutulur ve `public/` içine taşınmaz. Uygulamalara özel teknik belgeler ilgili uygulamanın `docs/` dizininde kalır.
 
 ## Geliştirme
 
 ```sh
 cd website
 npm ci
+npm --prefix denge-kasabasi-game ci
+npm --prefix denge-game-v2 ci
 npm run dev        # geliştirme sunucusu
 npm run typecheck  # tip kontrolü
 npm run build      # site + her iki oyunun üretim derlemesi

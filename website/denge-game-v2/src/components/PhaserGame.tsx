@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 
 import { createGameConfig } from '../Game/config';
+import { EventBus } from '../Game/events/EventBus';
 
 /**
  * Mounts exactly one Phaser.Game into a React-owned container.
@@ -35,8 +36,13 @@ export default function PhaserGame() {
 
     if (!gameRef.current && containerRef.current) {
       gameRef.current = new Phaser.Game(createGameConfig(containerRef.current));
-      // Dev/test hook: lets browser smoke tests inspect the running scene.
-      (window as unknown as { __dengeGame?: Phaser.Game }).__dengeGame = gameRef.current;
+      // Dev/test hooks: let browser smoke tests inspect scene and events.
+      const hooks = window as unknown as {
+        __dengeGame?: Phaser.Game;
+        __dengeBus?: typeof EventBus;
+      };
+      hooks.__dengeGame = gameRef.current;
+      hooks.__dengeBus = EventBus;
     }
 
     return () => {
