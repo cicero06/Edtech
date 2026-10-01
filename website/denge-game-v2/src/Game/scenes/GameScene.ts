@@ -28,6 +28,7 @@ import {
   TextureKeys,
   type PlayerAnimKey,
   type SoundKey,
+  type TextureKey,
 } from '../data/assets';
 import { DECISION_FEEDBACK, NPCS, type NpcDefinition } from '../data/npcs';
 import {
@@ -157,6 +158,8 @@ interface Npc {
 
 export default class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
+  /** Walk sheet picked by the student's avatar: boy (default) or girl (Lina's). */
+  private playerTexture: TextureKey = TextureKeys.PLAYER;
   private obstacles!: Phaser.Physics.Arcade.StaticGroup;
   private npcs: Npc[] = [];
   private hint!: Phaser.GameObjects.Text;
@@ -510,8 +513,12 @@ export default class GameScene extends Phaser.Scene {
     // Inset the physics bounds so the sprite's head/feet stay inside the world.
     this.physics.world.setBounds(16, 56, WORLD.width - 32, WORLD.height - 72);
 
+    // The world sprite follows the student's avatar: kız kartı Lina'nın
+    // walk sheet'ini kullanır (aynı 3x4 layout, lina-* anims hazır).
+    const avatar = loadSession()?.player.avatar;
+    this.playerTexture = avatar === TextureKeys.LINA ? TextureKeys.LINA : TextureKeys.PLAYER;
     this.player = this.physics.add
-      .sprite(PLAYER_SPAWN.x, PLAYER_SPAWN.y, TextureKeys.PLAYER)
+      .sprite(PLAYER_SPAWN.x, PLAYER_SPAWN.y, this.playerTexture)
       .setOrigin(0.5, 1)
       .setScale(PLAYER_SCALE);
 
@@ -2103,7 +2110,13 @@ export default class GameScene extends Phaser.Scene {
     this.player.setAngle(0).setScale(PLAYER_SCALE);
   }
 
-  private animFor(facing: Facing): PlayerAnimKey {
+  /** Direction -> walk-anim key on the active player sheet. */
+  private animFor(facing: Facing): string {
+    if (this.playerTexture === TextureKeys.LINA) return `lina-${facing}`;
+    return this.dirAnimFor(facing);
+  }
+
+  private dirAnimFor(facing: Facing): PlayerAnimKey {
     switch (facing) {
       case 'up':
         return PlayerAnims.WALK_UP;
@@ -2118,6 +2131,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private setIdleFrame(): void {
-    this.player.setFrame(PLAYER_ANIM_FRAMES[this.animFor(this.facing)].idle);
+    // Both kid sheets share the same 3x4 layout - same idle frame indices.
+    this.player.setFrame(PLAYER_ANIM_FRAMES[this.dirAnimFor(this.facing)].idle);
   }
 }

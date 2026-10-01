@@ -1,45 +1,60 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { INTRO_ART, INTRO_VIDEOS, type IntroStage } from '../Game/data/intro';
 import { SPRITESHEET_ASSETS, type TextureKey } from '../Game/data/assets';
-import { AVATARS, type PlayerProfile } from '../Game/data/session';
+import type { StudentProfile } from '../Game/data/session';
 import MaskedVideo from './MaskedVideo';
+import StudentGate from './StudentGate';
 
 type IntroSequenceProps = {
   stage: Exclude<IntroStage, 'complete'>;
   onContinue: () => void;
-  /** Mock login: name + avatar picked on the profile screen. */
-  onProfile: (player: PlayerProfile) => void;
+  /** Login: the student picked their card on the roster screen. */
+  onStudent: (student: StudentProfile) => void;
   /** A previous session exists - resume straight into the game. */
   savedName?: string;
   onResume?: () => void;
+  /** Way out of the login screen without picking a student. */
+  onBack?: () => void;
 };
 
 type PlaybackStatus = 'loading' | 'ready' | 'blocked' | 'error';
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${encodeURI(path)}`;
 
-/** Crops the front (down) frame out of a 1x4 character strip. */
-function AvatarFace({ textureKey }: { textureKey: TextureKey }) {
+/**
+ * Crops the standing front frame out of a character sheet: multi-row walk
+ * sheets idle on the middle column of the first row, 1x4 pose strips put
+ * the front pose first. The img keeps the sheet's full scaled size and the
+ * clipped container picks out the single frame.
+ */
+export function AvatarFace({ textureKey, size = 52 }: { textureKey: TextureKey; size?: number }) {
   const sheet = SPRITESHEET_ASSETS.find((s) => s.key === textureKey);
   if (!sheet) return null;
-  const height = 52;
+  const height = size;
   const frameW = (sheet.frameWidth / sheet.frameHeight) * height;
-  const stripW = frameW * sheet.columns;
+  const col = sheet.rows > 1 ? 1 : 0;
   return (
     <span className="avatar-face" style={{ width: frameW, height }} aria-hidden="true">
-      <img src={assetUrl(sheet.path)} alt="" style={{ width: stripW, height }} draggable={false} />
+      <img
+        src={assetUrl(sheet.path)}
+        alt=""
+        style={{
+          width: frameW * sheet.columns,
+          height: height * sheet.rows,
+          transform: col ? `translateX(${-col * frameW}px)` : undefined,
+        }}
+        draggable={false}
+      />
     </span>
   );
 }
 
-export default function IntroSequence({ stage, onContinue, onProfile, savedName, onResume }: IntroSequenceProps) {
+export default function IntroSequence({ stage, onContinue, onStudent, savedName, onResume, onBack }: IntroSequenceProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const continueRef = useRef<HTMLButtonElement>(null);
   const finishedRef = useRef(false);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(true);
   const [status, setStatus] = useState<PlaybackStatus>('loading');
-  const [playerName, setPlayerName] = useState('');
-  const [avatar, setAvatar] = useState<TextureKey | null>(null);
 
   const play = useCallback(() => {
     const video = videoRef.current;
@@ -63,6 +78,12 @@ export default function IntroSequence({ stage, onContinue, onProfile, savedName,
       continueRef.current?.focus({ preventScroll: true });
     }
   }, [stage]);
+
+  // A roster pick lands here directly - the click's user activation is still
+  // fresh enough to start the cinematic; the blocked fallback covers the rest.
+  useEffect(() => {
+    if (stage === 'opening') play();
+  }, [stage, play]);
 
   const finishOpening = () => {
     if (stage !== 'opening' || finishedRef.current) return;
@@ -128,43 +149,13 @@ export default function IntroSequence({ stage, onContinue, onProfile, savedName,
       </section>
 
       {stage === 'profile' && (
-        <section className="profile-panel" aria-label="Oyuncu profili">
-          <p className="startup-eyebrow">ÖNCE TANIŞALIM</p>
-          <h2 className="profile-title">Kimsin?</h2>
-          <input
-            className="profile-name-input"
-            type="text"
-            placeholder="Adını yaz"
-            maxLength={16}
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            autoFocus
-          />
-          <div className="avatar-grid" role="radiogroup" aria-label="Avatar seç">
-            {AVATARS.map((key) => (
-              <button
-                key={key}
-                className={`avatar-option${avatar === key ? ' picked' : ''}`}
-                role="radio"
-                aria-checked={avatar === key}
-                onClick={() => setAvatar(key)}
-              >
-                <AvatarFace textureKey={key} />
-              </button>
-            ))}
-          </div>
-          <button
-            className="startup-button startup-button-primary"
-            disabled={!playerName.trim() || !avatar}
-            onClick={() => {
-              if (!avatar) return;
-              onProfile({ name: playerName.trim(), avatar });
-              onContinue();
-              play();
-            }}
-          >
-            Hazırım →
-          </button>
+        <section className="profile-panel" aria-label="Öğrenci girişi">
+          {onBack && (
+            <button className="profile-back startup-button startup-button-glass" onClick={onBack}>
+              ← Ana sayfa
+            </button>
+          )}
+          <StudentGate onPick={onStudent} />
         </section>
       )}
 

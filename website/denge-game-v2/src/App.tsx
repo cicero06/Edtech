@@ -7,6 +7,7 @@ import SolutionPanel from './components/SolutionPanel';
 import FinaleCard from './components/FinaleCard';
 import AnnouncementCard from './components/AnnouncementCard';
 import MiniMap from './components/MiniMap';
+import PlayerMenu from './components/PlayerMenu';
 import ChartView from './components/ChartView';
 import TimeShift from './components/TimeShift';
 import { advanceIntro, type IntroStage } from './Game/data/intro';
@@ -35,12 +36,15 @@ import {
   type SolutionCard,
 } from './Game/data/story';
 import {
+  getStudent,
   loadSession,
   newSession,
+  recordEvent,
   saveSession,
+  setActiveStudent,
   type GameSession,
   type NotebookEntry,
-  type PlayerProfile,
+  type StudentProfile,
 } from './Game/data/session';
 import { isMuted, playSfx, setMuted } from './Game/audio';
 import { playRecordedVoice, setVoiceMuted, stopVoice } from './Game/speech';
@@ -52,8 +56,8 @@ import { SoundKeys } from './Game/data/assets';
  */
 function App() {
   const [introStage, setIntroStage] = useState<IntroStage>('splash');
-  const [player, setPlayer] = useState<PlayerProfile | null>(null);
-  const [savedName] = useState(() => loadSession()?.player.name);
+  const [player, setPlayer] = useState<StudentProfile | null>(null);
+  const [savedName, setSavedName] = useState(() => loadSession()?.player.name);
   const [dialogue, setDialogue] = useState<DialoguePayload | null>(null);
   const [dialoguePage, setDialoguePage] = useState(0);
   /** Typewriter: how many characters of the current line are visible. */
@@ -225,6 +229,7 @@ function App() {
     const nextStats = applyDecision(stats, choiceId);
     setStats(nextStats);
     persist({ stats: nextStats });
+    recordEvent('choice', { choiceId });
     setDialogue(null);
     EventBus.emit(GameEvents.DIALOGUE_CHOICE, choiceId);
   };
@@ -239,6 +244,7 @@ function App() {
       setNotebook(next);
       persist({ notebook: next });
     }
+    recordEvent('investigation', { cardId });
     setInvestigation(null);
     playSfx(SoundKeys.COMPLETE, 0.8);
     EventBus.emit(GameEvents.INVESTIGATION_COMPLETED, { cardId });
@@ -259,6 +265,7 @@ function App() {
     setEvidenceMode(false);
     setNotebookOpen(false);
     persist({ evidence: confirmedIds });
+    recordEvent('evidence', { confirmedIds });
     EventBus.emit(GameEvents.EVIDENCE_SUBMITTED, { confirmedIds });
   };
 
@@ -279,6 +286,7 @@ function App() {
     setReportMode(false);
     setNotebookOpen(false);
     persist({ report });
+    recordEvent('report', report);
     EventBus.emit(GameEvents.REPORT_SUBMITTED, report);
   };
 
@@ -295,6 +303,7 @@ function App() {
       const nextStats = applyStatChanges(baseStats, ...selected.map((c) => c.effects));
       setStats(nextStats);
       persist({ altPlan: plan, altStats: nextStats, stats: nextStats });
+      recordEvent('alt-plan', plan);
     } else {
       const nextStats = applyStatChanges(stats, ...selected.map((c) => c.effects));
       setStats(nextStats);
@@ -304,6 +313,7 @@ function App() {
         baseStats: stats,
         planStats: nextStats,
       });
+      recordEvent('plan', plan);
     }
 
     EventBus.emit(GameEvents.PLAN_SUBMITTED, {
@@ -316,6 +326,7 @@ function App() {
   const submitFinale = (statement: string) => {
     setFinaleOpen(false);
     persist({ finalStatement: statement });
+    recordEvent('finale', { statement });
     EventBus.emit(GameEvents.FINALE_SUBMITTED, { statement });
   };
 
@@ -324,28 +335,81 @@ function App() {
     setAnnounceOpen(false);
     playSfx(SoundKeys.ALERT, 0.9);
     persist({ announcement: { icon, headline, message } });
+    recordEvent('announce', { icon, headline, message });
     EventBus.emit(GameEvents.ANNOUNCE_SUBMITTED, { icon, headline, message });
   };
 
-  /** Mock login: a fresh session starts when the profile form is submitted. */
-  const startSession = (profile: PlayerProfile) => {
-    setPlayer(profile);
-    setNotebook([]);
-    setStats({ ...INITIAL_STATS });
-    setEvidencePicked(new Set());
-    saveSession(newSession(profile));
+  /**
+   * Roster pick on the login screen: the student becomes active, their own
+   * save resumes if it exists - otherwise a fresh session runs the cinematic.
+   */
+  const loginStudent = (student: StudentProfile) => {
+    stopVoice();
+    setPlayer(student);
+    setSavedName(student.name);
+    setActiveStudent(student.id);
+    const session = loadSession(student.id);
+    if (session) {
+      hydrate(session);
+      setIntroStage('complete');
+    } else {
+      setNotebook([]);
+      setStats({ ...INITIAL_STATS });
+      setEvidencePicked(new Set());
+      saveSession(newSession(student));
+      setIntroStage('opening');
+    }
   };
 
-  /** "Devam et" on the splash: hydrate React, the scene restores its own quest. */
-  const resumeSession = () => {
-    const session = loadSession();
-    if (!session) return;
-    setPlayer(session.player);
+  /** Shared speaker toggle - used by the HUD button and the settings row. */
+  const applyMuted = (value: boolean) => {
+    setVoiceMuted(value);
+    setMuted(value);
+    setMutedState(value);
+  };
+
+  /** Player menu -> splash: the session stays saved, "Devam et" resumes it. */
+  const goHome = () => {
+    stopVoice();
+    // Transient overlays would outlive the destroyed scene - drop them.
+    setDialogue(null);
+    setInvestigation(null);
+    setSavedName(loadSession()?.player.name);
+    setIntroStage('splash');
+  };
+
+  /** Player menu -> profile form: submitting it overwrites the session. */
+  const switchProfile = () => {
+    stopVoice();
+    setDialogue(null);
+    setInvestigation(null);
+    setIntroStage('profile');
+  };
+
+  /** Copies a stored session into React state; the scene restores the rest. */
+  const hydrate = (session: GameSession) => {
     setNotebook(session.notebook);
     setStats(session.stats);
     setEvidencePicked(new Set(session.evidence));
     setMuted(session.muted);
     setMutedState(session.muted);
+  };
+
+  /** "Devam et" on the splash: resumes whichever student was last active. */
+  const resumeSession = () => {
+    const session = loadSession();
+    if (!session) return;
+    const student = getStudent(session.studentId);
+    setPlayer(
+      student ?? {
+        ...session.player,
+        id: session.studentId,
+        classId: '',
+        shareCode: '',
+        createdAt: session.savedAt,
+      },
+    );
+    hydrate(session);
     setIntroStage('complete');
   };
 
@@ -368,9 +432,10 @@ function App() {
       <IntroSequence
         stage={introStage}
         onContinue={() => setIntroStage((current) => advanceIntro(current, introStage))}
-        onProfile={startSession}
+        onStudent={loginStudent}
         savedName={savedName}
         onResume={resumeSession}
+        onBack={() => setIntroStage('splash')}
       />
     );
   }
@@ -458,14 +523,21 @@ function App() {
           className="mute-button"
           aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}
           aria-pressed={muted}
-          onClick={() => {
-            setVoiceMuted(!muted);
-            setMuted(!muted);
-            setMutedState(!muted);
-          }}
+          onClick={() => applyMuted(!muted)}
         >
           {muted ? '🔇' : '🔊'}
         </button>
+
+        {player && (
+          <PlayerMenu
+            player={player}
+            muted={muted}
+            objective={objective}
+            onMute={applyMuted}
+            onGoHome={goHome}
+            onSwitchProfile={switchProfile}
+          />
+        )}
 
         {notebookOpen && (
           <aside className="notebook-panel" aria-label="Kanıt defteri">

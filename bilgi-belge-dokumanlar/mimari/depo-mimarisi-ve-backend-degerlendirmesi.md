@@ -91,6 +91,15 @@ PostgreSQL          Session (1) ──< Event (N); sessionId + eventType index; 
 5. İleriye dönük veri ihtiyacı (tasarım notundan): işaretlenen kanıtlar,
    kontrol soruları, seçilen çözümler + gerekçe, ilk vs ikinci plan farkı,
    yansıtma seçimleri — **puan değil, davranış profili**.
+6. **Okul kimliği isimle eşleşmez:** aynı isimli okullar yaygın (yüzlerce
+   "Atatürk İlkokulu"). Öğretmen–okul bağı davet/onayla kurulur; `School`'a
+   `il`, `ilçe`, `mebKodu?` (tekil) alanları eklenir. Mock'taki
+   `loginTeacher` isim eşleşmesi yalnızca cihaz-local kısayoldur.
+7. **Org modeli oyunda hazır:** `session.ts` artık School → Teacher →
+   ClassRoom(joinCode) → Student(shareCode) hiyerarşisini localStorage'da
+   taşıyor; backend'de her fonksiyonun REST karşılığı kodda işaretli.
+   Veli erişimi kararı: öğrenci başına rapor kodu (`shareCode`), veli
+   hesabı yok.
 
 ## 6. Genel hazırlık tablosu
 
