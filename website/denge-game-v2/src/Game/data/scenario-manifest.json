@@ -1,0 +1,61 @@
+{
+  "scenario": "denge-kasabasi",
+  "version": "ch1-e5532f77ce",
+  "manifest": {
+    "solutions": {
+      "fountains-off": 20000,
+      "saving-campaign": 80000,
+      "repair-pipes": 320000,
+      "drip-irrigation": 520000,
+      "rain-harvest": 700000
+    },
+    "maxCost": 1000000,
+    "cards": [
+      "belediye",
+      "baraj",
+      "tarim",
+      "konut",
+      "park"
+    ],
+    "evidenceIds": [
+      "baraj",
+      "tarim",
+      "konut",
+      "park"
+    ],
+    "icons": [
+      "💧",
+      "📢",
+      "🛠️"
+    ],
+    "reportItemIds": [
+      "belediye",
+      "baraj",
+      "tarim",
+      "konut",
+      "park",
+      "finding-muhendis-aylin",
+      "finding-ciftci-riza",
+      "finding-nuri-amca",
+      "finding-isci-kemal"
+    ],
+    "choiceIds": [
+      "ask-town",
+      "closing-budget",
+      "closing-evidence",
+      "closing-fairness",
+      "expect-people",
+      "expect-unsure",
+      "expect-water",
+      "gap-ev",
+      "gap-park",
+      "gap-rezerv",
+      "gap-tarim",
+      "gap-watch",
+      "reduce-water",
+      "repair-well",
+      "retry-alt",
+      "retry-keep"
+    ]
+  }
+}

@@ -49,6 +49,22 @@ import {
 import { isMuted, playSfx, setMuted } from './Game/audio';
 import { playRecordedVoice, setVoiceMuted, stopVoice } from './Game/speech';
 import { SoundKeys } from './Game/data/assets';
+import {
+  getRemoteContext,
+  getSyncStatus,
+  subscribeSyncStatus,
+  unbindAttempt,
+  type SyncStatus,
+} from './Game/sync/engine';
+
+/** Short HUD wording for the remote-attempt sync state. */
+const SYNC_LABELS: Record<Exclude<SyncStatus, 'local'>, string> = {
+  synced: '✓ Kaydedildi',
+  pending: '☁ Gönderim bekliyor',
+  syncing: '↻ Kaydediliyor…',
+  offline: '⚠ Bağlantı yok — kayıtlar bekliyor',
+  error: '⚠ Kayıt sorunu — yetişkine söyle',
+};
 
 /**
  * React owns all UI: the HUD, the dialogue card and the decision buttons.
@@ -91,6 +107,9 @@ function App() {
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [district, setDistrict] = useState<string>('—');
   const [muted, setMutedState] = useState(isMuted());
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
+
+  useEffect(() => subscribeSyncStatus(setSyncStatus), []);
 
   /** Merge-write into the mock session store; no-op until a profile exists. */
   const persist = (patch: Partial<GameSession>) => {
@@ -345,6 +364,10 @@ function App() {
    */
   const loginStudent = (student: StudentProfile) => {
     stopVoice();
+    // Picked someone else while a remote attempt was bound? Detach the
+    // engine so its queue can never write under another participant.
+    const remote = getRemoteContext();
+    if (remote && remote.participantId !== student.id) unbindAttempt();
     setPlayer(student);
     setSavedName(student.name);
     setActiveStudent(student.id);
@@ -459,6 +482,13 @@ function App() {
           ))}
         </button>
         <div className="district-pill">{district}</div>
+
+        {/* Remote attempt sync state - only rendered for server-bound play. */}
+        {syncStatus !== 'local' && (
+          <div className={`sync-chip sync-${syncStatus}`} role="status">
+            {SYNC_LABELS[syncStatus]}
+          </div>
+        )}
 
         {statsOpen && (
           <aside className="balance-panel" aria-label="Denge detayları">

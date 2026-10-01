@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { AvatarFace } from './IntroSequence';
+import StaffPanel from './StaffPanel';
 import StudentReport from './StudentReport';
 import { SoundKeys, TextureKeys, type TextureKey } from '../Game/data/assets';
 import { playSfx } from '../Game/audio';
@@ -13,6 +14,7 @@ import {
   clearLastClass,
   findStudentByShareCode,
   getCurrentTeacher,
+  hydrateRemoteSession,
   joinByCode,
   lastJoinCode,
   listClasses,
@@ -26,6 +28,7 @@ import {
   type JoinedClass,
   type StudentProfile,
 } from '../Game/data/session';
+import { bindAttempt, joinRemote } from '../Game/sync/engine';
 
 /**
  * "Who is playing?" gate - the org layer's UI, mirroring the future Atlas flow:
@@ -42,7 +45,7 @@ type StudentGateProps = {
   onPick: (student: StudentProfile) => void;
 };
 
-type GateView = 'code' | 'roster' | 'teacher-auth' | 'teacher' | 'class' | 'parent' | 'report';
+type GateView = 'code' | 'roster' | 'remote' | 'staff' | 'teacher-auth' | 'teacher' | 'class' | 'parent' | 'report';
 
 export default function StudentGate({ onPick }: StudentGateProps) {
   // A returning classroom device skips the code step entirely: a remembered
@@ -89,6 +92,51 @@ export default function StudentGate({ onPick }: StudentGateProps) {
   } | null>(null);
   const [shareInput, setShareInput] = useState('');
   const [shareError, setShareError] = useState<string | null>(null);
+
+  // --- remote (Atlas /v2) pilot join state ---
+  const [remoteCode, setRemoteCode] = useState('');
+  const [remoteName, setRemoteName] = useState('');
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [remoteBusy, setRemoteBusy] = useState(false);
+
+  /**
+   * Server-backed pilot entry: group code + roster name → participant token
+   * + attempt. A resumed attempt's server state is written into the local
+   * cache first, then the whole game runs through the normal session path.
+   */
+  const joinRemoteGroup = async () => {
+    setRemoteBusy(true);
+    setRemoteError(null);
+    try {
+      const result = await joinRemote(remoteCode, remoteName);
+      const student: StudentProfile = {
+        id: result.participantId,
+        classId: 'atlas-remote',
+        name: remoteName.trim(),
+        avatar: TextureKeys.PLAYER,
+        shareCode: '',
+        createdAt: Date.now(),
+      };
+      if (result.resumedState) {
+        hydrateRemoteSession(result.participantId, result.resumedState);
+      }
+      await bindAttempt({
+        attemptId: result.attemptId,
+        participantId: result.participantId,
+        token: result.token,
+        revision: result.revision,
+        joinCode: remoteCode.trim().toUpperCase(),
+        displayName: remoteName.trim(),
+        fresh: !result.resumedState,
+      });
+      playSfx(SoundKeys.TICK, 0.7);
+      onPick(student);
+    } catch {
+      setRemoteError('Giremedik — kodu ve adını kontrol et, ya da interneti yokla.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
 
   const openShareReport = () => {
     const found = findStudentByShareCode(shareInput);
@@ -173,6 +221,11 @@ export default function StudentGate({ onPick }: StudentGateProps) {
     setStudents(listStudents(currentClass.id));
   };
 
+  // ================= STAFF: remote pilot management =================
+  if (view === 'staff') {
+    return <StaffPanel onBack={() => setView('code')} />;
+  }
+
   // ================= STUDENT: class code =================
   if (view === 'code') {
     return (
@@ -209,6 +262,61 @@ export default function StudentGate({ onPick }: StudentGateProps) {
           }}
         >
           👪 Veli — rapor kodu
+        </button>
+        <button
+          className="gate-link"
+          onClick={() => {
+            setRemoteError(null);
+            setView('remote');
+          }}
+        >
+          🧪 Pilot grubu — merkezi kayıt
+        </button>
+        <button className="gate-link" onClick={() => setView('staff')}>
+          🛠 Pilot yönetimi
+        </button>
+      </div>
+    );
+  }
+
+  // ================= STUDENT: remote pilot group (Atlas backend) =================
+  if (view === 'remote') {
+    return (
+      <div className="gate-card" aria-label="Pilot grup girişi">
+        <p className="startup-eyebrow">PİLOT GRUBU</p>
+        <h2 className="profile-title gate-title">Grup kodu + adın</h2>
+        <p className="gate-hint">
+          Kolaylaştırıcının verdiği grup kodunu ve listede görünen adını yaz —
+          kayıtların merkezi sunucuya gider.
+        </p>
+        <input
+          className="gate-code-input"
+          type="text"
+          placeholder="GRUP KODU"
+          maxLength={12}
+          value={remoteCode}
+          autoFocus
+          onChange={(e) => setRemoteCode(e.target.value.toLocaleUpperCase('tr'))}
+        />
+        <input
+          className="gate-code-input"
+          type="text"
+          placeholder="LİSTEDEKİ ADIN — ör. P-07"
+          maxLength={60}
+          value={remoteName}
+          onChange={(e) => setRemoteName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && joinRemoteGroup()}
+        />
+        {remoteError && <p className="gate-error" role="alert">{remoteError}</p>}
+        <button
+          className="startup-button startup-button-primary"
+          disabled={!remoteCode.trim() || !remoteName.trim() || remoteBusy}
+          onClick={joinRemoteGroup}
+        >
+          {remoteBusy ? 'Bağlanıyor…' : 'Oyuna gir →'}
+        </button>
+        <button className="gate-link" onClick={() => setView('code')}>
+          ← Geri dön
         </button>
       </div>
     );

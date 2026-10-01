@@ -28,6 +28,7 @@
 import { TextureKeys, type TextureKey } from './assets';
 import { INITIAL_STATS, type GameStats } from './stats';
 import type { InvestigationId } from './story';
+import { noteEvent, noteState } from '../sync/engine';
 
 /** Mirrors the stage machine inside GameScene. */
 export type QuestStage =
@@ -659,14 +660,18 @@ export function loadSession(studentId?: string): GameSession | null {
 
 export function saveSession(session: GameSession): void {
   if (!session.studentId) return;
+  const snapshot = { ...session, savedAt: Date.now() };
   try {
     localStorage.setItem(
       sessionKey(session.studentId),
-      JSON.stringify({ ...session, savedAt: Date.now() }),
+      JSON.stringify(snapshot),
     );
   } catch {
     // Storage full or private mode - the game still works, it just won't resume.
   }
+  // Remote attempt bound? Hand the newest snapshot to the sync engine; it
+  // is a no-op for purely local sessions.
+  noteState(session, snapshot);
 }
 
 export function clearSession(studentId?: string): void {
@@ -719,6 +724,26 @@ export function recordEvent(type: SessionEventType, data?: Record<string, unknow
     ...session,
     events: [...session.events, { at: Date.now(), type, data }],
   });
+  // Remote attempt bound? Enqueue the typed event into the persistent
+  // outbox; no-op when the student is local-only.
+  noteEvent(type, data ?? {}, session.studentId);
+}
+
+/**
+ * Remote resume: the server sent an AttemptState snapshot for this
+ * participant — drop it into the local cache so loadSession() (and the
+ * whole synchronous read path) sees it exactly like a local save.
+ */
+export function hydrateRemoteSession(
+  participantId: string,
+  state: unknown,
+): void {
+  if (!state || typeof state !== 'object') return;
+  try {
+    localStorage.setItem(sessionKey(participantId), JSON.stringify(state));
+  } catch {
+    /* private mode — the game runs, resume just won't survive a reload */
+  }
 }
 
 // ---------------------------------------------------------------------------

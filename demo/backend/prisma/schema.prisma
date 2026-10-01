@@ -12,6 +12,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// Legacy v1 demo API — anonymous sessions. Kept untouched; v2 platform
+// models below live under separate routes/authorization and never mix
+// with these records.
+
 model Session {
   id          String    @id @default(uuid())
   scenarioId  String
@@ -34,4 +38,185 @@ model Event {
 
   @@index([sessionId])
   @@index([eventType])
+}
+
+// ---------------------------------------------------------------------------
+// Atlas platform models (v2)
+// See bilgi-belge-dokumanlar/mimari/veri-modeli-ve-erisim-tasarimi.md
+// ---------------------------------------------------------------------------
+
+enum WorkspaceKind {
+  SCHOOL
+  PILOT
+}
+
+enum MemberRole {
+  OWNER
+  FACILITATOR
+  VIEWER
+}
+
+enum MemberStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ActivityStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum AttemptStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+model Workspace {
+  id        String        @id @default(uuid())
+  kind      WorkspaceKind
+  name      String
+  province  String?
+  district  String?
+  mebCode   String?       @unique
+  createdAt DateTime      @default(now())
+  members   Membership[]
+  groups    Group[]
+}
+
+model AdultUser {
+  id          String       @id @default(uuid())
+  authSubject String       @unique
+  displayName String
+  email       String?      @unique
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+}
+
+model Membership {
+  id          String       @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        MemberRole
+  status      MemberStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  user        AdultUser    @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Group {
+  id           String            @id @default(uuid())
+  workspaceId  String
+  name         String
+  joinCode     String            @unique
+  createdAt    DateTime          @default(now())
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id])
+  participants Participant[]
+  activities   ActivitySession[]
+}
+
+model Participant {
+  id          String             @id @default(uuid())
+  groupId     String
+  displayName String
+  studentNo   String?
+  avatar      String?
+  createdAt   DateTime           @default(now())
+  group       Group              @relation(fields: [groupId], references: [id])
+  attempts    GameAttempt[]
+  tokens      ParticipantToken[]
+
+  @@index([groupId])
+}
+
+model ParticipantToken {
+  id            String      @id @default(uuid())
+  participantId String
+  tokenHash     String      @unique
+  label         String?
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId])
+}
+
+model ActivitySession {
+  id                String          @id @default(uuid())
+  groupId           String
+  scenarioVersionId String
+  title             String
+  status            ActivityStatus  @default(DRAFT)
+  openedAt          DateTime?
+  closedAt          DateTime?
+  createdById       String
+  createdAt         DateTime        @default(now())
+  group             Group           @relation(fields: [groupId], references: [id])
+  scenarioVersion   ScenarioVersion @relation(fields: [scenarioVersionId], references: [id])
+  attempts          GameAttempt[]
+
+  @@index([groupId, status])
+}
+
+model ScenarioVersion {
+  id        String        @id @default(uuid())
+  scenario  String
+  version   String
+  manifest  Json
+  createdAt  DateTime          @default(now())
+  attempts   GameAttempt[]
+  activities ActivitySession[]
+
+  @@unique([scenario, version])
+}
+
+model GameAttempt {
+  id                String          @id @default(uuid())
+  participantId     String
+  activityId        String
+  scenarioVersionId String
+  clientAttemptId   String
+  status            AttemptStatus   @default(ACTIVE)
+  revision          Int             @default(0)
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+  participant       Participant     @relation(fields: [participantId], references: [id])
+  activity          ActivitySession @relation(fields: [activityId], references: [id])
+  scenarioVersion   ScenarioVersion @relation(fields: [scenarioVersionId], references: [id])
+  state             AttemptState?
+  events            LearningEvent[]
+
+  @@unique([activityId, clientAttemptId])
+  @@index([participantId])
+  @@index([activityId])
+}
+
+model AttemptState {
+  attemptId String      @id
+  state     Json
+  updatedAt DateTime    @updatedAt
+  attempt   GameAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+}
+
+model LearningEvent {
+  id                   String      @id @default(uuid())
+  attemptId            String
+  clientEventId        String
+  sequence             Int
+  type                 String
+  payloadSchemaVersion Int
+  payload              Json
+  occurredAt           DateTime
+  receivedAt           DateTime    @default(now())
+  attempt              GameAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, clientEventId])
+  @@unique([attemptId, sequence])
+  @@index([attemptId, occurredAt])
+  @@index([type])
 }
