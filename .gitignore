@@ -8,6 +8,7 @@ playwright-report/
 # Ortam ve sistem
 .env
 .env.*
+!.env.example
 *.log
 .DS_Store
 .vercel
@@ -21,4 +22,6 @@ bilgi-belge-dokumanlar/basvuru/
 smoke*.mjs
 shot*.mjs
 cap*.mjs
+dressing-shots*.mjs
+website/shots/
 Attached*

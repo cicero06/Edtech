@@ -720,3 +720,33 @@ export function recordEvent(type: SessionEventType, data?: Record<string, unknow
     events: [...session.events, { at: Date.now(), type, data }],
   });
 }
+
+// ---------------------------------------------------------------------------
+// Parent report link - future REST: GET /reports/:shareCode
+// ---------------------------------------------------------------------------
+
+export interface SharedStudent {
+  student: StudentProfile;
+  classRoom: ClassRoom;
+  school: School;
+  /** Snapshot at lookup time - null when the student never played. */
+  session: GameSession | null;
+}
+
+/**
+ * Parent/guardian entry: resolve a share code (`DNGA-XXXX`) to its student.
+ * Read-only - the parent view must never mutate what comes back.
+ */
+export function findStudentByShareCode(code: string): SharedStudent | null {
+  ensureMigrated();
+  const normalized = code.trim().toLocaleUpperCase('tr').replace(/\s+/g, '');
+  if (!normalized) return null;
+  const org = readOrg();
+  const student = org.students.find((s) => s.shareCode.replace(/\s+/g, '') === normalized);
+  if (!student) return null;
+  const classRoom = org.classes.find((c) => c.id === student.classId);
+  const teacher = classRoom && org.teachers.find((t) => t.id === classRoom.teacherId);
+  const school = teacher && org.schools.find((s) => s.id === teacher.schoolId);
+  if (!classRoom || !school) return null;
+  return { student, classRoom, school, session: loadSession(student.id) };
+}

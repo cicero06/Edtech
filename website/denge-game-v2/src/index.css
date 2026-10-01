@@ -2745,3 +2745,250 @@ canvas {
     font-size: 17px;
   }
 }
+
+/* ================================= */
+/* STUDENT REPORT (teacher + parent) */
+/* ================================= */
+
+/* Wider variant of .gate-card holding the read-only session report. */
+.report-card {
+  width: min(720px, 94vw);
+  align-items: stretch;
+  text-align: left;
+}
+
+.report-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.report-head .avatar-face {
+  border-radius: 12px;
+}
+
+.report-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.report-identity strong {
+  font-size: 20px;
+  color: #fff8e9;
+}
+
+.report-identity span {
+  font-size: 12px;
+  color: #bcd4c8;
+}
+
+.report-section {
+  padding-top: 12px;
+  border-top: 2px dashed rgba(255, 255, 255, 0.18);
+}
+
+.report-section h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f1cd81;
+}
+
+.report-section h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #d8dcd6;
+}
+
+.report-stage {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff8e9;
+}
+
+.report-stage em,
+.report-note {
+  font-style: normal;
+  font-size: 13px;
+  color: #bcd4c8;
+}
+
+.report-note {
+  margin: 0;
+  text-align: center;
+}
+
+.rep-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rep-chips li {
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff8e9;
+}
+
+.rep-chips.good li {
+  background: rgba(120, 190, 140, 0.25);
+}
+
+.rep-chips.bad li {
+  background: rgba(230, 120, 100, 0.22);
+}
+
+.report-notes-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d8dcd6;
+}
+
+.report-notes-list em {
+  font-style: normal;
+  color: #9db3aa;
+}
+
+.plan-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13.5px;
+  color: #fff8e9;
+}
+
+.plan-items em {
+  font-style: normal;
+  font-weight: 700;
+  color: #f1cd81;
+  white-space: nowrap;
+}
+
+.plan-items .plan-total {
+  border-bottom: none;
+  font-weight: 800;
+}
+
+.report-quote {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid #f1cd81;
+  border-radius: 0 10px 10px 0;
+  background: rgba(241, 205, 129, 0.1);
+  font-size: 13.5px;
+  font-style: italic;
+  color: #fff8e9;
+}
+
+.report-announce {
+  margin: 0;
+  font-size: 14px;
+  color: #fff8e9;
+}
+
+.report-verdict {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.report-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.report-deltas li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: #d8dcd6;
+}
+
+.delta {
+  font-style: normal;
+  font-weight: 800;
+}
+
+.delta.up {
+  color: #9fe0ae;
+}
+
+.delta.down {
+  color: #ffb4a2;
+}
+
+.report-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.report-timeline li {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12.5px;
+  color: #d8dcd6;
+}
+
+.report-timeline time {
+  flex-shrink: 0;
+  color: #9db3aa;
+  font-variant-numeric: tabular-nums;
+}
+
+.teacher-report {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(241, 205, 129, 0.16);
+  font-size: 13px;
+}
+
+.teacher-report:hover {
+  background: rgba(241, 205, 129, 0.35);
+}
+
+@media (max-width: 560px) {
+  .report-verdict {
+    grid-template-columns: 1fr;
+  }
+
+  .report-head {
+    flex-wrap: wrap;
+  }
+}

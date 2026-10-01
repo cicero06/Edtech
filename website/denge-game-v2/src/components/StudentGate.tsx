@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { AvatarFace } from './IntroSequence';
+import StudentReport from './StudentReport';
 import { SoundKeys, TextureKeys, type TextureKey } from '../Game/data/assets';
 import { playSfx } from '../Game/audio';
 import {
@@ -10,6 +11,7 @@ import {
   addClass,
   addStudent,
   clearLastClass,
+  findStudentByShareCode,
   getCurrentTeacher,
   joinByCode,
   lastJoinCode,
@@ -40,7 +42,7 @@ type StudentGateProps = {
   onPick: (student: StudentProfile) => void;
 };
 
-type GateView = 'code' | 'roster' | 'teacher-auth' | 'teacher' | 'class';
+type GateView = 'code' | 'roster' | 'teacher-auth' | 'teacher' | 'class' | 'parent' | 'report';
 
 export default function StudentGate({ onPick }: StudentGateProps) {
   // A returning classroom device skips the code step entirely: a remembered
@@ -77,6 +79,33 @@ export default function StudentGate({ onPick }: StudentGateProps) {
   const [avatar, setAvatar] = useState<TextureKey>(TextureKeys.PLAYER);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  // --- report state: teacher class detail and parent share code share it ---
+  const [reportTarget, setReportTarget] = useState<{
+    student: StudentProfile;
+    schoolName: string;
+    className: string;
+    from: 'teacher' | 'parent';
+  } | null>(null);
+  const [shareInput, setShareInput] = useState('');
+  const [shareError, setShareError] = useState<string | null>(null);
+
+  const openShareReport = () => {
+    const found = findStudentByShareCode(shareInput);
+    if (!found) {
+      setShareError('Bu kodu tanımadık — öğretmenden kontrol et.');
+      return;
+    }
+    playSfx(SoundKeys.TICK, 0.7);
+    setShareError(null);
+    setReportTarget({
+      student: found.student,
+      schoolName: found.school.name,
+      className: found.classRoom.name,
+      from: 'parent',
+    });
+    setView('report');
+  };
 
   const join = () => {
     const result = joinByCode(code);
@@ -171,6 +200,15 @@ export default function StudentGate({ onPick }: StudentGateProps) {
         </button>
         <button className="gate-link" onClick={openTeacher}>
           👩‍🏫 Öğretmen girişi
+        </button>
+        <button
+          className="gate-link"
+          onClick={() => {
+            setShareError(null);
+            setView('parent');
+          }}
+        >
+          👪 Veli — rapor kodu
         </button>
       </div>
     );
@@ -407,6 +445,22 @@ export default function StudentGate({ onPick }: StudentGateProps) {
                   <em className="share-code"> · veli: {student.shareCode}</em>
                 </span>
                 <button
+                  className="teacher-report"
+                  aria-label={`${student.name} raporu`}
+                  title="Öğrenci raporu"
+                  onClick={() => {
+                    setReportTarget({
+                      student,
+                      schoolName: auth.school.name,
+                      className: currentClass.name,
+                      from: 'teacher',
+                    });
+                    setView('report');
+                  }}
+                >
+                  📊
+                </button>
+                <button
                   className="teacher-del"
                   aria-label={`${student.name} kaydını sil`}
                   onClick={() => {
@@ -437,6 +491,60 @@ export default function StudentGate({ onPick }: StudentGateProps) {
           ← Sınıf listesine dön
         </button>
       </div>
+    );
+  }
+
+  // ================= PARENT: share-code report entry =================
+  if (view === 'parent') {
+    return (
+      <div className="gate-card" aria-label="Veli raporu">
+        <p className="startup-eyebrow">VELİ RAPORU</p>
+        <h2 className="profile-title gate-title">Rapor kodunu gir</h2>
+        <p className="gate-hint">
+          Öğretmenin paylaştığı kod — ör. <strong>DNGA-4K7X</strong>
+        </p>
+        <input
+          className="gate-code-input"
+          type="text"
+          placeholder="RAPOR KODU"
+          maxLength={12}
+          value={shareInput}
+          autoFocus
+          onChange={(e) => setShareInput(e.target.value.toLocaleUpperCase('tr'))}
+          onKeyDown={(e) => e.key === 'Enter' && openShareReport()}
+        />
+        {shareError && (
+          <p className="gate-error" role="alert">
+            {shareError}
+          </p>
+        )}
+        <button
+          className="startup-button startup-button-primary"
+          disabled={!shareInput.trim()}
+          onClick={openShareReport}
+        >
+          Raporu gör →
+        </button>
+        <button className="gate-link" onClick={() => setView('code')}>
+          ← Öğrenci girişine dön
+        </button>
+      </div>
+    );
+  }
+
+  // ================= SHARED: read-only student report =================
+  if (view === 'report' && reportTarget) {
+    return (
+      <StudentReport
+        student={reportTarget.student}
+        schoolName={reportTarget.schoolName}
+        className={reportTarget.className}
+        backLabel={reportTarget.from === 'teacher' ? '← Sınıfa dön' : '← Başka kod gir'}
+        onBack={() => {
+          setReportTarget(null);
+          setView(reportTarget.from === 'teacher' ? 'class' : 'parent');
+        }}
+      />
     );
   }
 
