@@ -92,6 +92,31 @@ model AdultUser {
   email       String?      @unique
   createdAt   DateTime     @default(now())
   memberships Membership[]
+  blogPosts   BlogPost[]
+}
+
+// Blog posts authored through the site's writer console. Content lives in
+// Postgres so non-dev writers can publish without touching the repo; the
+// prerender step folds PUBLISHED posts into the static site on each deploy.
+model BlogPost {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  title       String
+  tag         String
+  displayDate String
+  excerpt     String
+  body        Json
+  authorId    String
+  author      AdultUser  @relation(fields: [authorId], references: [id])
+  status      BlogStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
 }
 
 model Membership {

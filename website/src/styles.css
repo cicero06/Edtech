@@ -3421,3 +3421,59 @@ section[id] {
     overflow-x: clip;
   }
 }
+
+/* Writer console (/yazar) */
+.writer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  margin-top: 24px;
+}
+.writer-form input,
+.writer-form textarea {
+  font: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.writer-form input:focus,
+.writer-form textarea:focus {
+  outline: 2px solid var(--accent, #c16c39);
+  outline-offset: 1px;
+}
+.writer-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.writer-list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+.writer-list em {
+  opacity: 0.6;
+  font-style: normal;
+  font-size: 0.85em;
+}
+.writer-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.form-error {
+  color: #e07a5f;
+  margin: 0;
+}
+.form-ok {
+  color: #81b29a;
+  margin: 0;
+}

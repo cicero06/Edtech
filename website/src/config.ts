@@ -32,6 +32,10 @@ export const pages: Record<string, { title: string; description: string }> = {
       { title: `${p.title} | Atlas Blog`, description: p.excerpt },
     ]),
   ),
+  "/yazar": {
+    title: "Yazar Paneli | Atlas Blog",
+    description: "Atlas blog yazar konsolu.",
+  },
   "/404": {
     title: "Sayfa bulunamadı | Atlas Learning Technologies",
     description:

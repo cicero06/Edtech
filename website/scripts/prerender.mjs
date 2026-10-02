@@ -1,5 +1,26 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { render, pages, site } from "../.ssr/entry-server.js";
+
+// Published writer-console posts get real static pages on every deploy.
+// The backend publish endpoint also pings the Vercel deploy hook, so a new
+// post is folded into the site ~a minute after it goes live.
+let remotePosts = [];
+const apiBase = process.env.VITE_API_URL;
+if (apiBase) {
+  try {
+    const res = await fetch(`${apiBase}/v2/blog/posts`);
+    if (res.ok) remotePosts = await res.json();
+  } catch {
+    console.warn("prerender: remote posts fetch failed, static-only build");
+  }
+}
+for (const p of remotePosts) {
+  pages[`/blog/${p.slug}`] = {
+    title: `${p.title} | Atlas Blog`,
+    description: p.excerpt,
+  };
+}
+
 const shell = await readFile("dist/index.html", "utf8");
 const escape = (value) =>
   value
@@ -8,7 +29,7 @@ const escape = (value) =>
     .replaceAll("<", "&lt;");
 for (const [path, meta] of Object.entries(pages)) {
   const url = site.origin + (path === "/" ? "/" : path);
-  const tags = `<title>${escape(meta.title)}</title><meta name="description" content="${escape(meta.description)}"/><link rel="canonical" href="${url}"/><meta property="og:type" content="website"/><meta property="og:locale" content="tr_TR"/><meta property="og:site_name" content="${site.name}"/><meta property="og:title" content="${escape(meta.title)}"/><meta property="og:description" content="${escape(meta.description)}"/><meta property="og:url" content="${url}"/><meta property="og:image" content="${site.origin}/images/town.jpg"/><meta property="og:image:alt" content="Denge Kasabası oyunundaki kasaba görseli"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="${escape(meta.title)}"/><meta name="twitter:description" content="${escape(meta.description)}"/><meta name="twitter:image" content="${site.origin}/images/town.jpg"/>${path === "/404" ? '<meta name="robots" content="noindex"/>' : ""}`;
+  const tags = `<title>${escape(meta.title)}</title><meta name="description" content="${escape(meta.description)}"/><link rel="canonical" href="${url}"/><meta property="og:type" content="website"/><meta property="og:locale" content="tr_TR"/><meta property="og:site_name" content="${site.name}"/><meta property="og:title" content="${escape(meta.title)}"/><meta property="og:description" content="${escape(meta.description)}"/><meta property="og:url" content="${url}"/><meta property="og:image" content="${site.origin}/images/town.jpg"/><meta property="og:image:alt" content="Denge Kasabası oyunundaki kasaba görseli"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="${escape(meta.title)}"/><meta name="twitter:description" content="${escape(meta.description)}"/><meta name="twitter:image" content="${site.origin}/images/town.jpg"/>${path === "/404" || path === "/yazar" ? '<meta name="robots" content="noindex"/>' : ""}`;
   const out =
     path === "/"
       ? "dist/index.html"
@@ -19,7 +40,9 @@ for (const [path, meta] of Object.entries(pages)) {
     await mkdir(`dist${path}`, { recursive: true });
   await writeFile(
     out,
-    shell.replace("<!--meta-->", tags).replace("<!--app-->", render(path)),
+    shell
+      .replace("<!--meta-->", tags)
+      .replace("<!--app-->", render(path, remotePosts)),
   );
 }
 await writeFile(

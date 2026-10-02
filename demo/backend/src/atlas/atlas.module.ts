@@ -16,5 +16,6 @@ import { ManagementService } from './management.service.js';
     ManagementService,
     AttemptsService,
   ],
+  exports: [AtlasAuthService, AtlasAuthGuard],
 })
 export class AtlasModule {}

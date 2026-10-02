@@ -1,5 +1,6 @@
-import { useRef } from "react";
-import { posts } from "../content";
+import { useEffect, useRef, useState } from "react";
+import { posts, type Post } from "../content";
+import { fetchPublishedPosts } from "../api";
 import { Arrow } from "../components/Arrow";
 import { Contact } from "../components/Contact";
 import { Eyebrow } from "../components/Eyebrow";
@@ -7,7 +8,18 @@ import { useReveals } from "../hooks/useReveals";
 
 export function BlogIndex() {
   const root = useRef<HTMLDivElement>(null);
+  const [remotePosts, setRemotePosts] = useState<Post[]>([]);
   useReveals(root);
+  useEffect(() => {
+    fetchPublishedPosts()
+      .then(setRemotePosts)
+      .catch(() => setRemotePosts([]));
+  }, []);
+  const staticSlugs = new Set(posts.map((p) => p.slug));
+  const list = [
+    ...remotePosts.filter((p) => !staticSlugs.has(p.slug)),
+    ...posts,
+  ];
   return (
     <div ref={root}>
       <section className="section container blog-index">
@@ -23,7 +35,7 @@ export function BlogIndex() {
           </p>
         </div>
         <div className="blog-list" data-reveal-group>
-          {posts.map((p) => (
+          {list.map((p) => (
             <a className="blog-card" key={p.slug} href={`/blog/${p.slug}`}>
               <div className="blog-card__meta">
                 <span className="vtag">{p.tag}</span>
