@@ -51,8 +51,12 @@ export function BlogEditor() {
                 String(data.get("password")),
               );
               setEmail(s.email);
-            } catch {
-              setSignInError("Giriş başarısız — e-posta/şifreyi kontrol et.");
+            } catch (err) {
+              setSignInError(
+                `Giriş başarısız — ${
+                  err instanceof Error ? err.message : "e-posta/şifreyi kontrol et."
+                }`,
+              );
             }
           }}
         >

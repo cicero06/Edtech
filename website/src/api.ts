@@ -102,7 +102,17 @@ async function supabaseToken(
     },
     body: JSON.stringify(grant),
   });
-  if (!res.ok) throw new ApiError(res.status, "Giriş başarısız");
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as {
+      error_description?: string;
+      msg?: string;
+      error?: string;
+    } | null;
+    throw new ApiError(
+      res.status,
+      detail?.error_description ?? detail?.msg ?? detail?.error ?? "Giriş başarısız",
+    );
+  }
   const data = (await res.json()) as {
     access_token: string;
     refresh_token: string;
