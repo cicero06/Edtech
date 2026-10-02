@@ -49,6 +49,11 @@ export function BlogIndex() {
             </a>
           ))}
         </div>
+        <p className="writer-entry">
+          <a className="text-link" href="/yazar">
+            Ekipten misiniz? Yazar girişi <Arrow />
+          </a>
+        </p>
       </section>
       <Contact />
     </div>

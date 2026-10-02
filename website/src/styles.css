@@ -3477,3 +3477,13 @@ section[id] {
   color: #81b29a;
   margin: 0;
 }
+
+/* Writer entry link at the bottom of /blog */
+.writer-entry {
+  margin-top: 32px;
+  opacity: 0.55;
+  font-size: 0.85rem;
+}
+.writer-entry:hover {
+  opacity: 0.9;
+}
