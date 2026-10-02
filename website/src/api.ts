@@ -89,19 +89,23 @@ export function signOutWriter() {
 }
 
 async function supabaseToken(
+  grantType: string,
   grant: Record<string, string>,
 ): Promise<WriterSession> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new ApiError(0, "Supabase yapılandırması eksik");
   }
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
+  const res = await fetch(
+    `${SUPABASE_URL}/auth/v1/token?grant_type=${grantType}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(grant),
     },
-    body: JSON.stringify(grant),
-  });
+  );
   if (!res.ok) {
     const detail = (await res.json().catch(() => null)) as {
       error_description?: string;
@@ -130,7 +134,7 @@ async function supabaseToken(
 }
 
 export function signInWriter(email: string, password: string) {
-  return supabaseToken({ grant_type: "password", email, password });
+  return supabaseToken("password", { email, password });
 }
 
 /** Valid session, transparently refreshed once when expired. */
@@ -141,8 +145,7 @@ export async function ensureWriterSession(): Promise<WriterSession | null> {
     const raw = sessionStorage.getItem(TOKEN_KEY);
     const stored = raw ? (JSON.parse(raw) as WriterSession) : null;
     if (!stored?.refreshToken) return null;
-    return await supabaseToken({
-      grant_type: "refresh_token",
+    return await supabaseToken("refresh_token", {
       refresh_token: stored.refreshToken,
     });
   } catch {
