@@ -117,6 +117,21 @@ export function unbindAttempt(): void {
   setStatus('local');
 }
 
+function safeUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      /* fallback */
+    }
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 /**
  * Attach the engine to a server attempt. Loads the outbox sequence counter,
  * queues `attempt_started` for brand-new attempts, then flushes whatever a
@@ -145,11 +160,15 @@ export function bindAttempt(input: {
     displayName: rest.displayName ?? '',
   });
   return queue(async () => {
-    nextSequence =
-      (await getMeta<number>(`seq:${rest.attemptId}`)) ?? 0;
-    if (fresh) await enqueueInternal('attempt_started', {});
-    setStatus('pending');
-    scheduleFlush(0);
+    try {
+      nextSequence =
+        (await getMeta<number>(`seq:${rest.attemptId}`)) ?? 0;
+      if (fresh) await enqueueInternal('attempt_started', {});
+      setStatus('pending');
+      scheduleFlush(0);
+    } catch (e) {
+      console.warn('Outbox storage warning:', e);
+    }
   });
 }
 
@@ -211,7 +230,7 @@ async function enqueueInternal(
   const bound = binding;
   if (!bound) return;
   const envelope: EventEnvelope = {
-    clientEventId: crypto.randomUUID(),
+    clientEventId: safeUUID(),
     sequence: nextSequence++,
     type,
     payloadSchemaVersion: 1,
@@ -317,7 +336,7 @@ export async function joinRemote(
   const result = await joinActivity({
     joinCode: joinCode.trim().toUpperCase(),
     displayName: displayName.trim(),
-    clientAttemptId: crypto.randomUUID(),
+    clientAttemptId: safeUUID(),
   });
   return {
     participantId: result.attempt.participantId,

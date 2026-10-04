@@ -19,6 +19,7 @@ import {
   type AdultSession,
 } from '../Game/sync/adultAuth';
 import {
+  ApiError,
   getPublicReport,
   type PublicReportResult,
   type StaffAuth,
@@ -120,8 +121,19 @@ export default function StudentGate({ onPick }: StudentGateProps) {
 
       playSfx(SoundKeys.COMPLETE, 0.8);
       onPick(student);
-    } catch {
-      setError('Giriş yapılamadı — Sınıf kodunu, listedeki adını ve öğretmenin oyunu açıp açmadığını kontrol et.');
+    } catch (err: unknown) {
+      console.error('Student login error:', err);
+      const detail =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : '';
+      setError(
+        detail
+          ? `Giriş yapılamadı: ${detail}`
+          : 'Giriş yapılamadı — Sınıf kodunu, listedeki adını ve öğretmenin oyunu açıp açmadığını kontrol et.',
+      );
     } finally {
       setBusy(false);
     }
