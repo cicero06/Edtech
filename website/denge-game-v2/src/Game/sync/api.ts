@@ -92,9 +92,15 @@ export function syncAttempt(
 // ---------------------------------------------------------------------------
 // Staff management (facilitator console)
 //
-// Until the Supabase sign-in ships, the staff caller identifies itself with
-// the dev-only `x-atlas-user` header — the backend ignores it in production.
+// `StaffAuth` carries either a Supabase JWT (`token` — the production path,
+// backend resolves it to an adult principal) or a dev handle (`subject`,
+// sent as `x-atlas-user` — the backend ignores it in production).
 // ---------------------------------------------------------------------------
+
+export interface StaffAuth {
+  token?: string;
+  subject?: string;
+}
 
 export interface RemoteWorkspace {
   id: string;
@@ -102,11 +108,30 @@ export interface RemoteWorkspace {
   name: string;
 }
 
+export interface RemoteParticipant {
+  id: string;
+  groupId: string;
+  displayName: string;
+  studentNo?: string | null;
+  avatar?: string | null;
+  createdAt: string;
+  shareCode?: string;
+  latestAttempt?: {
+    id: string;
+    status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+    startedAt: string;
+    completedAt?: string | null;
+    revision: number;
+    state?: { state: unknown } | null;
+    _count?: { events: number };
+  } | null;
+}
+
 export interface RemoteGroup {
   id: string;
   name: string;
   joinCode: string;
-  participants?: { id: string; displayName: string }[];
+  participants?: RemoteParticipant[];
   activities?: RemoteActivity[];
 }
 
@@ -125,69 +150,139 @@ export interface RemoteActivity {
   }[];
 }
 
+export interface PublicReportResult {
+  shareCode: string;
+  studentName: string;
+  groupName: string;
+  schoolName: string;
+  status: 'NOT_STARTED' | 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+  startedAt: string | null;
+  completedAt: string | null;
+  eventsCount: number;
+  activityTitle: string | null;
+  state: {
+    stats?: {
+      environment: number;
+      economy: number;
+      society: number;
+      water: number;
+    };
+    notebook?: { cardId: string; icon: string; text: string; datum?: string }[];
+    evidence?: string[];
+    plan?: { solutionIds: string[]; totalCost: number; rationale: string } | null;
+    report?: { workedIds: string[]; problemIds: string[] };
+    finalStatement?: string;
+    quest?: string;
+  } | null;
+}
+
+export function getPublicReport(shareCode: string): Promise<PublicReportResult> {
+  return call<PublicReportResult>(`/v2/reports/${encodeURIComponent(shareCode)}`);
+}
+
 function staffCall<T>(
   path: string,
-  subject: string,
+  auth: StaffAuth,
   init: RequestInit = {},
 ): Promise<T> {
   return call<T>(path, {
     ...init,
-    headers: { 'x-atlas-user': subject },
+    headers: auth.token
+      ? { Authorization: `Bearer ${auth.token}` }
+      : { 'x-atlas-user': auth.subject ?? '' },
   });
 }
 
 export function staffCreateWorkspace(
-  subject: string,
+  auth: StaffAuth,
   input: { kind: 'SCHOOL' | 'PILOT'; name: string },
 ) {
-  return staffCall<RemoteWorkspace>('/v2/workspaces', subject, {
+  return staffCall<RemoteWorkspace>('/v2/workspaces', auth, {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export async function staffListWorkspaces(subject: string) {
+export async function staffListWorkspaces(auth: StaffAuth) {
   const rows = await staffCall<
     { role: string; workspace: RemoteWorkspace }[]
-  >('/v2/workspaces', subject);
-  return rows.map((row) => row.workspace);
+  >('/v2/workspaces', auth);
+  return rows;
 }
 
-export function staffListGroups(subject: string, workspaceId: string) {
+export function staffListGroups(auth: StaffAuth, workspaceId: string) {
   return staffCall<RemoteGroup[]>(
     `/v2/workspaces/${workspaceId}/groups`,
-    subject,
+    auth,
   );
 }
 
 export function staffCreateGroup(
-  subject: string,
+  auth: StaffAuth,
   workspaceId: string,
   name: string,
 ) {
-  return staffCall<RemoteGroup>(`/v2/workspaces/${workspaceId}/groups`, subject, {
+  return staffCall<RemoteGroup>(`/v2/workspaces/${workspaceId}/groups`, auth, {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
 }
 
-export function staffGetGroup(subject: string, groupId: string) {
-  return staffCall<RemoteGroup>(`/v2/groups/${groupId}`, subject);
+export function staffDeleteGroup(
+  auth: StaffAuth,
+  workspaceId: string,
+  groupId: string,
+) {
+  return staffCall<{ id: string }>(
+    `/v2/workspaces/${workspaceId}/groups/${groupId}`,
+    auth,
+    { method: 'DELETE' },
+  );
+}
+
+export function staffGetGroup(auth: StaffAuth, groupId: string) {
+  return staffCall<RemoteGroup>(`/v2/groups/${groupId}`, auth);
 }
 
 export function staffAddParticipant(
-  subject: string,
+  auth: StaffAuth,
   groupId: string,
   displayName: string,
 ) {
-  return staffCall<{ id: string }>(`/v2/groups/${groupId}/participants`, subject, {
-    method: 'POST',
-    body: JSON.stringify({ displayName }),
-  });
+  return staffCall<{ id: string; shareCode?: string }>(
+    `/v2/groups/${groupId}/participants`,
+    auth,
+    {
+      method: 'POST',
+      body: JSON.stringify({ displayName }),
+    },
+  );
+}
+
+export function staffDeleteParticipant(
+  auth: StaffAuth,
+  groupId: string,
+  participantId: string,
+) {
+  return staffCall<{ id: string }>(
+    `/v2/groups/${groupId}/participants/${participantId}`,
+    auth,
+    { method: 'DELETE' },
+  );
+}
+
+export function staffGetParticipantReport(
+  auth: StaffAuth,
+  participantId: string,
+): Promise<PublicReportResult> {
+  return staffCall<PublicReportResult>(
+    `/v2/participants/${participantId}/report`,
+    auth,
+  );
 }
 
 export function staffCreateActivity(
-  subject: string,
+  auth: StaffAuth,
   groupId: string,
   input: {
     title: string;
@@ -196,24 +291,24 @@ export function staffCreateActivity(
     manifest: Record<string, unknown>;
   },
 ) {
-  return staffCall<RemoteActivity>(`/v2/groups/${groupId}/activities`, subject, {
+  return staffCall<RemoteActivity>(`/v2/groups/${groupId}/activities`, auth, {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export function staffSetActivityStatus(
-  subject: string,
+  auth: StaffAuth,
   activityId: string,
   action: 'open' | 'close',
 ) {
   return staffCall<RemoteActivity>(
     `/v2/activities/${activityId}/${action}`,
-    subject,
+    auth,
     { method: 'POST' },
   );
 }
 
-export function staffGetActivity(subject: string, activityId: string) {
-  return staffCall<RemoteActivity>(`/v2/activities/${activityId}`, subject);
+export function staffGetActivity(auth: StaffAuth, activityId: string) {
+  return staffCall<RemoteActivity>(`/v2/activities/${activityId}`, auth);
 }

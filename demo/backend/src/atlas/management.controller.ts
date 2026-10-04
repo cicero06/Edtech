@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -71,6 +72,19 @@ export class ManagementController {
     return this.management.getGroup(asAdult(principal), id);
   }
 
+  @Delete('workspaces/:workspaceId/groups/:groupId')
+  deleteGroup(
+    @Principal() principal: AuthPrincipal,
+    @Param('workspaceId', uuid()) workspaceId: string,
+    @Param('groupId', uuid()) groupId: string,
+  ) {
+    return this.management.deleteGroup(
+      asAdult(principal),
+      workspaceId,
+      groupId,
+    );
+  }
+
   @Post('groups/:id/participants')
   addParticipant(
     @Principal() principal: AuthPrincipal,
@@ -78,6 +92,30 @@ export class ManagementController {
     @Body() dto: CreateParticipantDto,
   ) {
     return this.management.addParticipant(asAdult(principal), id, dto);
+  }
+
+  @Delete('groups/:groupId/participants/:participantId')
+  deleteParticipant(
+    @Principal() principal: AuthPrincipal,
+    @Param('groupId', uuid()) groupId: string,
+    @Param('participantId', uuid()) participantId: string,
+  ) {
+    return this.management.deleteParticipant(
+      asAdult(principal),
+      groupId,
+      participantId,
+    );
+  }
+
+  @Get('participants/:participantId/report')
+  getParticipantReport(
+    @Principal() principal: AuthPrincipal,
+    @Param('participantId', uuid()) participantId: string,
+  ) {
+    return this.management.getParticipantReport(
+      asAdult(principal),
+      participantId,
+    );
   }
 
   @Post('groups/:id/activities')

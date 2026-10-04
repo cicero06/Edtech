@@ -218,6 +218,49 @@ export class AttemptsService {
     });
   }
 
+  async getPublicReport(shareCode: string) {
+    const raw = shareCode.trim().toUpperCase().replace(/^DNGA-?/, '').toLowerCase();
+    if (raw.length < 4) {
+      throw new BadRequestException('Geçersiz rapor kodu');
+    }
+    const participant = await this.prisma.participant.findFirst({
+      where: { id: { startsWith: raw } },
+      include: {
+        group: {
+          include: {
+            workspace: true,
+          },
+        },
+      },
+    });
+    if (!participant) {
+      throw new ForbiddenException('Bu koda ait öğrenci raporu bulunamadı');
+    }
+
+    const latestAttempt = await this.prisma.gameAttempt.findFirst({
+      where: { participantId: participant.id },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        state: true,
+        activity: true,
+        _count: { select: { events: true } },
+      },
+    });
+
+    return {
+      shareCode: `DNGA-${participant.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+      studentName: participant.displayName,
+      groupName: participant.group.name,
+      schoolName: participant.group.workspace.name,
+      status: latestAttempt?.status ?? 'NOT_STARTED',
+      startedAt: latestAttempt?.startedAt ?? null,
+      completedAt: latestAttempt?.completedAt ?? null,
+      eventsCount: latestAttempt?._count.events ?? 0,
+      activityTitle: latestAttempt?.activity.title ?? null,
+      state: latestAttempt?.state?.state ?? null,
+    };
+  }
+
   private async assertReadAccess(
     principal: AuthPrincipal,
     attempt: { participantId: string; activity: { group: { workspaceId: string } } },

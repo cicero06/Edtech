@@ -23,6 +23,12 @@ export class JoinController {
   join(@Body() dto: JoinActivityDto) {
     return this.attempts.join(dto);
   }
+
+  /** Public parent/student report lookup by shareCode (e.g. DNGA-4FA7C8). */
+  @Get('reports/:shareCode')
+  getPublicReport(@Param('shareCode') shareCode: string) {
+    return this.attempts.getPublicReport(shareCode);
+  }
 }
 
 @Controller('v2/attempts')

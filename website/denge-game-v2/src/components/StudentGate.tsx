@@ -1,660 +1,371 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { AvatarFace } from './IntroSequence';
 import StaffPanel from './StaffPanel';
-import StudentReport from './StudentReport';
-import { SoundKeys, TextureKeys, type TextureKey } from '../Game/data/assets';
+import ParentReportModal from './ParentReportModal';
+import { SoundKeys, TextureKeys } from '../Game/data/assets';
 import { playSfx } from '../Game/audio';
 import {
-  AVATARS,
-  AVATAR_LABELS,
-  QUEST_STAGE_LABELS,
-  addClass,
-  addStudent,
-  clearLastClass,
-  findStudentByShareCode,
-  getCurrentTeacher,
   hydrateRemoteSession,
-  joinByCode,
-  lastJoinCode,
-  listClasses,
-  listStudents,
-  loginTeacher,
-  logoutTeacher,
-  removeClass,
-  removeStudent,
-  sessionSummary,
-  type ClassRoom,
-  type JoinedClass,
   type StudentProfile,
 } from '../Game/data/session';
 import { bindAttempt, joinRemote } from '../Game/sync/engine';
+import {
+  ensureAdultSession,
+  getAdultSession,
+  isAdultAuthConfigured,
+  signInAdult,
+  signOutAdult,
+  type AdultSession,
+} from '../Game/sync/adultAuth';
+import {
+  getPublicReport,
+  type PublicReportResult,
+  type StaffAuth,
+} from '../Game/sync/api';
 
-/**
- * "Who is playing?" gate - the org layer's UI, mirroring the future Atlas flow:
- *
- *   Student:  type class code -> class roster -> pick your card -> play.
- *             The roster is never shown without a valid code.
- *   Teacher:  school + name sign-in (mock, no password yet) -> class list ->
- *             per-class student management + parent share codes.
- *
- * A classroom device remembers the last joined class, so kids go straight to
- * their roster on repeat visits.
- */
 type StudentGateProps = {
   onPick: (student: StudentProfile) => void;
 };
 
-type GateView = 'code' | 'roster' | 'remote' | 'staff' | 'teacher-auth' | 'teacher' | 'class' | 'parent' | 'report';
+type GateRole = 'student' | 'teacher' | 'parent';
+type GateView = 'login' | 'dev' | 'staff';
 
 export default function StudentGate({ onPick }: StudentGateProps) {
-  // A returning classroom device skips the code step entirely: a remembered
-  // join code resolves straight to the roster during the first render.
-  const [joined, setJoined] = useState<JoinedClass | null>(() => {
-    const last = lastJoinCode();
-    if (!last) return null;
-    const result = joinByCode(last);
-    if (!result) clearLastClass();
-    return result;
-  });
-  const [view, setView] = useState<GateView>(joined ? 'roster' : 'code');
+  const [adult, setAdult] = useState<AdultSession | null>(() => getAdultSession());
+  const [devHandle, setDevHandle] = useState('');
+  const [view, setView] = useState<GateView>(adult ? 'staff' : 'login');
+  const [role, setRole] = useState<GateRole>('student');
 
-  // --- student join state ---
-  const [code, setCode] = useState('');
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [students, setStudents] = useState<StudentProfile[]>(() =>
-    joined ? listStudents(joined.classRoom.id) : [],
-  );
+  // Student form fields
+  const [studentCode, setStudentCode] = useState('');
+  const [studentName, setStudentName] = useState('');
 
-  // --- teacher state ---
-  const [auth, setAuth] = useState(() => getCurrentTeacher());
-  const [schoolName, setSchoolName] = useState('');
-  const [teacherName, setTeacherName] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [classes, setClasses] = useState<ClassRoom[]>([]);
-  const [className, setClassName] = useState('');
-  const [currentClass, setCurrentClass] = useState<ClassRoom | null>(null);
-  const [confirmDeleteClass, setConfirmDeleteClass] = useState<string | null>(null);
+  // Teacher form fields
+  const [teacherEmail, setTeacherEmail] = useState('');
+  const [teacherPassword, setTeacherPassword] = useState('');
 
-  // --- student add form (inside class detail) ---
-  const [name, setName] = useState('');
-  const [studentNo, setStudentNo] = useState('');
-  const [avatar, setAvatar] = useState<TextureKey>(TextureKeys.PLAYER);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Parent form fields
+  const [reportCode, setReportCode] = useState('');
+  const [viewingReport, setViewingReport] = useState<PublicReportResult | null>(null);
 
-  // --- report state: teacher class detail and parent share code share it ---
-  const [reportTarget, setReportTarget] = useState<{
-    student: StudentProfile;
-    schoolName: string;
-    className: string;
-    from: 'teacher' | 'parent';
-  } | null>(null);
-  const [shareInput, setShareInput] = useState('');
-  const [shareError, setShareError] = useState<string | null>(null);
+  // Common status
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  // --- remote (Atlas /v2) pilot join state ---
-  const [remoteCode, setRemoteCode] = useState('');
-  const [remoteName, setRemoteName] = useState('');
-  const [remoteError, setRemoteError] = useState<string | null>(null);
-  const [remoteBusy, setRemoteBusy] = useState(false);
+  // A stored refresh token can resurrect the adult session after expiry.
+  useEffect(() => {
+    if (adult) return;
+    void ensureAdultSession().then((restored) => {
+      if (restored) {
+        setAdult(restored);
+        setView('staff');
+      }
+    });
+  }, [adult]);
 
-  /**
-   * Server-backed pilot entry: group code + roster name → participant token
-   * + attempt. A resumed attempt's server state is written into the local
-   * cache first, then the whole game runs through the normal session path.
-   */
-  const joinRemoteGroup = async () => {
-    setRemoteBusy(true);
-    setRemoteError(null);
+  const staffAuth: StaffAuth | null = adult
+    ? { token: adult.accessToken }
+    : devHandle
+      ? { subject: devHandle }
+      : null;
+
+  const identity = adult?.email ?? devHandle;
+
+  const signOut = () => {
+    signOutAdult();
+    setAdult(null);
+    setDevHandle('');
+    setError(null);
+    setView('login');
+  };
+
+  // Student login action
+  const handleStudentLogin = async () => {
+    const code = studentCode.trim().toUpperCase();
+    const name = studentName.trim();
+    if (!code || !name || busy) return;
+
+    setBusy(true);
+    setError(null);
     try {
-      const result = await joinRemote(remoteCode, remoteName);
+      const result = await joinRemote(code, name);
+      const computedShareCode = `DNGA-${result.participantId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+
       const student: StudentProfile = {
         id: result.participantId,
-        classId: 'atlas-remote',
-        name: remoteName.trim(),
+        classId: code,
+        name: name,
         avatar: TextureKeys.PLAYER,
-        shareCode: '',
+        shareCode: computedShareCode,
         createdAt: Date.now(),
       };
+
       if (result.resumedState) {
         hydrateRemoteSession(result.participantId, result.resumedState);
       }
+
       await bindAttempt({
         attemptId: result.attemptId,
         participantId: result.participantId,
         token: result.token,
         revision: result.revision,
-        joinCode: remoteCode.trim().toUpperCase(),
-        displayName: remoteName.trim(),
+        joinCode: code,
+        displayName: name,
         fresh: !result.resumedState,
       });
-      playSfx(SoundKeys.TICK, 0.7);
+
+      playSfx(SoundKeys.COMPLETE, 0.8);
       onPick(student);
     } catch {
-      setRemoteError('Giremedik — kodu ve adını kontrol et, ya da interneti yokla.');
+      setError('Giriş yapılamadı — Sınıf kodunu, listedeki adını ve öğretmenin oyunu açıp açmadığını kontrol et.');
     } finally {
-      setRemoteBusy(false);
+      setBusy(false);
     }
   };
 
-  const openShareReport = () => {
-    const found = findStudentByShareCode(shareInput);
-    if (!found) {
-      setShareError('Bu kodu tanımadık — öğretmenden kontrol et.');
+  // Teacher login action
+  const handleTeacherLogin = async () => {
+    const email = teacherEmail.trim();
+    const password = teacherPassword.trim();
+    if (!email || !password || busy) return;
+
+    if (!isAdultAuthConfigured()) {
+      setError('Yönetici girişi bu ortamda yapılandırılmamış.');
       return;
     }
-    playSfx(SoundKeys.TICK, 0.7);
-    setShareError(null);
-    setReportTarget({
-      student: found.student,
-      schoolName: found.school.name,
-      className: found.classRoom.name,
-      from: 'parent',
-    });
-    setView('report');
-  };
 
-  const join = () => {
-    const result = joinByCode(code);
-    if (!result) {
-      setCodeError('Bu kodu tanımadık — öğretmeninden kontrol et.');
-      return;
-    }
-    playSfx(SoundKeys.TICK, 0.7);
-    setCodeError(null);
-    setJoined(result);
-    setStudents(listStudents(result.classRoom.id));
-    setView('roster');
-  };
-
-  const openTeacher = () => {
-    const current = getCurrentTeacher();
-    setAuth(current);
-    if (current) {
-      setClasses(listClasses());
-      setView('teacher');
-    } else {
-      setView('teacher-auth');
+    setBusy(true);
+    setError(null);
+    try {
+      const session = await signInAdult(email, password);
+      playSfx(SoundKeys.COMPLETE, 0.7);
+      setAdult(session);
+      setView('staff');
+    } catch {
+      setError('Giriş başarısız — E-posta ve şifrenizi kontrol edin.');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const doLogin = () => {
-    const teacher = loginTeacher(schoolName, teacherName);
-    if (!teacher) {
-      setAuthError('Okul adını ve kendi adını yaz.');
-      return;
+  // Parent report lookup action
+  const handleParentLookup = async () => {
+    const code = reportCode.trim().toUpperCase();
+    if (!code || busy) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      const report = await getPublicReport(code);
+      playSfx(SoundKeys.PAGE, 0.7);
+      setViewingReport(report);
+    } catch {
+      setError('Rapor bulunamadı — Lütfen 6 haneli rapor kodunu kontrol edin (örn: DNGA-XXXXXX).');
+    } finally {
+      setBusy(false);
     }
-    playSfx(SoundKeys.COMPLETE, 0.7);
-    setAuthError(null);
-    setAuth(getCurrentTeacher());
-    setClasses(listClasses());
-    setView('teacher');
   };
 
-  const openClass = (classRoom: ClassRoom) => {
-    setCurrentClass(classRoom);
-    setStudents(listStudents(classRoom.id));
-    setFormError(null);
-    setView('class');
-  };
-
-  const submitClass = () => {
-    const created = addClass(className);
-    if (!created) return;
-    playSfx(SoundKeys.COMPLETE, 0.7);
-    setClassName('');
-    setClasses(listClasses());
-  };
-
-  const submitStudent = () => {
-    if (!currentClass) return;
-    const created = addStudent(currentClass.id, { name, studentNo, avatar });
-    if (!created) {
-      setFormError(studentNo.trim() ? 'Bu numara sınıfta zaten var.' : 'Ad boş olamaz.');
-      return;
-    }
-    playSfx(SoundKeys.COMPLETE, 0.7);
-    setFormError(null);
-    setName('');
-    setStudentNo('');
-    setStudents(listStudents(currentClass.id));
-  };
-
-  // ================= STAFF: remote pilot management =================
-  if (view === 'staff') {
-    return <StaffPanel onBack={() => setView('code')} />;
-  }
-
-  // ================= STUDENT: class code =================
-  if (view === 'code') {
+  // ================= STAFF console (adult) =================
+  if (view === 'staff' && staffAuth) {
     return (
-      <div className="gate-card" aria-label="Öğrenci girişi">
-        <p className="startup-eyebrow">ÖĞRENCİ GİRİŞİ</p>
-        <h2 className="profile-title gate-title">Sınıf kodunu gir</h2>
-        <p className="gate-hint">Öğretmeninin verdiği kod — ör. <strong>5A-K7X2</strong></p>
-        <input
-          className="gate-code-input"
-          type="text"
-          placeholder="SINIF KODU"
-          maxLength={12}
-          value={code}
-          autoFocus
-          onChange={(e) => setCode(e.target.value.toLocaleUpperCase('tr'))}
-          onKeyDown={(e) => e.key === 'Enter' && join()}
-        />
-        {codeError && <p className="gate-error" role="alert">{codeError}</p>}
-        <button
-          className="startup-button startup-button-primary"
-          disabled={!code.trim()}
-          onClick={join}
-        >
-          Sınıfa gir →
-        </button>
-        <button className="gate-link" onClick={openTeacher}>
-          👩‍🏫 Öğretmen girişi
-        </button>
-        <button
-          className="gate-link"
-          onClick={() => {
-            setShareError(null);
-            setView('parent');
-          }}
-        >
-          👪 Veli — rapor kodu
-        </button>
-        <button
-          className="gate-link"
-          onClick={() => {
-            setRemoteError(null);
-            setView('remote');
-          }}
-        >
-          🧪 Pilot grubu — merkezi kayıt
-        </button>
-        <button className="gate-link" onClick={() => setView('staff')}>
-          🛠 Pilot yönetimi
-        </button>
-      </div>
+      <StaffPanel auth={staffAuth} identity={identity} onSignOut={signOut} />
     );
   }
 
-  // ================= STUDENT: remote pilot group (Atlas backend) =================
-  if (view === 'remote') {
+  // ================= DEV handle (no Supabase configured) =================
+  if (view === 'dev') {
     return (
-      <div className="gate-card" aria-label="Pilot grup girişi">
-        <p className="startup-eyebrow">PİLOT GRUBU</p>
-        <h2 className="profile-title gate-title">Grup kodu + adın</h2>
+      <div className="gate-card" aria-label="Geliştirici girişi">
+        <p className="startup-eyebrow">GELİŞTİRİCİ GİRİŞİ</p>
+        <h2 className="profile-title gate-title">Yönetici adı</h2>
         <p className="gate-hint">
-          Kolaylaştırıcının verdiği grup kodunu ve listede görünen adını yaz —
-          kayıtların merkezi sunucuya gider.
+          Supabase yapılandırılmadığı için dev handle kullanılıyor — yalnızca
+          production dışı backend&apos;lerde geçer.
         </p>
         <input
           className="gate-code-input"
           type="text"
-          placeholder="GRUP KODU"
-          maxLength={12}
-          value={remoteCode}
+          placeholder="YÖNETİCİ ADI"
+          maxLength={40}
+          value={devHandle}
           autoFocus
-          onChange={(e) => setRemoteCode(e.target.value.toLocaleUpperCase('tr'))}
+          onChange={(e) => setDevHandle(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && devHandle.trim() && setView('staff')}
         />
-        <input
-          className="gate-code-input"
-          type="text"
-          placeholder="LİSTEDEKİ ADIN — ör. P-07"
-          maxLength={60}
-          value={remoteName}
-          onChange={(e) => setRemoteName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && joinRemoteGroup()}
-        />
-        {remoteError && <p className="gate-error" role="alert">{remoteError}</p>}
         <button
           className="startup-button startup-button-primary"
-          disabled={!remoteCode.trim() || !remoteName.trim() || remoteBusy}
-          onClick={joinRemoteGroup}
+          disabled={!devHandle.trim()}
+          onClick={() => setView('staff')}
         >
-          {remoteBusy ? 'Bağlanıyor…' : 'Oyuna gir →'}
+          Devam →
         </button>
-        <button className="gate-link" onClick={() => setView('code')}>
+        <button className="gate-link" onClick={() => setView('login')}>
           ← Geri dön
         </button>
       </div>
     );
   }
 
-  // ================= STUDENT: class roster =================
-  if (view === 'roster' && joined) {
-    return (
-      <div className="gate-card" aria-label="Sınıf listesi">
-        <p className="startup-eyebrow">{joined.school.name} · {joined.classRoom.name}</p>
-        <h2 className="profile-title gate-title">Kim oynuyor?</h2>
-        {students.length === 0 ? (
-          <p className="roster-empty">
-            Bu sınıfta henüz öğrenci yok — öğretmenin seni eklemeli.
-          </p>
-        ) : (
-          <div className="roster-grid" role="list">
-            {students.map((student) => {
-              const summary = sessionSummary(student.id);
-              return (
-                <button
-                  key={student.id}
-                  className="roster-card"
-                  role="listitem"
-                  onClick={() => {
-                    playSfx(SoundKeys.TICK, 0.7);
-                    onPick(student);
-                  }}
-                >
-                  <AvatarFace textureKey={student.avatar} />
-                  <strong>{student.name}</strong>
-                  {student.studentNo && <span className="roster-no">No: {student.studentNo}</span>}
-                  <em className={summary ? 'roster-stage saved' : 'roster-stage'}>
-                    {summary ? `▶ ${QUEST_STAGE_LABELS[summary.quest]}` : 'Yeni oyun'}
-                  </em>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        <button
-          className="gate-link"
-          onClick={() => {
-            clearLastClass();
-            setJoined(null);
-            setView('code');
-          }}
-        >
-          ← Farklı sınıf kodu gir
-        </button>
-      </div>
-    );
-  }
-
-  // ================= TEACHER: sign-in (mock, on the school's behalf) =================
-  if (view === 'teacher-auth') {
-    return (
-      <div className="gate-card" aria-label="Öğretmen girişi">
-        <p className="startup-eyebrow">ÖĞRETMEN GİRİŞİ</p>
-        <h2 className="profile-title gate-title">Okulun adına giriş yap</h2>
-        <label className="gate-field">
-          <span>Okul</span>
-          <input
-            type="text"
-            placeholder="Okul adı — ör. Atatürk İlkokulu"
-            maxLength={48}
-            value={schoolName}
-            onChange={(e) => setSchoolName(e.target.value)}
-            autoFocus
-          />
-        </label>
-        <label className="gate-field">
-          <span>Öğretmen</span>
-          <input
-            type="text"
-            placeholder="Adın"
-            maxLength={32}
-            value={teacherName}
-            onChange={(e) => setTeacherName(e.target.value)}
-          />
-        </label>
-        {authError && <p className="gate-error" role="alert">{authError}</p>}
-        <button
-          className="startup-button startup-button-primary"
-          disabled={!schoolName.trim() || !teacherName.trim()}
-          onClick={doLogin}
-        >
-          Giriş yap →
-        </button>
-        <button className="gate-link" onClick={() => setView('code')}>
-          ← Öğrenci girişine dön
-        </button>
-      </div>
-    );
-  }
-
-  // ================= TEACHER: class list =================
-  if (view === 'teacher' && auth) {
-    return (
-      <div className="gate-card" aria-label="Öğretmen paneli">
-        <p className="startup-eyebrow">ÖĞRETMEN PANELİ</p>
-        <h2 className="profile-title gate-title">{auth.school.name}</h2>
-        <p className="gate-hint">{auth.teacher.name} olarak giriş yaptın</p>
-
-        <div className="gate-form">
-          <input
-            type="text"
-            placeholder="Yeni sınıf — ör. 5-A"
-            maxLength={16}
-            value={className}
-            onChange={(e) => setClassName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submitClass()}
-          />
+  // ================= 3-TAB UNIFIED LOGIN =================
+  return (
+    <>
+      <div className="gate-card professional-gate" aria-label="Denge Kasabası Girişi">
+        {/* Role Selector Tabs */}
+        <div className="gate-role-tabs" role="tablist">
           <button
-            className="startup-button startup-button-primary gate-inline-btn"
-            disabled={!className.trim()}
-            onClick={submitClass}
+            type="button"
+            role="tab"
+            aria-selected={role === 'student'}
+            className={`gate-role-tab ${role === 'student' ? 'active' : ''}`}
+            onClick={() => {
+              setRole('student');
+              setError(null);
+            }}
           >
-            + Sınıf
+            🎒 Öğrenci
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={role === 'teacher'}
+            className={`gate-role-tab ${role === 'teacher' ? 'active' : ''}`}
+            onClick={() => {
+              setRole('teacher');
+              setError(null);
+            }}
+          >
+            👨‍🏫 Öğretmen
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={role === 'parent'}
+            className={`gate-role-tab ${role === 'parent' ? 'active' : ''}`}
+            onClick={() => {
+              setRole('parent');
+              setError(null);
+            }}
+          >
+            👨‍👩‍👧 Veli Raporu
           </button>
         </div>
 
-        {classes.length === 0 ? (
-          <p className="roster-empty">Henüz sınıfın yok — yukarıdan ilk sınıfını oluştur.</p>
-        ) : (
-          <ul className="teacher-list">
-            {classes.map((classRoom) => (
-              <li key={classRoom.id}>
-                <button className="teacher-class-open" onClick={() => openClass(classRoom)}>
-                  <strong>{classRoom.name}</strong>
-                  <span className="join-code">{classRoom.joinCode}</span>
-                  <em>{listStudents(classRoom.id).length} öğrenci</em>
-                </button>
-                <button
-                  className="teacher-del"
-                  aria-label={`${classRoom.name} sınıfını sil`}
-                  onClick={() => {
-                    if (confirmDeleteClass === classRoom.id) {
-                      removeClass(classRoom.id);
-                      setConfirmDeleteClass(null);
-                      setClasses(listClasses());
-                    } else {
-                      setConfirmDeleteClass(classRoom.id);
-                    }
-                  }}
-                  onBlur={() => setConfirmDeleteClass(null)}
-                >
-                  {confirmDeleteClass === classRoom.id ? 'Emin misin? Sil' : '✕'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <button
-          className="gate-link"
-          onClick={() => {
-            logoutTeacher();
-            setAuth(null);
-            setView('teacher-auth');
-          }}
-        >
-          Farklı öğretmen ile giriş
-        </button>
-        <button className="gate-link" onClick={() => setView('code')}>
-          ← Öğrenci girişine dön
-        </button>
-      </div>
-    );
-  }
-
-  // ================= TEACHER: class detail (roster management) =================
-  if (view === 'class' && currentClass && auth) {
-    return (
-      <div className="gate-card" aria-label={`${currentClass.name} sınıfı`}>
-        <p className="startup-eyebrow">{auth.school.name}</p>
-        <h2 className="profile-title gate-title">{currentClass.name}</h2>
-        <p className="gate-hint">
-          Sınıf kodu: <strong className="join-code">{currentClass.joinCode}</strong> — öğrenciler
-          bununla giriyor
-        </p>
-
-        <div className="gate-form">
-          <input
-            type="text"
-            placeholder="Öğrenci adı soyadı"
-            maxLength={32}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="No"
-            maxLength={6}
-            value={studentNo}
-            onChange={(e) => setStudentNo(e.target.value)}
-          />
-        </div>
-
-        <div className="avatar-grid" role="radiogroup" aria-label="Karakter seç">
-          {AVATARS.map((key) => (
+        {/* Tab 1: Öğrenci Girişi */}
+        {role === 'student' && (
+          <div className="gate-tab-content">
+            <h2 className="profile-title gate-title">Kasabaya Katıl</h2>
+            <p className="gate-hint">
+              Öğretmeninin verdiği <strong>sınıf kodunu</strong> ve listedeki <strong>adını</strong> yaz.
+            </p>
+            <input
+              className="gate-code-input"
+              type="text"
+              placeholder="SINIF KODU (örn. K7X29M)"
+              maxLength={12}
+              value={studentCode}
+              autoFocus
+              onChange={(e) => setStudentCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleStudentLogin()}
+            />
+            <input
+              className="gate-code-input gate-name-input"
+              type="text"
+              placeholder="LİSTEDEKİ ADIN SOYADIN"
+              maxLength={60}
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleStudentLogin()}
+            />
+            {error && <p className="gate-error" role="alert">{error}</p>}
             <button
-              key={key}
-              type="button"
-              className={`avatar-option${avatar === key ? ' picked' : ''}`}
-              role="radio"
-              aria-checked={avatar === key}
-              aria-label={AVATAR_LABELS[key]}
-              onClick={() => setAvatar(key)}
+              className="startup-button startup-button-primary"
+              disabled={!studentCode.trim() || !studentName.trim() || busy}
+              onClick={() => void handleStudentLogin()}
             >
-              <AvatarFace textureKey={key} size={44} />
+              {busy ? 'Bağlanıyor…' : 'Oyuna Başla →'}
             </button>
-          ))}
-        </div>
-
-        {formError && <p className="gate-error" role="alert">{formError}</p>}
-
-        <button
-          className="startup-button startup-button-primary"
-          disabled={!name.trim()}
-          onClick={submitStudent}
-        >
-          + Öğrenci ekle
-        </button>
-
-        {students.length > 0 && (
-          <ul className="teacher-list">
-            {students.map((student) => (
-              <li key={student.id}>
-                <span className="teacher-list-name">
-                  {student.name}
-                  {student.studentNo && <em> · {student.studentNo}</em>}
-                  <em className="share-code"> · veli: {student.shareCode}</em>
-                </span>
-                <button
-                  className="teacher-report"
-                  aria-label={`${student.name} raporu`}
-                  title="Öğrenci raporu"
-                  onClick={() => {
-                    setReportTarget({
-                      student,
-                      schoolName: auth.school.name,
-                      className: currentClass.name,
-                      from: 'teacher',
-                    });
-                    setView('report');
-                  }}
-                >
-                  📊
-                </button>
-                <button
-                  className="teacher-del"
-                  aria-label={`${student.name} kaydını sil`}
-                  onClick={() => {
-                    if (confirmDelete === student.id) {
-                      removeStudent(student.id);
-                      setConfirmDelete(null);
-                      setStudents(listStudents(currentClass.id));
-                    } else {
-                      setConfirmDelete(student.id);
-                    }
-                  }}
-                  onBlur={() => setConfirmDelete(null)}
-                >
-                  {confirmDelete === student.id ? 'Emin misin? Sil' : '✕'}
-                </button>
-              </li>
-            ))}
-          </ul>
+          </div>
         )}
 
-        <button
-          className="gate-link"
-          onClick={() => {
-            setClasses(listClasses());
-            setView('teacher');
-          }}
-        >
-          ← Sınıf listesine dön
-        </button>
-      </div>
-    );
-  }
+        {/* Tab 2: Öğretmen Girişi */}
+        {role === 'teacher' && (
+          <div className="gate-tab-content">
+            <h2 className="profile-title gate-title">Öğretmen Yönetimi</h2>
+            <p className="gate-hint">
+              Sınıf kodları üretmek, öğrenci eklemek ve oturumları başlatmak için giriş yapın.
+            </p>
+            <input
+              className="gate-code-input gate-name-input"
+              type="email"
+              placeholder="E-POSTA ADRESİNİZ"
+              maxLength={80}
+              value={teacherEmail}
+              autoFocus
+              onChange={(e) => setTeacherEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleTeacherLogin()}
+            />
+            <input
+              className="gate-code-input gate-name-input"
+              type="password"
+              placeholder="ŞİFRENİZ"
+              maxLength={80}
+              value={teacherPassword}
+              onChange={(e) => setTeacherPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleTeacherLogin()}
+            />
+            {error && <p className="gate-error" role="alert">{error}</p>}
+            <button
+              className="startup-button startup-button-primary"
+              disabled={!teacherEmail.trim() || !teacherPassword.trim() || busy}
+              onClick={() => void handleTeacherLogin()}
+            >
+              {busy ? 'Doğrulanıyor…' : 'Yönetim Paneline Git →'}
+            </button>
+            {!isAdultAuthConfigured() && (
+              <button className="gate-link" onClick={() => setView('dev')}>
+                🛠 Geliştirici Girişi
+              </button>
+            )}
+          </div>
+        )}
 
-  // ================= PARENT: share-code report entry =================
-  if (view === 'parent') {
-    return (
-      <div className="gate-card" aria-label="Veli raporu">
-        <p className="startup-eyebrow">VELİ RAPORU</p>
-        <h2 className="profile-title gate-title">Rapor kodunu gir</h2>
-        <p className="gate-hint">
-          Öğretmenin paylaştığı kod — ör. <strong>DNGA-4K7X</strong>
-        </p>
-        <input
-          className="gate-code-input"
-          type="text"
-          placeholder="RAPOR KODU"
-          maxLength={12}
-          value={shareInput}
-          autoFocus
-          onChange={(e) => setShareInput(e.target.value.toLocaleUpperCase('tr'))}
-          onKeyDown={(e) => e.key === 'Enter' && openShareReport()}
+        {/* Tab 3: Veli Raporu */}
+        {role === 'parent' && (
+          <div className="gate-tab-content">
+            <h2 className="profile-title gate-title">Öğrenci Gelişim Raporu</h2>
+            <p className="gate-hint">
+              Öğretmenden veya öğrenciden aldığınız <strong>Veli Rapor Kodunu</strong> girerek gelişim durumunu inceleyin.
+            </p>
+            <input
+              className="gate-code-input"
+              type="text"
+              placeholder="RAPOR KODU (DNGA-XXXXXX)"
+              maxLength={20}
+              value={reportCode}
+              autoFocus
+              onChange={(e) => setReportCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleParentLookup()}
+            />
+            {error && <p className="gate-error" role="alert">{error}</p>}
+            <button
+              className="startup-button startup-button-primary"
+              disabled={!reportCode.trim() || busy}
+              onClick={() => void handleParentLookup()}
+            >
+              {busy ? 'Rapor aranıyor…' : 'Raporu Görüntüle →'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Modal for viewing student report */}
+      {viewingReport && (
+        <ParentReportModal
+          report={viewingReport}
+          onClose={() => setViewingReport(null)}
         />
-        {shareError && (
-          <p className="gate-error" role="alert">
-            {shareError}
-          </p>
-        )}
-        <button
-          className="startup-button startup-button-primary"
-          disabled={!shareInput.trim()}
-          onClick={openShareReport}
-        >
-          Raporu gör →
-        </button>
-        <button className="gate-link" onClick={() => setView('code')}>
-          ← Öğrenci girişine dön
-        </button>
-      </div>
-    );
-  }
-
-  // ================= SHARED: read-only student report =================
-  if (view === 'report' && reportTarget) {
-    return (
-      <StudentReport
-        student={reportTarget.student}
-        schoolName={reportTarget.schoolName}
-        className={reportTarget.className}
-        backLabel={reportTarget.from === 'teacher' ? '← Sınıfa dön' : '← Başka kod gir'}
-        onBack={() => {
-          setReportTarget(null);
-          setView(reportTarget.from === 'teacher' ? 'class' : 'parent');
-        }}
-      />
-    );
-  }
-
-  return null;
+      )}
+    </>
+  );
 }

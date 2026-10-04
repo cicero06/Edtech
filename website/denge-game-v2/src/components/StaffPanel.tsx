@@ -1,56 +1,58 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { SoundKeys } from '../Game/data/assets';
-import { playSfx } from '../Game/audio';
 import manifestJson from '../Game/data/scenario-manifest.json';
+import ParentReportModal from './ParentReportModal';
 import {
+  ApiError,
   staffAddParticipant,
   staffCreateActivity,
   staffCreateGroup,
   staffCreateWorkspace,
+  staffDeleteGroup,
+  staffDeleteParticipant,
   staffGetActivity,
   staffGetGroup,
+  staffGetParticipantReport,
   staffListGroups,
   staffListWorkspaces,
   staffSetActivityStatus,
+  type PublicReportResult,
   type RemoteGroup,
   type RemoteWorkspace,
+  type StaffAuth,
 } from '../Game/sync/api';
 
-/**
- * Facilitator console for the remote pilot flow.
- *
- * Until Supabase sign-in lands, the staff identity is a dev handle sent as
- * `x-atlas-user` (backend ignores it in production). The flow:
- *
- *   handle → workspace → group (join code + roster) → activity → open
- *
- * Kids then join with group code + roster name on the gate's pilot entry.
- */
 type StaffPanelProps = {
-  onBack: () => void;
+  auth: StaffAuth;
+  identity: string;
+  onSignOut: () => void;
 };
 
 type PanelView = 'workspaces' | 'group';
 
-const STAFF_KEY = 'denge:v2:staff-subject';
-const ATTEMPT_LABELS: Record<string, string> = {
-  ACTIVE: 'sürüyor',
-  COMPLETED: 'tamamlandı',
-  ABANDONED: 'yarım kaldı',
+interface MembershipRow {
+  role: string;
+  workspace: RemoteWorkspace;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Yönetici / Sahip',
+  FACILITATOR: 'Öğretmen',
+  VIEWER: 'Gözlemci',
 };
 
-export default function StaffPanel({ onBack }: StaffPanelProps) {
-  const [subject, setSubject] = useState(
-    () => localStorage.getItem(STAFF_KEY) ?? '',
-  );
-  const [subjectInput, setSubjectInput] = useState(subject);
+const ATTEMPT_LABELS: Record<string, string> = {
+  ACTIVE: 'Oynuyor',
+  COMPLETED: 'Tamamlandı',
+  ABANDONED: 'Yarım Kaldı',
+};
+
+export default function StaffPanel({ auth, identity, onSignOut }: StaffPanelProps) {
   const [view, setView] = useState<PanelView>('workspaces');
 
-  const [workspaces, setWorkspaces] = useState<RemoteWorkspace[]>([]);
+  const [memberships, setMemberships] = useState<MembershipRow[]>([]);
   const [workspaceName, setWorkspaceName] = useState('');
-  const [currentWorkspace, setCurrentWorkspace] =
-    useState<RemoteWorkspace | null>(null);
+  const [currentWorkspace, setCurrentWorkspace] = useState<RemoteWorkspace | null>(null);
   const [groups, setGroups] = useState<RemoteGroup[]>([]);
   const [groupName, setGroupName] = useState('');
 
@@ -59,19 +61,29 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
   const [activityTitle, setActivityTitle] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  // Student report modal
+  const [activeReport, setActiveReport] = useState<PublicReportResult | null>(null);
+
+  const copyToClipboard = (text: string, label: string) => {
+    void navigator.clipboard.writeText(text);
+    setCopyFeedback(`${label} panoya kopyalandı!`);
+    setTimeout(() => setCopyFeedback(null), 2500);
+  };
 
   const refreshGroup = useCallback(
     async (groupId: string) => {
-      const fresh = await staffGetGroup(subject, groupId);
+      const fresh = await staffGetGroup(auth, groupId);
       setGroup(fresh);
       const withAttempts = await Promise.all(
-        (fresh.activities ?? []).map((a) => staffGetActivity(subject, a.id)),
+        (fresh.activities ?? []).map((a) => staffGetActivity(auth, a.id)),
       );
       setGroup((current) =>
         current ? { ...current, activities: withAttempts } : current,
       );
     },
-    [subject],
+    [auth],
   );
 
   const run = useCallback(
@@ -80,8 +92,12 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
       setError(null);
       try {
         await job();
-      } catch {
-        setError('İşlem başarısız — sunucu ayakta mı, kodu kontrol et.');
+      } catch (e) {
+        setError(
+          e instanceof ApiError && e.status === 401
+            ? 'Oturumun süresi doldu — çıkış yapıp tekrar giriş yapın.'
+            : 'İşlem gerçekleştirilemedi — sunucu durumunu kontrol edin.',
+        );
       } finally {
         setBusy(false);
       }
@@ -90,25 +106,17 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
   );
 
   const loadWorkspaces = useCallback(
-    (handle: string) =>
-      staffListWorkspaces(handle).then(setWorkspaces).catch(() => {
-        setWorkspaces([]);
+    () =>
+      staffListWorkspaces(auth).then(setMemberships).catch(() => {
+        setMemberships([]);
         setError('Sunucuya ulaşılamadı.');
       }),
-    [],
+    [auth],
   );
 
   useEffect(() => {
-    if (subject) void loadWorkspaces(subject);
-  }, [subject, loadWorkspaces]);
-
-  const signIn = () => {
-    const handle = subjectInput.trim();
-    if (!handle) return;
-    localStorage.setItem(STAFF_KEY, handle);
-    setSubject(handle);
-    playSfx(SoundKeys.TICK, 0.7);
-  };
+    void loadWorkspaces();
+  }, [loadWorkspaces]);
 
   const openGroup = (entry: RemoteGroup) =>
     run(async () => {
@@ -116,101 +124,159 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
       setView('group');
     });
 
-  // ================= sign-in =================
-  if (!subject) {
-    return (
-      <div className="gate-card" aria-label="Pilot yönetimi">
-        <p className="startup-eyebrow">PİLOT YÖNETİMİ</p>
-        <h2 className="profile-title gate-title">Yönetici adı</h2>
-        <p className="gate-hint">
-          Geliştirme aşamasında sunucu bu adı yönetici olarak tanır; gerçek
-          giriş Supabase bağlanınca gelecek.
-        </p>
-        <input
-          className="gate-code-input"
-          type="text"
-          placeholder="YÖNETİCİ ADI"
-          maxLength={40}
-          value={subjectInput}
-          autoFocus
-          onChange={(e) => setSubjectInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && signIn()}
-        />
-        <button
-          className="startup-button startup-button-primary"
-          disabled={!subjectInput.trim()}
-          onClick={signIn}
-        >
-          Devam →
-        </button>
-        <button className="gate-link" onClick={onBack}>
-          ← Geri dön
-        </button>
-      </div>
-    );
-  }
+  const handleDeleteGroup = (targetGroup: RemoteGroup) => {
+    if (!currentWorkspace) return;
+    if (!window.confirm(`"${targetGroup.name}" sınıfını ve kayıtlarını silmek istediğinize emin misiniz?`)) return;
+    run(async () => {
+      await staffDeleteGroup(auth, currentWorkspace.id, targetGroup.id);
+      setGroups((list) => list.filter((g) => g.id !== targetGroup.id));
+    });
+  };
 
-  // ================= workspace + group list =================
+  const handleDeleteParticipant = (participantId: string, pName: string) => {
+    if (!group) return;
+    if (!window.confirm(`"${pName}" adlı öğrenciyi silmek istediğinize emin misiniz?`)) return;
+    run(async () => {
+      await staffDeleteParticipant(auth, group.id, participantId);
+      await refreshGroup(group.id);
+    });
+  };
+
+  const handleViewParticipantReport = (participantId: string) => {
+    run(async () => {
+      const rep = await staffGetParticipantReport(auth, participantId);
+      setActiveReport(rep);
+    });
+  };
+
+  // ================= WORKSPACES & GROUPS LIST =================
   if (view === 'workspaces') {
     return (
-      <div className="gate-card" aria-label="Çalışma alanları">
-        <p className="startup-eyebrow">PİLOT YÖNETİMİ · {subject}</p>
-        <h2 className="profile-title gate-title">Çalışma alanları</h2>
-
-        {workspaces.map((ws) => (
-          <div key={ws.id} className="gate-form">
-            <strong>{ws.name}</strong>
-          </div>
-        ))}
-
-        <div className="gate-form">
-          <input
-            type="text"
-            placeholder="Yeni çalışma alanı — ör. Ekim Pilotu"
-            maxLength={60}
-            value={workspaceName}
-            onChange={(e) => setWorkspaceName(e.target.value)}
-          />
-          <button
-            className="startup-button startup-button-primary gate-inline-btn"
-            disabled={!workspaceName.trim() || busy}
-            onClick={() =>
-              run(async () => {
-                const ws = await staffCreateWorkspace(subject, {
-                  kind: 'PILOT',
-                  name: workspaceName.trim(),
-                });
-                setWorkspaceName('');
-                setWorkspaces((list) => [...list, ws]);
-              })
-            }
-          >
-            + Alan
+      <div className="gate-card professional-staff-card" aria-label="Öğretmen Yönetim Paneli">
+        <div className="staff-header-row">
+          <p className="startup-eyebrow">ÖĞRETMEN PANELİ · {identity}</p>
+          <button className="gate-link logout-link" onClick={onSignOut}>
+            Çıkış Yap ✕
           </button>
         </div>
 
-        {currentWorkspace && (
-          <>
-            <p className="gate-hint">
-              <strong>{currentWorkspace.name}</strong> — gruplar:
-            </p>
+        <h2 className="profile-title gate-title">Sınıflar & Çalışma Alanları</h2>
+
+        {copyFeedback && <p className="gate-success-toast">{copyFeedback}</p>}
+
+        {/* Workspace select / create */}
+        {!currentWorkspace && memberships.length > 0 && (
+          <div className="staff-section-block">
+            <p className="gate-hint">Lütfen işlem yapmak istediğiniz okulu/alanı seçin:</p>
             <ul className="teacher-list">
-              {groups.map((entry) => (
-                <li key={entry.id}>
+              {memberships.map((m) => (
+                <li key={m.workspace.id}>
                   <button
                     className="teacher-class-open"
-                    onClick={() => openGroup(entry)}
+                    onClick={() =>
+                      run(async () => {
+                        setCurrentWorkspace(m.workspace);
+                        setGroups(await staffListGroups(auth, m.workspace.id));
+                      })
+                    }
                   >
-                    <strong>{entry.name}</strong>
-                    <span className="join-code">{entry.joinCode}</span>
+                    <strong>🏫 {m.workspace.name}</strong>
+                    <em className="share-code">{ROLE_LABELS[m.role] ?? m.role}</em>
                   </button>
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Create workspace if none exists */}
+        {memberships.length === 0 && (
+          <div className="staff-section-block">
+            <p className="gate-hint">Henüz tanımlı okul veya pilot çalışma alanınız yok:</p>
             <div className="gate-form">
               <input
                 type="text"
-                placeholder="Yeni grup — ör. Sabah Grubu"
+                placeholder="Okul veya Alan Adı — ör. Atatürk İlkokulu"
+                maxLength={60}
+                value={workspaceName}
+                onChange={(e) => setWorkspaceName(e.target.value)}
+              />
+              <button
+                className="startup-button startup-button-primary gate-inline-btn"
+                disabled={!workspaceName.trim() || busy}
+                onClick={() =>
+                  run(async () => {
+                    const ws = await staffCreateWorkspace(auth, {
+                      kind: 'SCHOOL',
+                      name: workspaceName.trim(),
+                    });
+                    setWorkspaceName('');
+                    setMemberships([{ role: 'OWNER', workspace: ws }]);
+                    setCurrentWorkspace(ws);
+                    setGroups([]);
+                  })
+                }
+              >
+                + Alan Oluştur
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Selected workspace details & group management */}
+        {currentWorkspace && (
+          <div className="staff-workspace-view">
+            <div className="staff-meta-row">
+              <span className="workspace-title-pill">🏫 {currentWorkspace.name}</span>
+              {memberships.length > 1 && (
+                <button
+                  type="button"
+                  className="gate-link"
+                  onClick={() => {
+                    setCurrentWorkspace(null);
+                    setGroups([]);
+                  }}
+                >
+                  ← Diğer Alanlar
+                </button>
+              )}
+            </div>
+
+            <p className="gate-hint">Bu alana ait sınıflar ve gruplar:</p>
+
+            <ul className="teacher-list">
+              {groups.map((entry) => (
+                <li key={entry.id} className="staff-group-row">
+                  <button
+                    className="teacher-class-open"
+                    onClick={() => openGroup(entry)}
+                  >
+                    <strong>👥 {entry.name}</strong>
+                    <span className="join-code">Kod: {entry.joinCode}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="teacher-del"
+                    title="Sınıfı Sil"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteGroup(entry);
+                    }}
+                  >
+                    Sil
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {groups.length === 0 && (
+              <p className="gate-hint empty-hint">Henüz bir sınıf/grup oluşturulmamış.</p>
+            )}
+
+            <div className="gate-form">
+              <input
+                type="text"
+                placeholder="Yeni sınıf adı — ör. 5/A Sınıfı"
                 maxLength={40}
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
@@ -221,7 +287,7 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
                 onClick={() =>
                   run(async () => {
                     const created = await staffCreateGroup(
-                      subject,
+                      auth,
                       currentWorkspace.id,
                       groupName.trim(),
                     );
@@ -230,198 +296,243 @@ export default function StaffPanel({ onBack }: StaffPanelProps) {
                   })
                 }
               >
-                + Grup
+                + Sınıf Ekle
               </button>
             </div>
-          </>
-        )}
-
-        {!currentWorkspace && workspaces.length > 0 && (
-          <ul className="teacher-list">
-            {workspaces.map((ws) => (
-              <li key={ws.id}>
-                <button
-                  className="teacher-class-open"
-                  onClick={() =>
-                    run(async () => {
-                      setCurrentWorkspace(ws);
-                      setGroups(await staffListGroups(subject, ws.id));
-                    })
-                  }
-                >
-                  <strong>{ws.name}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
+          </div>
         )}
 
         {error && <p className="gate-error" role="alert">{error}</p>}
-        <button
-          className="gate-link"
-          onClick={() => {
-            localStorage.removeItem(STAFF_KEY);
-            setSubject('');
-          }}
-        >
-          Farklı yönetici
-        </button>
-        <button className="gate-link" onClick={onBack}>
-          ← Geri dön
-        </button>
       </div>
     );
   }
 
-  // ================= group detail =================
+  // ================= GROUP / CLASS DETAIL VIEW =================
   if (view === 'group' && group) {
+    const openActivity = (group.activities ?? []).find((a) => a.status === 'OPEN');
+
     return (
-      <div className="gate-card" aria-label={`${group.name} grubu`}>
-        <p className="startup-eyebrow">GRUP · {subject}</p>
-        <h2 className="profile-title gate-title">{group.name}</h2>
-        <p className="gate-hint">
-          Grup kodu: <strong className="join-code">{group.joinCode}</strong> —
-          çocuklar bu kod + listedeki adlarıyla giriyor
-        </p>
+      <>
+        <div className="gate-card professional-staff-card" aria-label={`${group.name} Sınıf Yönetimi`}>
+          <div className="staff-header-row">
+            <button
+              className="gate-link"
+              onClick={() => {
+                setGroup(null);
+                setView('workspaces');
+              }}
+            >
+              ← Sınıf Listesine Dön
+            </button>
+            <span className="staff-current-tag">Öğretmen: {identity}</span>
+          </div>
 
-        <div className="gate-form">
-          <input
-            type="text"
-            placeholder="Katılımcı takma adı — ör. P-07"
-            maxLength={60}
-            value={participantName}
-            onChange={(e) => setParticipantName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !busy && participantName.trim() &&
-              run(async () => {
-                await staffAddParticipant(subject, group.id, participantName);
-                setParticipantName('');
-                await refreshGroup(group.id);
-              })}
-          />
-          <button
-            className="startup-button startup-button-primary gate-inline-btn"
-            disabled={!participantName.trim() || busy}
-            onClick={() =>
-              run(async () => {
-                await staffAddParticipant(subject, group.id, participantName);
-                setParticipantName('');
-                await refreshGroup(group.id);
-              })
-            }
-          >
-            + Ekle
-          </button>
-        </div>
+          <h2 className="profile-title gate-title">👥 {group.name}</h2>
 
-        {group.participants && group.participants.length > 0 && (
-          <ul className="teacher-list">
-            {group.participants.map((p) => (
-              <li key={p.id}>
-                <span className="teacher-list-name">{p.displayName}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+          {/* Prominent Class Join Code Card */}
+          <div className="staff-join-code-banner">
+            <div>
+              <span className="banner-label">ÖĞRENCİ SINIF KODU:</span>
+              <strong className="banner-code">{group.joinCode}</strong>
+            </div>
+            <button
+              type="button"
+              className="startup-button startup-button-glass"
+              onClick={() => copyToClipboard(group.joinCode, 'Sınıf Kodu')}
+            >
+              📋 Kodu Kopyala
+            </button>
+          </div>
 
-        <p className="gate-hint">Etkinlikler:</p>
-        <ul className="teacher-list">
-          {(group.activities ?? []).map((activity) => (
-            <li key={activity.id}>
-              <span className="teacher-list-name">
-                {activity.title}
-                <em> · {activity.status}</em>
-                {activity.attempts && (
-                  <em> · {activity.attempts.length} deneme</em>
+          {copyFeedback && <p className="gate-success-toast">{copyFeedback}</p>}
+
+          {/* Activity State / Session Control */}
+          <div className="staff-activity-box">
+            <h3 className="staff-subheading">🎮 Oyun Oturumu & Etkinlik Durumu</h3>
+            {openActivity ? (
+              <div className="activity-active-bar">
+                <span className="activity-status-indicator pulse-green">● ETKİNLİK AÇIK</span>
+                <span className="activity-name">{openActivity.title}</span>
+                <button
+                  type="button"
+                  className="startup-button startup-button-glass btn-sm"
+                  title="Öğrenci girişlerini kapat"
+                  disabled={busy}
+                  onClick={() =>
+                    run(async () => {
+                      await staffSetActivityStatus(auth, openActivity.id, 'close');
+                      await refreshGroup(group.id);
+                    })
+                  }
+                >
+                  ⏹ Oturumu Kapat
+                </button>
+              </div>
+            ) : (
+              <div className="activity-closed-bar">
+                <span className="activity-status-indicator gray">○ ETKİNLİK KAPALI</span>
+                <p className="activity-help-text">
+                  Öğrencilerin sınıf koduyla oyuna girebilmesi için bir oturum başlatmalısınız.
+                </p>
+                {(group.activities ?? []).filter((a) => a.status === 'DRAFT').length > 0 ? (
+                  <button
+                    type="button"
+                    className="startup-button startup-button-primary btn-sm"
+                    disabled={busy}
+                    onClick={() =>
+                      run(async () => {
+                        const draft = (group.activities ?? []).find((a) => a.status === 'DRAFT')!;
+                        await staffSetActivityStatus(auth, draft.id, 'open');
+                        await refreshGroup(group.id);
+                      })
+                    }
+                  >
+                    ▶ Oturumu Başlat (Aç)
+                  </button>
+                ) : (
+                  <div className="gate-form">
+                    <input
+                      type="text"
+                      placeholder="Yeni etkinlik adı — ör. 1. Dönem Simülasyonu"
+                      maxLength={60}
+                      value={activityTitle}
+                      onChange={(e) => setActivityTitle(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="startup-button startup-button-primary gate-inline-btn"
+                      disabled={!activityTitle.trim() || busy}
+                      onClick={() =>
+                        run(async () => {
+                          const act = await staffCreateActivity(auth, group.id, {
+                            title: activityTitle.trim(),
+                            scenario: manifestJson.scenario,
+                            version: manifestJson.version,
+                            manifest: manifestJson.manifest,
+                          });
+                          await staffSetActivityStatus(auth, act.id, 'open');
+                          setActivityTitle('');
+                          await refreshGroup(group.id);
+                        })
+                      }
+                    >
+                      ▶ Etkinlik Oluştur ve Başlat
+                    </button>
+                  </div>
                 )}
-              </span>
-              {activity.status === 'DRAFT' && (
-                <button
-                  className="teacher-report"
-                  title="Etkinliği aç"
-                  disabled={busy}
-                  onClick={() =>
-                    run(async () => {
-                      await staffSetActivityStatus(subject, activity.id, 'open');
-                      await refreshGroup(group.id);
-                    })
-                  }
-                >
-                  ▶
-                </button>
-              )}
-              {activity.status === 'OPEN' && (
-                <button
-                  className="teacher-report"
-                  title="Etkinliği kapat"
-                  disabled={busy}
-                  onClick={() =>
-                    run(async () => {
-                      await staffSetActivityStatus(subject, activity.id, 'close');
-                      await refreshGroup(group.id);
-                    })
-                  }
-                >
-                  ⏹
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-        {(group.activities ?? []).some((a) => a.attempts?.length) && (
-          <p className="gate-hint">
-            {group.activities
-              ?.flatMap((a) =>
-                (a.attempts ?? []).map(
-                  (t) =>
-                    `${t.participant.displayName}: ${ATTEMPT_LABELS[t.status] ?? t.status} (${t._count.events} olay)`,
-                ),
-              )
-              .join(' · ')}
-          </p>
-        )}
+              </div>
+            )}
+          </div>
 
-        <div className="gate-form">
-          <input
-            type="text"
-            placeholder="Yeni etkinlik — ör. Sabah oturumu"
-            maxLength={60}
-            value={activityTitle}
-            onChange={(e) => setActivityTitle(e.target.value)}
-          />
-          <button
-            className="startup-button startup-button-primary gate-inline-btn"
-            disabled={!activityTitle.trim() || busy}
-            onClick={() =>
-              run(async () => {
-                await staffCreateActivity(subject, group.id, {
-                  title: activityTitle.trim(),
-                  scenario: manifestJson.scenario,
-                  version: manifestJson.version,
-                  manifest: manifestJson.manifest,
-                });
-                setActivityTitle('');
-                await refreshGroup(group.id);
-              })
-            }
-          >
-            + Etkinlik
-          </button>
+          {/* Student Roster */}
+          <div className="staff-roster-section">
+            <h3 className="staff-subheading">
+              🎒 Sınıf Öğrenci Listesi ({group.participants?.length ?? 0} Kayıt)
+            </h3>
+
+            {/* Add Student Form */}
+            <div className="gate-form">
+              <input
+                type="text"
+                placeholder="Öğrenci Adı Soyadı — ör. Ali Yılmaz"
+                maxLength={60}
+                value={participantName}
+                onChange={(e) => setParticipantName(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === 'Enter' &&
+                  !busy &&
+                  participantName.trim() &&
+                  run(async () => {
+                    await staffAddParticipant(auth, group.id, participantName);
+                    setParticipantName('');
+                    await refreshGroup(group.id);
+                  })
+                }
+              />
+              <button
+                type="button"
+                className="startup-button startup-button-primary gate-inline-btn"
+                disabled={!participantName.trim() || busy}
+                onClick={() =>
+                  run(async () => {
+                    await staffAddParticipant(auth, group.id, participantName);
+                    setParticipantName('');
+                    await refreshGroup(group.id);
+                  })
+                }
+              >
+                + Öğrenci Ekle
+              </button>
+            </div>
+
+            {/* Roster Table / List */}
+            {group.participants && group.participants.length > 0 ? (
+              <ul className="staff-student-list">
+                {group.participants.map((p) => {
+                  const attempt = p.latestAttempt;
+                  const shareCode = p.shareCode ?? `DNGA-${p.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+
+                  return (
+                    <li key={p.id} className="staff-student-card">
+                      <div className="student-main-info">
+                        <strong className="student-name">{p.displayName}</strong>
+                        <div className="student-share-code-line">
+                          <span className="code-tag">Veli Kodu: <code>{shareCode}</code></span>
+                          <button
+                            type="button"
+                            className="code-copy-btn"
+                            title="Veliye göndermek için kodu kopyala"
+                            onClick={() => copyToClipboard(shareCode, `${p.displayName} veli kodu`)}
+                          >
+                            📋 Kopyala
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="student-actions-row">
+                        <span className={`attempt-badge ${attempt ? attempt.status.toLowerCase() : 'none'}`}>
+                          {attempt ? (ATTEMPT_LABELS[attempt.status] ?? attempt.status) : 'Başlamadı'}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="startup-button startup-button-glass btn-xs"
+                          onClick={() => handleViewParticipantReport(p.id)}
+                        >
+                          📊 Rapor
+                        </button>
+
+                        <button
+                          type="button"
+                          className="teacher-del"
+                          title="Öğrenciyi Sil"
+                          onClick={() => handleDeleteParticipant(p.id, p.displayName)}
+                        >
+                          ✕ Sil
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="gate-hint empty-hint">
+                Bu sınıfta henüz kayıtlı öğrenci yok. Yukarıdaki formdan öğrenci ekleyin.
+              </p>
+            )}
+          </div>
+
+          {error && <p className="gate-error" role="alert">{error}</p>}
         </div>
-        <p className="gate-hint">
-          Senaryo: <code>{manifestJson.scenario}@{manifestJson.version}</code>
-        </p>
 
-        {error && <p className="gate-error" role="alert">{error}</p>}
-        <button
-          className="gate-link"
-          onClick={() => {
-            setGroup(null);
-            setView('workspaces');
-          }}
-        >
-          ← Çalışma alanlarına dön
-        </button>
-      </div>
+        {/* Modal for viewing student report */}
+        {activeReport && (
+          <ParentReportModal
+            report={activeReport}
+            onClose={() => setActiveReport(null)}
+          />
+        )}
+      </>
     );
   }
 

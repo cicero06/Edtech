@@ -119,6 +119,14 @@ export default function PlayerMenu({
                 <em>{formatSavedAt(session.savedAt)}</em>
               </li>
             )}
+            {player.shareCode && (
+              <li>
+                <span>👨‍👩‍👧 Veli Kodu</span>
+                <em style={{ userSelect: 'all', color: '#f1cd81', fontWeight: 700 }}>
+                  {player.shareCode}
+                </em>
+              </li>
+            )}
           </ul>
 
           <div className="player-menu-section">

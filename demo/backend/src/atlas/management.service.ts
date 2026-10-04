@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import type { AdultUser } from '../generated/prisma/client.js';
@@ -76,13 +77,44 @@ export class ManagementService {
   async getGroup(user: AdultUser, groupId: string) {
     const group = await this.access.workspaceOfGroup(groupId);
     await this.access.requireMembership(user.id, group.workspaceId);
-    return this.prisma.group.findUniqueOrThrow({
+    const row = await this.prisma.group.findUniqueOrThrow({
       where: { id: groupId },
       include: {
-        participants: { orderBy: { createdAt: 'asc' } },
+        participants: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            attempts: {
+              select: {
+                id: true,
+                status: true,
+                startedAt: true,
+                completedAt: true,
+                revision: true,
+                state: true,
+                _count: { select: { events: true } },
+              },
+              orderBy: { startedAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
         activities: { orderBy: { createdAt: 'desc' } },
       },
     });
+
+    return {
+      ...row,
+      participants: row.participants.map((p) => ({
+        id: p.id,
+        groupId: p.groupId,
+        displayName: p.displayName,
+        studentNo: p.studentNo,
+        avatar: p.avatar,
+        createdAt: p.createdAt,
+        shareCode: `DNGA-${p.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+        latestAttempt: p.attempts[0] ?? null,
+      })),
+    };
   }
 
   async addParticipant(
@@ -103,15 +135,153 @@ export class ManagementService {
       },
     });
     if (existing) {
-      throw new ConflictException('Participant name is already used');
+      throw new ConflictException('Bu isimde bir katılımcı grupta zaten kayıtlı');
     }
-    return this.prisma.participant.create({
+    const created = await this.prisma.participant.create({
       data: {
         groupId,
         displayName: dto.displayName.trim(),
         avatar: dto.avatar,
       },
     });
+    return {
+      ...created,
+      shareCode: `DNGA-${created.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+    };
+  }
+
+  async deleteParticipant(
+    user: AdultUser,
+    groupId: string,
+    participantId: string,
+  ) {
+    const group = await this.access.workspaceOfGroup(groupId);
+    await this.access.requireMembership(
+      user.id,
+      group.workspaceId,
+      MANAGER_ROLES,
+    );
+    const participant = await this.prisma.participant.findFirst({
+      where: { id: participantId, groupId },
+    });
+    if (!participant) throw new NotFoundException('Öğrenci bulunamadı');
+
+    const attempts = await this.prisma.gameAttempt.findMany({
+      where: { participantId },
+      select: { id: true },
+    });
+    const attemptIds = attempts.map((a) => a.id);
+
+    return this.prisma.$transaction(async (tx) => {
+      if (attemptIds.length > 0) {
+        await tx.learningEvent.deleteMany({
+          where: { attemptId: { in: attemptIds } },
+        });
+        await tx.attemptState.deleteMany({
+          where: { attemptId: { in: attemptIds } },
+        });
+        await tx.gameAttempt.deleteMany({
+          where: { id: { in: attemptIds } },
+        });
+      }
+      await tx.participantToken.deleteMany({
+        where: { participantId },
+      });
+      return tx.participant.delete({
+        where: { id: participantId },
+      });
+    });
+  }
+
+  async deleteGroup(user: AdultUser, workspaceId: string, groupId: string) {
+    await this.access.requireMembership(user.id, workspaceId, MANAGER_ROLES);
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, workspaceId },
+      include: {
+        participants: { select: { id: true } },
+        activities: { select: { id: true } },
+      },
+    });
+    if (!group) throw new NotFoundException('Grup bulunamadı');
+
+    const participantIds = group.participants.map((p) => p.id);
+    const activityIds = group.activities.map((a) => a.id);
+
+    return this.prisma.$transaction(async (tx) => {
+      const attempts = await tx.gameAttempt.findMany({
+        where: {
+          OR: [
+            { participantId: { in: participantIds } },
+            { activityId: { in: activityIds } },
+          ],
+        },
+        select: { id: true },
+      });
+      const attemptIds = attempts.map((a) => a.id);
+
+      if (attemptIds.length > 0) {
+        await tx.learningEvent.deleteMany({
+          where: { attemptId: { in: attemptIds } },
+        });
+        await tx.attemptState.deleteMany({
+          where: { attemptId: { in: attemptIds } },
+        });
+        await tx.gameAttempt.deleteMany({
+          where: { id: { in: attemptIds } },
+        });
+      }
+
+      await tx.participantToken.deleteMany({
+        where: { participantId: { in: participantIds } },
+      });
+      await tx.participant.deleteMany({
+        where: { groupId },
+      });
+      await tx.activitySession.deleteMany({
+        where: { groupId },
+      });
+      return tx.group.delete({
+        where: { id: groupId },
+      });
+    });
+  }
+
+  async getParticipantReport(user: AdultUser, participantId: string) {
+    const participant = await this.prisma.participant.findUnique({
+      where: { id: participantId },
+      include: {
+        group: {
+          include: {
+            workspace: true,
+          },
+        },
+      },
+    });
+    if (!participant) throw new NotFoundException('Öğrenci bulunamadı');
+    await this.access.requireMembership(user.id, participant.group.workspaceId);
+
+    const latestAttempt = await this.prisma.gameAttempt.findFirst({
+      where: { participantId: participant.id },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        state: true,
+        activity: true,
+        _count: { select: { events: true } },
+      },
+    });
+
+    return {
+      shareCode: `DNGA-${participant.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+      studentName: participant.displayName,
+      groupName: participant.group.name,
+      schoolName: participant.group.workspace.name,
+      status: latestAttempt?.status ?? 'NOT_STARTED',
+      startedAt: latestAttempt?.startedAt ?? null,
+      completedAt: latestAttempt?.completedAt ?? null,
+      eventsCount: latestAttempt?._count.events ?? 0,
+      activityTitle: latestAttempt?.activity.title ?? null,
+      state: latestAttempt?.state?.state ?? null,
+    };
   }
 
   async createActivity(
