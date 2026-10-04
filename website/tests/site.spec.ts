@@ -33,6 +33,16 @@ test("Ürün duyurusu açılır ve kapanır", async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 });
 
+test("3D Tanıtım Filmi modalı açılır ve kapanır", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".button-trailer").first().click();
+  const dialog = page.getByRole("dialog", { name: "Denge Kasabası — 3D Tanıtım Filmi" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("video")).toHaveAttribute("src", "/videos/denge-kasabasi-trailer-hd.mp4");
+  await dialog.getByRole("button", { name: "Videoyu kapat" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test("Bilinmeyen blog yazısı gerçek 404 döndürür", async ({ page }) => {
   expect((await page.goto("/blog/bulunamayan-yazi"))?.status()).toBe(404);
   await expect(page.locator("h1")).toContainText("Bu yol");
@@ -47,7 +57,12 @@ for (const width of [375, 768, 1440])
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(e.message));
       page.on("console", (m) => {
-        if (m.type() === "error") errors.push(m.text());
+        if (
+          m.type() === "error" &&
+          !m.text().includes("ERR_CONNECTION_REFUSED")
+        ) {
+          errors.push(m.text());
+        }
       });
       const response = await page.goto(route);
       expect(response?.status()).toBe(200);

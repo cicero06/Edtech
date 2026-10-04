@@ -1,7 +1,7 @@
 import { site } from "../config";
 import { Arrow } from "./Arrow";
 
-export function SeqCinematic() {
+export function SeqCinematic({ onOpenTrailer }: { onOpenTrailer?: () => void }) {
   return (
     <section className="seq" aria-label="Denge Kasabası tanıtım sekansı">
       <div className="seq-stage">
@@ -56,6 +56,16 @@ export function SeqCinematic() {
             <a className="button primary" href={site.demoUrl}>
               Demoyu Oyna <Arrow />
             </a>
+            {onOpenTrailer && (
+              <button
+                type="button"
+                className="button light button-trailer"
+                onClick={onOpenTrailer}
+              >
+                <span className="play-icon" aria-hidden="true">▶</span>
+                Tanıtım Filmi (1:20)
+              </button>
+            )}
           </div>
           <span className="seq-note">
             Oynanabilir prototip · 10–12 yaş için tasarlandı

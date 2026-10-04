@@ -3487,3 +3487,297 @@ section[id] {
 .writer-entry:hover {
   opacity: 0.9;
 }
+
+/* =========================================================================
+   3D Tanıtım Filmi Video Modalı & Fragman Bileşenleri
+   ========================================================================= */
+
+.button-trailer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid rgba(15, 118, 110, 0.25);
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.button-trailer:hover {
+  background: #ffffff;
+  border-color: #0f766e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.16);
+}
+
+.play-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 1;
+  padding-left: 2px;
+}
+
+.video-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 36px);
+  background: rgba(8, 18, 16, 0.82);
+  backdrop-filter: blur(16px);
+  animation: video-overlay-in 0.25s ease-out;
+}
+
+.video-modal__panel {
+  position: relative;
+  width: min(100%, 1040px);
+  background: #0d1a17;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: clamp(16px, 2.5vw, 24px);
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(15, 118, 110, 0.3);
+  animation: video-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.video-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.video-modal__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.video-modal__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+.video-modal__title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.video-modal__close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.video-modal__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.video-modal__player-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.video-modal__player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.video-modal__tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.video-modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.video-modal__actions .button {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+@keyframes video-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes video-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* =========================================================================
+   Dinamik Kasaba Dönüşümü (World Dressing Before & After)
+   ========================================================================= */
+
+.transformations {
+  margin-top: 48px;
+}
+
+.transformation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.transformation-card {
+  background: #ffffff;
+  border: 1.5px solid rgba(7, 120, 106, 0.12);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(12, 38, 33, 0.05);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.transformation-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(12, 38, 33, 0.1);
+}
+
+.transformation-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.transformation-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.transformation-card:hover .transformation-card__media img {
+  transform: scale(1.03);
+}
+
+.transformation-card__badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.transformation-card__badge.after {
+  background: rgba(15, 118, 110, 0.9);
+  color: #ffffff;
+}
+
+.transformation-card__body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transformation-card__body h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #133c34;
+}
+
+.transformation-card__body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #4a635d;
+}
+
+/* Hero Art Play Badge */
+.art-play-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.art-play-badge:hover {
+  background: #0f766e;
+  border-color: #2dd4bf;
+  transform: scale(1.04);
+}

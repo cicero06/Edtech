@@ -1,15 +1,17 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { site } from "../config";
 import { approaches, futureAreas, partnerModels } from "../content";
 import { Arrow } from "../components/Arrow";
 import { Contact } from "../components/Contact";
 import { Eyebrow } from "../components/Eyebrow";
 import { Icon } from "../components/Icon";
+import { VideoModal } from "../components/VideoModal";
 import { useHomeAnimations } from "../hooks/useHomeAnimations";
 import { useReveals } from "../hooks/useReveals";
 
 export function Home() {
   const root = useRef<HTMLDivElement>(null);
+  const [trailerOpen, setTrailerOpen] = useState(false);
   useHomeAnimations(root);
   useReveals(root);
   return (
@@ -37,8 +39,16 @@ export function Home() {
             <a className="button primary" href="/denge-kasabasi">
               Denge Kasabası&apos;nı Keşfet <Arrow />
             </a>
+            <button
+              type="button"
+              className="button light button-trailer"
+              onClick={() => setTrailerOpen(true)}
+            >
+              <span className="play-icon" aria-hidden="true">▶</span>
+              Tanıtım Filmi (1:20)
+            </button>
             <a className="button light" href="#nasil-oynanir">
-              Nasıl Oynanır? (2 Dk)
+              Nasıl Oynanır?
             </a>
           </div>
           <p className="version-note">
@@ -59,6 +69,15 @@ export function Home() {
           </div>
         </div>
         <div className="hero-art">
+          <button
+            type="button"
+            className="art-play-badge"
+            onClick={() => setTrailerOpen(true)}
+            aria-label="3D Tanıtım Filmini İzle"
+          >
+            <span className="play-icon" aria-hidden="true">▶</span>
+            3D Tanıtım Filmi
+          </button>
           <img
             src="/images/town.jpg"
             width="512"
@@ -389,27 +408,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">01</span>
-              <h3>Görev başlatılır</h3>
+              <h3>Görev &amp; Öğrenci Profili</h3>
               <p>
-                Kullanıcı oyuna girdiğinde karşısına kasabanın mevcut sorunu ve
-                hedefi çıkar. Bu ekran, “neden bu kararı veriyoruz?” sorusunu
-                netleştirir ve oyuncunun odak noktasını belirler.
+                Kullanıcı oyuna girdiğinde kendi adını ve karakter avatarını
+                seçer. Rehber Lina ile tanışır ve kasabanın mevcut su krizini,
+                ekonomik ve çevresel dengesini netleştirir.
               </p>
               <ul>
-                <li>Görevi okur</li>
-                <li>Kasabanın ana sorunu anlar</li>
-                <li>Bu probleme çözüm aramaya başlar</li>
+                <li>Öğrenci profilini oluşturur</li>
+                <li>Kasabanın kriz durumunu öğrenir</li>
+                <li>Rehber Lina eşliğinde göreve başlar</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Giriş ekranı</div>
+              <div className="screen-label">Giriş &amp; Profil</div>
               <img
-                src="/denge-kasabasi/oyna/assets/town-intro.jpg"
-                alt="Denge Kasabası görev başlatma ekranı; kullanıcı oyuna başlıyor ve kasabanın su krizini okuyup başlayacak."
+                src="/images/v2-lina-map.png"
+                alt="Denge Kasabası v2 sinematik giriş ve profil ekranı."
               />
               <figcaption className="tutorial-caption">
                 <span>Adım</span>
-                <strong>Görevi oku ve problemi tanı.</strong>
+                <strong>Profilini oluştur, görevi oku ve problemi tanı.</strong>
               </figcaption>
             </figure>
           </article>
@@ -417,27 +436,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">02</span>
-              <h3>Haritada araştırma yapılır</h3>
+              <h3>Kasabada Canlı Keşif</h3>
               <p>
-                Ardından kullanıcı kasabanın haritasını inceler. Baraj, evler,
-                tarım alanları ve belediye gibi alanlara tek tek bakar. Burada neyin
-                suya daha çok ihtiyaç duyduğunu görmeye başlar.
+                Kullanıcı kasabanın sokaklarını adımlar. Baraj, konutlar, tarım
+                alanları ve belediyeyi gezer; Nuri Amca&apos;nın sokağındaki patlak
+                boruyu ve fışkıran suyu yerinde inceler.
               </p>
               <ul>
-                <li>Bölgeleri tek tek açar</li>
-                <li>Su kaynaklarını ve yaşam alanlarını karşılaştırır</li>
-                <li>En kritik alanı belirler</li>
+                <li>Sokakları serbestçe gezer ve tanıklarla konuşur</li>
+                <li>Su kaynaklarını ve yaşam alanlarını inceler</li>
+                <li>Kritik kaçak ve kuraklık noktalarını deftere kaydeder</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Harita ekranı</div>
+              <div className="screen-label">Canlı Keşif</div>
               <img
-                src="/images/game-map.png"
-                alt="Denge Kasabası harita ekranı; kullanıcının bölgeleri tıklayıp kasabayı gezmesi gerekir."
+                src="/images/v2-before-leak.png"
+                alt="Denge Kasabası canlı keşif: sokaktaki patlak boru ve Nuri Amca."
               />
               <figcaption className="tutorial-caption">
                 <span>Adım</span>
-                <strong>Kasabayı gezip sorunlu alanı bul.</strong>
+                <strong>Kasabayı gez, patlak boruyu ve tanıkları bul.</strong>
               </figcaption>
             </figure>
           </article>
@@ -445,27 +464,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">03</span>
-              <h3>Kanıtlar toplanır ve incelenir</h3>
+              <h3>Kanıtlar &amp; Belediye Meclisi</h3>
               <p>
-                Seçilen alan için kullanıcı görüşme, maliyet, kullanım ve risk
-                bilgilerini ortaya çıkarır. Bu ekran, karar vermeden önce veri ve
-                kanıtları anlamanın ne kadar önemli olduğunu gösterir.
+                Mühendis Aylin&apos;in baraj ölçüm verilerini ve uzman görüşlerini
+                inceler. Belediye Meclisi&apos;nde ₺1.000.000 bütçeyle en etkili
+                çözüm paketini seçer ve gerekçelendirir.
               </p>
               <ul>
-                <li>Kaynak ve bilgi kartlarını okur</li>
-                <li>Seçenekleri karşılaştırır</li>
-                <li>En etkili çözüm için mantık kurar</li>
+                <li>Veri grafiklerini ve kanıt kartlarını değerlendirir</li>
+                <li>₺1.000.000 bütçeyle önceliklendirme yapar</li>
+                <li>Kararını savunacak gerekçeyi belirler</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Bilgi ekranı</div>
+              <div className="screen-label">Belediye Meclisi</div>
               <img
-                src="/images/game-plan.png"
-                alt="Denge Kasabası bilgi kartları ekranı; kullanıcı kanıtları okur ve karşılaştırır."
+                src="/images/v2-gameplay.png"
+                alt="Denge Kasabası belediye meclisi ve karar ekranı."
               />
               <figcaption className="tutorial-caption">
                 <span>Adım</span>
-                <strong>Kanıtları oku ve çözüm seçeneklerini kıyasla.</strong>
+                <strong>Kanıtları topla, bütçeyle meclis kararını oluştur.</strong>
               </figcaption>
             </figure>
           </article>
@@ -473,27 +492,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">04</span>
-              <h3>Plan oluşturulur</h3>
+              <h3>Uygulama: 30 Gün İlerler</h3>
               <p>
-                Kullanıcı, mevcut seçeneklerden uygun müdahaleleri seçerek bir plan
-                oluşturur. Burada kararlar sadece tek tek değil, birlikte kasabanın
-                geleceğini şekillendirir.
+                Plan onaylandıktan sonra zaman hızla ilerler (TimeShift). 7., 15.
+                ve 30. gün duraklarında şantiyeler kurulur, işçiler ve makineler
+                sahaya iner, uygulama adım adım tamamlanır.
               </p>
               <ul>
-                <li>Çözüm adımlarını seçer</li>
-                <li>Ek maliyet ve etkiyi görür</li>
-                <li>Planı kaydeder ve ilerler</li>
+                <li>Zaman akışı animasyonuyla ilerleme hissedilir</li>
+                <li>Sokaklarda şantiyeler ve onarım çalışmaları başlar</li>
+                <li>Halkın tepkisi ve gelişmeler takip edilir</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Plan ekranı</div>
+              <div className="screen-label">30 Gün Sonra</div>
               <img
-                src="/images/game-plan.png"
-                alt="Denge Kasabası plan oluşturma ekranı; kullanıcı müdahale seçeneklerini seçer."
+                src="/images/v2-repair-crew.jpg"
+                alt="Denge Kasabası sokak onarım şantiyesi ve işçiler."
               />
               <figcaption className="tutorial-caption">
                 <span>Adım</span>
-                <strong>Bir plan oluştur ve seçtiğin adımları uygula.</strong>
+                <strong>Zaman ilerler: şantiyeler kurulur ve uygulama tamamlanır.</strong>
               </figcaption>
             </figure>
           </article>
@@ -501,54 +520,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">05</span>
-              <h3>Karar uygulanır ve değerlendirilir</h3>
+              <h3>Fiziksel Kasaba Dönüşümü</h3>
               <p>
-                Plan onaylandıktan sonra kullanıcı kararının etkisini görür. Bu
-                aşamada oyunun en önemli fikri ortaya çıkar: “Karar, sadece bir
-                seçenek değil; bütün sistemi etkiler.”
+                30 gün sonunda kararın somut etkisi kasaba haritasına yansır.
+                Patlak boru yeni asfalt yamasıyla onarılmış, tarlalara damla
+                sulama hatları döşenmiştir.
               </p>
               <ul>
-                <li>Kararını uygular</li>
-                <li>Sonuç çıktısını inceler</li>
-                <li>Etkiyi yorumlar</li>
+                <li>Fiziksel kasaba haritasındaki görsel dönüşümü görür</li>
+                <li>Su, çevre, ekonomi ve toplum dengesini inceler</li>
+                <li>Sistemin bir bütün olarak tepkisini kavrar</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Sonuç ekranı</div>
-              <div className="result-visual" aria-label="Denge Kasabası sonuç ekranı görseli">
-                <div className="result-header">
-                  <span>SONUÇLAR &amp; YENİ BİLGİ</span>
-                  <strong>FİNAL SONUÇ</strong>
-                </div>
-                <div className="result-metrics">
-                  <div className="result-card result-water">
-                    <label>SU DURUMU</label>
-                    <strong>+12</strong>
-                    <small>Önce %42 → Sonra %54</small>
-                  </div>
-                  <div className="result-card result-budget">
-                    <label>BÜTÇE</label>
-                    <strong>−27</strong>
-                    <small>Önce 50 → Sonra 23</small>
-                  </div>
-                </div>
-                <div className="result-secondary">
-                  <div className="result-card result-small">
-                    <label>TARIM</label>
-                    <small>Nitel gözlem</small>
-                  </div>
-                  <div className="result-card result-small">
-                    <label>ÇEVRE</label>
-                    <small>Uzun vadeli fayda yüksek</small>
-                  </div>
-                </div>
-                <div className="result-note">
-                  Yeni bilgi: Yağmur suyu toplama sistemi kısa vadede beklenenden daha az su sağlayabilir.
-                </div>
-              </div>
+              <div className="screen-label">Dönüşüm Sonucu</div>
+              <img
+                src="/images/v2-after-leak.png"
+                alt="Denge Kasabası dönüşüm sonucu: onarılan sokak ve yeni asfalt yaması."
+              />
               <figcaption className="tutorial-caption">
                 <span>Adım</span>
-                <strong>Kararın etkisini gör ve öğren.</strong>
+                <strong>Kararın kasabaya fiziksel etkisini ve yeni dengeyi gör.</strong>
               </figcaption>
             </figure>
           </article>
@@ -556,28 +548,27 @@ export function Home() {
           <article className="tutorial-step">
             <div className="tutorial-copy">
               <span className="step-number">06</span>
-              <h3>Sonuçlar değerlendirilir ve raporlanır</h3>
+              <h3>Öğrenci &amp; Oturum Raporu</h3>
               <p>
-                Sonuç ekranında kullanıcı, önceki adımlara geri dönüp farklı bir
-                karar deneyebilir. Aynı zamanda toplanan veriler öğretmenler ve
-                velilerle açık şekilde paylaşılabilecek bir rapor haline gelir;
-                böylece süreç sadece oyun değil, öğrenme ve izleme aracı olur.
+                Süreç sonunda toplanan kanıtlar, bütçe kullanımı ve yansıtma
+                kararları hem öğrenci karnesine hem de öğretmen ve veliler için
+                açık değerlendirme raporuna dönüşür.
               </p>
               <ul>
-                <li>Önceki adımlara geri döner</li>
-                <li>Farklı bir seçenek deneyip karşılaştırır</li>
-                <li>Sonuçları rapor halinde paylaşabilir</li>
+                <li>Öğrenci karnesinde güçlü yönleri ve kararları görür</li>
+                <li>Öğretmenler oturumun pedagojik izlerini inceler</li>
+                <li>İstenirse alternatif bir planla deneyim tekrarlanabilir</li>
               </ul>
             </div>
             <figure className="tutorial-visual">
-              <div className="screen-label">Rapor ekranı</div>
+              <div className="screen-label">Raporlama</div>
               <img
-                src="/images/game-plan.png"
-                alt="Denge Kasabası geri dönüp değerlendirme ve raporlama ekranı; kullanıcı kararları ve sonuçları öğretmen ve veliler için paylaşabilir."
+                src="/images/v2-mayor-council.jpg"
+                alt="Denge Kasabası belediye başkanı ve oturum raporlama."
               />
               <figcaption className="tutorial-caption">
                 <span>Özellik</span>
-                <strong>Sonuçlar açık raporla öğretmen ve velilere ulaşır.</strong>
+                <strong>Süreç analizi, öğrenci ve öğretmen raporuyla kalıcı öğrenmeye dönüşür.</strong>
               </figcaption>
             </figure>
           </article>
@@ -667,10 +658,10 @@ export function Home() {
             <strong>Yeni sürüm ön gösterimi</strong>
             <span>Yeni harita, karakterler ve görev akışı</span>
           </li>
-          <li>
+          <li className="done">
             <span className="step-dot" aria-hidden="true" />
-            <strong>Sonuç ekranı &amp; final raporu</strong>
-            <span>“30 gün sonra” sonuçları ve oturum değerlendirmesi</span>
+            <strong>Sonuç ekranı &amp; 30 gün raporu</strong>
+            <span>Yayında — “30 gün sonra” (TimeShift), kasaba dönüşümü ve oturum değerlendirmesi</span>
           </li>
           <li>
             <span className="step-dot" aria-hidden="true" />
@@ -829,6 +820,10 @@ export function Home() {
         </a>
       </section>
       <Contact />
+      <VideoModal
+        isOpen={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+      />
     </div>
   );
 }

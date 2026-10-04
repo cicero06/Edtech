@@ -47,9 +47,32 @@ const server = http.createServer(async (req, res) => {
     file = resolve(root, "404.html");
   }
   try {
+    const fileStat = await stat(file);
+    const total = fileStat.size;
+    const range = req.headers.range;
+    const contentType = types[extname(file)] || "application/octet-stream";
+
+    if (range && status === 200) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : total - 1;
+      const chunksize = end - start + 1;
+      const fileData = await readFile(file);
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${total}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunksize,
+        "Content-Type": contentType,
+        "X-Content-Type-Options": "nosniff",
+      });
+      return res.end(req.method === "HEAD" ? undefined : fileData.subarray(start, end + 1));
+    }
+
     const body = await readFile(file);
     res.writeHead(status, {
-      "Content-Type": types[extname(file)] || "application/octet-stream",
+      "Content-Type": contentType,
+      "Content-Length": total,
+      "Accept-Ranges": "bytes",
       "X-Content-Type-Options": "nosniff",
     });
     res.end(req.method === "HEAD" ? undefined : body);

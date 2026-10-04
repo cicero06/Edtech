@@ -167,28 +167,31 @@ export const posts: Post[] = [
     slug: "v2-ongosteriminde-neler-degisti",
     title: "Başvurudan sonra durmadık: v2 ön gösteriminde neler değişti?",
     tag: "Geliştirme günlüğü",
-    date: "Eylül 2026",
+    date: "Ekim 2026",
     excerpt:
-      "ETKİM başvurusunda sunduğumuz sürüm yayında dururken, geliştirmeye devam ettik. Yeni harita, ses sistemi ve genişleyen görev akışı ön gösterimde.",
+      "ETKİM başvurusunda sunduğumuz sürüm yayında dururken, geliştirmeye devam ettik. Yeni harita, 3D sinematik tanıtım, Bölüm 2 '30 Gün Sonra' zaman atlaması, dinamik kasaba dönüşümü ve oturum raporu.",
     body: [
       {
-        p: "ETKİM başvurusunda sunduğumuz oynanabilir prototipi (v1) başvurudaki haliyle yayında tutuyoruz. Başvurudan sonra ise çalışmaya devam ettik ve ortaya aynı öğrenme döngüsünü koruyan ama çok daha canlı bir sürüm çıktı: v2 ön gösterimi.",
+        p: "ETKİM başvurusunda sunduğumuz oynanabilir prototipi (v1) başvurudaki haliyle yayında tutuyoruz. Başvurudan sonra ise çalışmaya devam ettik ve ortaya aynı öğrenme döngüsünü koruyan ama çok daha zengin bir sürüm çıktı: v2 ön gösterimi.",
       },
       {
         ul: [
           "Yeni kasaba haritası ve bölge bazlı ortam sesleri",
           "Gerçek yürüme animasyonları ve canlı kasaba görünümü",
-          "Öğrenci profili ve oturum kaydı",
-          "Kanıt rozetli belediye toplantısı ve gerekçe adımı",
-          "Planı halka duyurma turu ve yeni karakterler",
+          "Öğrenci profili ve yerel oturum kaydı",
+          "Kanıt rozetli belediye toplantısı ve ₺1.000.000 bütçe kararı",
+          "Bölüm 2: '30 Gün Sonra' (TimeShift) zaman atlaması",
+          "Dinamik kasaba dönüşümü: sokak borusu onarımı, yeni asfalt ve damla sulama hatları",
+          "Öğrenci karnesi ve veli/öğretmen açık oturum raporu",
+          "3D sinematik tanıtım filmi (1080p)",
         ],
       },
       { h: "Neden iki sürümü birlikte yayınlıyoruz?" },
       {
-        p: "Başvuru sürümü, değerlendirme sürecinde sunduğumuz ürünün dürüst bir kaydı olarak kalsın istedik. Ön gösterim ise gelişimin devam ettiğini gösteriyor. Ziyaretçiler iki sürümü de açıp farkı kendileri görebilir.",
+        p: "Başvuru sürümü, değerlendirme sürecinde sunduğumuz ürünün dürüst bir kaydı olarak kalsın istedik. Ön gösterim ise gelişimin hız kesmeden devam ettiğini gösteriyor. Ziyaretçiler iki sürümü de açıp farkı kendileri görebilir.",
       },
       {
-        p: "Sıradaki adımlar; sonuç ekranı ve final raporunun tamamlanması, pilot okul çalışmaları ve öğretmen araçları. Gelişmeleri bu sayfada duyurmaya devam edeceğiz.",
+        p: "Sıradaki adımlar; pilot okul sınıf uygulamaları, öğretmen rehberi ve kurumsal kullanım lisanslama süreçleri. Gelişmeleri bu sayfada duyurmaya devam edeceğiz.",
       },
     ],
   },

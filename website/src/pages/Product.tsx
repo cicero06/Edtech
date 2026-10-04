@@ -5,12 +5,14 @@ import { Contact } from "../components/Contact";
 import { DemoLink } from "../components/DemoLink";
 import { Eyebrow } from "../components/Eyebrow";
 import { SeqCinematic } from "../components/SeqCinematic";
+import { VideoModal } from "../components/VideoModal";
 import { useReveals } from "../hooks/useReveals";
 import { useSeqAnimations } from "../hooks/useSeqAnimations";
 
 export function Product() {
   const root = useRef<HTMLDivElement>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   useSeqAnimations(root);
   useReveals(root);
@@ -35,7 +37,7 @@ export function Product() {
         </span>
         <span className="loader-note">Kasaba hazırlanıyor…</span>
       </div>
-      <SeqCinematic />
+      <SeqCinematic onOpenTrailer={() => setTrailerOpen(true)} />
       <section className="stats-strip" aria-label="Oyun içeriği özeti">
         <div className="container stats-grid" data-reveal-group>
           <div className="stat">
@@ -362,6 +364,78 @@ export function Product() {
           </figure>
         </div>
       </section>
+      <section className="section container transformations">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>BÖLÜM 2 · DİNAMİK KASABA DÖNÜŞÜMÜ</Eyebrow>
+            <h2>
+              Verdiğin her karar,
+              <br />
+              kasabayı fiziksel olarak değiştirir.
+            </h2>
+          </div>
+          <p>
+            v2 sürümünde kararlar sadece grafikte kalmaz. 30 gün içinde
+            şantiyeler çalışır; sokaktaki patlak boru yeni asfaltla onarılır,
+            tarlalara damla sulama hatları çekilir.
+          </p>
+        </div>
+        <div className="transformation-grid" data-reveal-group>
+          <article className="transformation-card">
+            <div className="transformation-card__media">
+              <span className="transformation-card__badge">1. KRİZ · ÖNCE</span>
+              <img
+                src="/images/v2-before-leak.png"
+                alt="Sokakta çatlamış asfalt ve fışkıran su kaçağı"
+                loading="lazy"
+              />
+            </div>
+            <div className="transformation-card__body">
+              <h4>Boşa Akan Sokak Kaçağı</h4>
+              <p>
+                Konut bölgesinde çatlamış asfalttan her gün binlerce litre temiz
+                içme suyu sokağa akıyor; Nuri Amca çaresizce bekliyor.
+              </p>
+            </div>
+          </article>
+
+          <article className="transformation-card">
+            <div className="transformation-card__media">
+              <span className="transformation-card__badge after">UYGULAMA · SONRA</span>
+              <img
+                src="/images/v2-after-leak.png"
+                alt="Onarılan sokak ve yeni siyah asfalt yaması"
+                loading="lazy"
+              />
+            </div>
+            <div className="transformation-card__body">
+              <h4>Onarılan Sokak &amp; Yeni Asfalt</h4>
+              <p>
+                Belediye Meclisi kararıyla borular yenilendi, su kaçağı durduruldu
+                ve yol taze asfalt yamasıyla kapatıldı.
+              </p>
+            </div>
+          </article>
+
+          <article className="transformation-card">
+            <div className="transformation-card__media">
+              <span className="transformation-card__badge after">TARIMDA DÖNÜŞÜM</span>
+              <img
+                src="/images/v2-field-drip.png"
+                alt="Tarlada kurulu damla sulama boru hatları"
+                loading="lazy"
+              />
+            </div>
+            <div className="transformation-card__body">
+              <h4>Damla Sulama Hatları</h4>
+              <p>
+                Vahşi sulama yerine doğrudan bitki köklerine su ulaştıran modern
+                hatlar kuruldu; tarımsal verim ve su tasarrufu sağlandı.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
       <section className="pedagogy">
         <div className="container pedagogy-inner" data-reveal-group>
           <div>
@@ -494,21 +568,37 @@ export function Product() {
               <li>Yeni harita ve bölge bazlı ortam sesleri</li>
               <li>Gerçek yürüme animasyonları ve canlı kasaba</li>
               <li>Öğrenci profili ve oturum kaydı</li>
-              <li>Kanıt rozetli belediye toplantısı ve gerekçe adımı</li>
-              <li>Planı halka duyurma turu ve yeni karakterler</li>
+              <li>Kanıt rozetli belediye toplantısı ve ₺1.000.000 bütçe</li>
+              <li>Bölüm 2: “30 Gün Sonra” zaman atlaması (TimeShift)</li>
+              <li>Dinamik kasaba dönüşümü (sokak onarımı ve damla sulama)</li>
+              <li>Öğrenci karnesi ve veli/öğretmen oturum raporu</li>
             </ul>
-            <a
-              className="button light preview-link"
-              href="/denge-kasabasi/ongosteri/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Ön Gösterimi Aç <Arrow />
-            </a>
+            <div className="demo-actions-row" style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "16px" }}>
+              <a
+                className="button light preview-link"
+                href="/denge-kasabasi/ongosteri/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Ön Gösterimi Aç <Arrow />
+              </a>
+              <button
+                type="button"
+                className="button light button-trailer"
+                onClick={() => setTrailerOpen(true)}
+              >
+                <span className="play-icon" aria-hidden="true">▶</span>
+                Tanıtım Filmi (1:20)
+              </button>
+            </div>
           </div>
         </div>
       </section>
       <Contact />
+      <VideoModal
+        isOpen={trailerOpen}
+        onClose={() => setTrailerOpen(false)}
+      />
     </div>
   );
 }
