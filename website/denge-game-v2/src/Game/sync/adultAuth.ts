@@ -99,6 +99,71 @@ export function signInAdult(email: string, password: string) {
   return supabaseToken('password', { email, password });
 }
 
+export async function signUpAdult(
+  email: string,
+  password: string,
+  fullName?: string,
+): Promise<{ session: AdultSession | null; requiresEmailConfirmation: boolean }> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new AdultAuthError('Supabase yapılandırması eksik');
+  }
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      email,
+      password,
+      data: fullName ? { full_name: fullName } : {},
+    }),
+  });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as {
+      error_description?: string;
+      msg?: string;
+      error?: string;
+      message?: string;
+    } | null;
+    throw new AdultAuthError(
+      detail?.error_description ??
+        detail?.msg ??
+        detail?.message ??
+        detail?.error ??
+        'Kayıt başarısız',
+    );
+  }
+  const data = (await res.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    user?: { email?: string };
+    session?: {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    };
+  };
+
+  const token = data.session?.access_token ?? data.access_token;
+  const refreshToken = data.session?.refresh_token ?? data.refresh_token;
+  const expiresIn = data.session?.expires_in ?? data.expires_in ?? 3600;
+
+  if (token && refreshToken) {
+    const session: AdultSession = {
+      accessToken: token,
+      refreshToken: refreshToken,
+      expiresAt: Date.now() + expiresIn * 1000,
+      email: data.user?.email ?? email,
+    };
+    saveSession(session);
+    return { session, requiresEmailConfirmation: false };
+  }
+
+  return { session: null, requiresEmailConfirmation: true };
+}
+
 /** Valid session, transparently refreshed once when expired. */
 export async function ensureAdultSession(): Promise<AdultSession | null> {
   const current = getAdultSession();

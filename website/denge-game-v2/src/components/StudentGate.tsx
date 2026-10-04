@@ -15,6 +15,7 @@ import {
   isAdultAuthConfigured,
   signInAdult,
   signOutAdult,
+  signUpAdult,
   type AdultSession,
 } from '../Game/sync/adultAuth';
 import {
@@ -41,8 +42,11 @@ export default function StudentGate({ onPick }: StudentGateProps) {
   const [studentName, setStudentName] = useState('');
 
   // Teacher form fields
+  const [teacherMode, setTeacherMode] = useState<'login' | 'register'>('login');
+  const [teacherFullName, setTeacherFullName] = useState('');
   const [teacherEmail, setTeacherEmail] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Parent form fields
   const [reportCode, setReportCode] = useState('');
@@ -143,6 +147,47 @@ export default function StudentGate({ onPick }: StudentGateProps) {
       setView('staff');
     } catch {
       setError('Giriş başarısız — E-posta ve şifrenizi kontrol edin.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Teacher register action
+  const handleTeacherRegister = async () => {
+    const fullName = teacherFullName.trim();
+    const email = teacherEmail.trim();
+    const password = teacherPassword.trim();
+    if (!email || !password || busy) return;
+
+    if (password.length < 6) {
+      setError('Şifreniz en az 6 karakter olmalıdır.');
+      return;
+    }
+
+    if (!isAdultAuthConfigured()) {
+      setError('Öğretmen kayıt sistemi bu ortamda yapılandırılmamış.');
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const res = await signUpAdult(email, password, fullName);
+      if (res.session) {
+        playSfx(SoundKeys.COMPLETE, 0.7);
+        setAdult(res.session);
+        setView('staff');
+      } else if (res.requiresEmailConfirmation) {
+        setInfoMessage(
+          'Hesabınız başarıyla oluşturuldu! Lütfen e-postanıza gönderilen onay bağlantısına tıklayın, ardından giriş yapın.',
+        );
+        setTeacherMode('login');
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'Kayıt başarısız oldu — e-postanızı kontrol edin.',
+      );
     } finally {
       setBusy(false);
     }
@@ -288,40 +333,118 @@ export default function StudentGate({ onPick }: StudentGateProps) {
           </div>
         )}
 
-        {/* Tab 2: Öğretmen Girişi */}
+        {/* Tab 2: Öğretmen Girişi & Kayıt */}
         {role === 'teacher' && (
           <div className="gate-tab-content">
-            <h2 className="profile-title gate-title">Öğretmen Yönetimi</h2>
+            <h2 className="profile-title gate-title">
+              {teacherMode === 'login' ? 'Öğretmen Girişi' : 'Yeni Öğretmen Kaydı'}
+            </h2>
             <p className="gate-hint">
-              Sınıf kodları üretmek, öğrenci eklemek ve oturumları başlatmak için giriş yapın.
+              {teacherMode === 'login'
+                ? 'Sınıf kodları üretmek ve oturumları başlatmak için giriş yapın.'
+                : 'Sınıflarınızı oluşturup öğrencilerinizi takip etmek için kayıt olun.'}
             </p>
+
+            {infoMessage && (
+              <p className="gate-success-toast" role="status">
+                {infoMessage}
+              </p>
+            )}
+
+            {teacherMode === 'register' && (
+              <input
+                className="gate-code-input gate-name-input"
+                type="text"
+                placeholder="ADINIZ SOYADINIZ"
+                maxLength={60}
+                value={teacherFullName}
+                autoFocus
+                onChange={(e) => setTeacherFullName(e.target.value)}
+              />
+            )}
+
             <input
               className="gate-code-input gate-name-input"
               type="email"
               placeholder="E-POSTA ADRESİNİZ"
               maxLength={80}
               value={teacherEmail}
-              autoFocus
+              autoFocus={teacherMode === 'login'}
               onChange={(e) => setTeacherEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void handleTeacherLogin()}
+              onKeyDown={(e) =>
+                e.key === 'Enter' &&
+                (teacherMode === 'login'
+                  ? void handleTeacherLogin()
+                  : void handleTeacherRegister())
+              }
             />
+
             <input
               className="gate-code-input gate-name-input"
               type="password"
-              placeholder="ŞİFRENİZ"
+              placeholder="ŞİFRENİZ (en az 6 karakter)"
               maxLength={80}
               value={teacherPassword}
               onChange={(e) => setTeacherPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void handleTeacherLogin()}
+              onKeyDown={(e) =>
+                e.key === 'Enter' &&
+                (teacherMode === 'login'
+                  ? void handleTeacherLogin()
+                  : void handleTeacherRegister())
+              }
             />
+
             {error && <p className="gate-error" role="alert">{error}</p>}
-            <button
-              className="startup-button startup-button-primary"
-              disabled={!teacherEmail.trim() || !teacherPassword.trim() || busy}
-              onClick={() => void handleTeacherLogin()}
-            >
-              {busy ? 'Doğrulanıyor…' : 'Yönetim Paneline Git →'}
-            </button>
+
+            {teacherMode === 'login' ? (
+              <>
+                <button
+                  className="startup-button startup-button-primary"
+                  disabled={!teacherEmail.trim() || !teacherPassword.trim() || busy}
+                  onClick={() => void handleTeacherLogin()}
+                >
+                  {busy ? 'Doğrulanıyor…' : 'Giriş Yap →'}
+                </button>
+                <button
+                  type="button"
+                  className="gate-link"
+                  onClick={() => {
+                    setTeacherMode('register');
+                    setError(null);
+                    setInfoMessage(null);
+                  }}
+                >
+                  Hesabınız yok mu? <strong>Öğretmen Kaydı Oluşturun</strong>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="startup-button startup-button-primary"
+                  disabled={
+                    !teacherEmail.trim() ||
+                    !teacherPassword.trim() ||
+                    !teacherFullName.trim() ||
+                    busy
+                  }
+                  onClick={() => void handleTeacherRegister()}
+                >
+                  {busy ? 'Kaydediliyor…' : 'Kayıt Ol ve Paneli Aç →'}
+                </button>
+                <button
+                  type="button"
+                  className="gate-link"
+                  onClick={() => {
+                    setTeacherMode('login');
+                    setError(null);
+                    setInfoMessage(null);
+                  }}
+                >
+                  Zaten hesabınız var mı? <strong>Giriş Yapın</strong>
+                </button>
+              </>
+            )}
+
             {!isAdultAuthConfigured() && (
               <button className="gate-link" onClick={() => setView('dev')}>
                 🛠 Geliştirici Girişi
