@@ -179,8 +179,8 @@ export function Home() {
           <div className="team-summary">
             <span className="eyebrow">ATLAS EKİBİ</span>
             <p>
-              Üç kişilik çekirdek ekibimiz, bir edtech ürününün üç kritik
-              ayağını — mühendislik, pedagoji ve tasarımı — doğrudan
+              Çekirdek ekibimiz, bir edtech ürününün kritik ayaklarını —
+              mühendislik, ürün geliştirme ve deneyim tasarımını — doğrudan
               karşılıyor. Denge Kasabası'nın fikirden oynanabilir iki sürüme
               uzanan geliştirmesi bu ekibin işi.
             </p>
@@ -200,22 +200,6 @@ export function Home() {
                 Ürün vizyonu, teknik mimari ve oyunun geliştirme sürecini
                 yürütür; Denge Kasabası'nın oynanabilir prototipinden canlı ön
                 gösterime uzanan mühendisliğin sahibi.
-              </p>
-            </article>
-
-            <article className="team-card">
-              <img
-                className="team-avatar team-avatar--photo"
-                src="/images/team/fadime.jpg"
-                alt="Fadime Aksoy"
-                loading="lazy"
-              />
-              <h3>Fadime Aksoy</h3>
-              <p className="team-role">Pedagoji &amp; Öğrenme Tasarımı</p>
-              <p>
-                Öğrenme hedeflerini oyun mekaniklerine çevirir; kanıt
-                değerlendirme ve yansıtma döngüsünün pedagojik temellerini
-                kurar.
               </p>
             </article>
 
