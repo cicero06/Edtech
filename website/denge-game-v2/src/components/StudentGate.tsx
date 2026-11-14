@@ -32,6 +32,27 @@ type StudentGateProps = {
 type GateRole = 'student' | 'teacher' | 'parent';
 type GateView = 'login' | 'dev' | 'staff';
 
+/** Child-friendly Turkish text for a failed /v2/join — never raw server JSON. */
+function studentJoinError(err: unknown): string {
+  if (!(err instanceof ApiError)) {
+    return 'İnternet bağlantısı kurulamadı. Bağlantını kontrol edip tekrar dene.';
+  }
+  const message = err.message;
+  if (message.includes('Name is not on the roster')) {
+    return 'Bu isim sınıf listesinde yok. Adını öğretmeninin listesindeki gibi yaz ya da öğretmenine sor.';
+  }
+  if (message.includes('Invalid join code')) {
+    return 'Bu sınıf kodu bulunamadı. Kodu öğretmeninden tekrar kontrol et.';
+  }
+  if (message.includes('No open activity')) {
+    return 'Öğretmenin henüz oyunu başlatmadı. Biraz bekleyip tekrar dene.';
+  }
+  if (err.status === 400) {
+    return 'Sınıf kodunu ve adını eksiksiz yazdığından emin ol.';
+  }
+  return 'Şu an giriş yapılamıyor. Biraz sonra tekrar dene ya da öğretmenine haber ver.';
+}
+
 export default function StudentGate({ onPick }: StudentGateProps) {
   const [adult, setAdult] = useState<AdultSession | null>(() => getAdultSession());
   const [devHandle, setDevHandle] = useState('');
@@ -123,17 +144,7 @@ export default function StudentGate({ onPick }: StudentGateProps) {
       onPick(student);
     } catch (err: unknown) {
       console.error('Student login error:', err);
-      const detail =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : '';
-      setError(
-        detail
-          ? `Giriş yapılamadı: ${detail}`
-          : 'Giriş yapılamadı — Sınıf kodunu, listedeki adını ve öğretmenin oyunu açıp açmadığını kontrol et.',
-      );
+      setError(studentJoinError(err));
     } finally {
       setBusy(false);
     }

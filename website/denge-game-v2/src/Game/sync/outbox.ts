@@ -54,9 +54,14 @@ function open(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-function request<T>(db: IDBDatabase, store: string, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function request<T>(
+  db: IDBDatabase,
+  store: string,
+  run: (s: IDBObjectStore) => IDBRequest<T>,
+  mode: IDBTransactionMode = 'readonly',
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const req = run(db.transaction(store).objectStore(store));
+    const req = run(db.transaction(store, mode).objectStore(store));
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -115,5 +120,7 @@ export async function getMeta<T>(key: string): Promise<T | null> {
 
 export async function setMeta(key: string, value: unknown): Promise<void> {
   const db = await open();
-  await request(db, META, (store) => store.put({ key, value }));
+  // Writes need a readwrite transaction; the default (readonly) threw
+  // ReadOnlyError here, which aborted every flush — nothing ever synced.
+  await request(db, META, (store) => store.put({ key, value }), 'readwrite');
 }
