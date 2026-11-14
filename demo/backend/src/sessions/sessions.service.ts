@@ -3,8 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '../generated/prisma/client.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { randomUUID } from 'node:crypto';
+import { C } from '../firebase/collections.js';
+import {
+  decodeJson,
+  encodeJson,
+  FirebaseService,
+  fromDoc,
+} from '../firebase/firebase.service.js';
 import type {
   CreateEventDto,
   EventType,
@@ -61,14 +67,31 @@ const eventScreens: Record<EventType, ScreenName> = {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly firebase: FirebaseService) {}
 
-  create(scenarioId: string) {
-    return this.prisma.session.create({ data: { scenarioId } });
+  private get sessions() {
+    return this.firebase.db.collection(C.v1Sessions);
+  }
+
+  async create(scenarioId: string) {
+    const session = {
+      id: randomUUID(),
+      scenarioId,
+      startedAt: new Date(),
+      completedAt: null as Date | null,
+    };
+    const { id, ...data } = session;
+    await this.sessions.doc(id).create(data);
+    return session;
   }
 
   async findOne(id: string) {
-    const session = await this.prisma.session.findUnique({ where: { id } });
+    const session = fromDoc<{
+      id: string;
+      scenarioId: string;
+      startedAt: Date;
+      completedAt: Date | null;
+    }>(await this.sessions.doc(id).get());
     if (!session) throw new NotFoundException('Session not found');
     return session;
   }
@@ -76,35 +99,53 @@ export class SessionsService {
   async addEvent(sessionId: string, dto: CreateEventDto) {
     await this.findOne(sessionId);
     this.validateEvent(dto);
-    const data: Prisma.EventUncheckedCreateInput = {
+    const event = {
+      id: randomUUID(),
       sessionId,
       eventType: dto.eventType,
       screen: dto.screen,
+      target: dto.target ?? null,
+      value: dto.value === undefined ? null : encodeJson(dto.value),
+      metadata: dto.metadata === undefined ? null : encodeJson(dto.metadata),
       occurredAt: new Date(dto.timestamp),
-      ...(dto.target !== undefined ? { target: dto.target } : {}),
-      ...(dto.value !== undefined
-        ? { value: dto.value as Prisma.InputJsonValue }
-        : {}),
-      ...(dto.metadata !== undefined
-        ? { metadata: dto.metadata as Prisma.InputJsonValue }
-        : {}),
+      createdAt: new Date(),
     };
-    const event = await this.prisma.event.create({ data });
+    const { id, ...data } = event;
+    const ref = this.sessions.doc(sessionId);
+    const batch = this.firebase.db.batch();
+    batch.create(ref.collection(C.events).doc(id), data);
     if (dto.eventType === 'session_completed') {
-      await this.prisma.session.update({
-        where: { id: sessionId },
-        data: { completedAt: new Date(dto.timestamp) },
-      });
+      batch.update(ref, { completedAt: new Date(dto.timestamp) });
     }
-    return event;
+    await batch.commit();
+    return { ...event, value: dto.value ?? null, metadata: dto.metadata ?? null };
   }
 
   async findEvents(sessionId: string) {
     await this.findOne(sessionId);
-    return this.prisma.event.findMany({
-      where: { sessionId },
-      orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }],
-    });
+    const snap = await this.sessions
+      .doc(sessionId)
+      .collection(C.events)
+      .orderBy('occurredAt', 'asc')
+      .get();
+    return snap.docs
+      .map((d) => {
+        const e = fromDoc<{
+          id: string;
+          eventType: string;
+          target: string | null;
+          value: unknown;
+          metadata: unknown;
+          createdAt: Date;
+          occurredAt: Date;
+        }>(d)!;
+        return { ...e, value: decodeJson(e.value), metadata: decodeJson(e.metadata) };
+      })
+      .sort(
+        (a, b) =>
+          a.occurredAt.getTime() - b.occurredAt.getTime() ||
+          a.createdAt.getTime() - b.createdAt.getTime(),
+      );
   }
 
   async summary(sessionId: string) {

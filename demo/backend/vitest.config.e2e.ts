@@ -8,8 +8,8 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
-    // e2e runs against whatever DATABASE_URL is configured; the hosted
-    // Supabase pooler adds latency vs. a local Postgres.
+    // e2e runs against the Firebase emulator (npm run test:e2e:emu).
+    fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,
   },

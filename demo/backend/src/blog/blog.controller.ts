@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { AtlasAuthGuard } from '../atlas/auth/atlas-auth.guard.js';
 import { Principal, type AuthPrincipal } from '../atlas/auth/principal.js';
-import type { AdultUser } from '../generated/prisma/client.js';
+import type { AdultUser } from '../firebase/models.js';
 import { BlogService } from './blog.service.js';
 import { UpsertBlogPostDto } from './dto.js';
 

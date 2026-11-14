@@ -15,7 +15,7 @@ import {
 import { Eyebrow } from "../components/Eyebrow";
 
 /**
- * Hidden writer console at /yazar. Sign-in is Supabase email+password;
+ * Hidden writer console at /yazar. Sign-in is Firebase email+password;
  * the backend additionally checks the email against BLOG_AUTHOR_EMAILS.
  * Body format: paragraphs separated by blank lines, "## " headings,
  * "- " list items.

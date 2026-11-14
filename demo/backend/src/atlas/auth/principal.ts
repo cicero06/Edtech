@@ -1,9 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
-import type {
-  AdultUser,
-  Participant,
-} from '../../generated/prisma/client.js';
+import type { AdultUser, Participant } from '../../firebase/models.js';
 
 export type AuthPrincipal =
   | { kind: 'adult'; user: AdultUser }

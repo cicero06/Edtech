@@ -230,14 +230,14 @@ export default function StudentGate({ onPick }: StudentGateProps) {
     );
   }
 
-  // ================= DEV handle (no Supabase configured) =================
+  // ================= DEV handle (no Firebase configured) =================
   if (view === 'dev') {
     return (
       <div className="gate-card" aria-label="Geliştirici girişi">
         <p className="startup-eyebrow">GELİŞTİRİCİ GİRİŞİ</p>
         <h2 className="profile-title gate-title">Yönetici adı</h2>
         <p className="gate-hint">
-          Supabase yapılandırılmadığı için dev handle kullanılıyor — yalnızca
+          Firebase yapılandırılmadığı için dev handle kullanılıyor — yalnızca
           production dışı backend&apos;lerde geçer.
         </p>
         <input

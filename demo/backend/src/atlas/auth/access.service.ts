@@ -3,23 +3,41 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MemberRole } from '../../generated/prisma/client.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { C } from '../../firebase/collections.js';
+import { FirebaseService, fromDoc } from '../../firebase/firebase.service.js';
+import type {
+  ActivitySession,
+  GameAttempt,
+  Group,
+  MemberRole,
+  Membership,
+} from '../../firebase/models.js';
 
 const MANAGER_ROLES: MemberRole[] = ['OWNER', 'FACILITATOR'];
 
+export function membershipId(workspaceId: string, userId: string) {
+  return `${workspaceId}_${userId}`;
+}
+
 @Injectable()
 export class AccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly firebase: FirebaseService) {}
+
+  private get db() {
+    return this.firebase.db;
+  }
 
   async requireMembership(
     userId: string,
     workspaceId: string,
     roles: MemberRole[] = [...MANAGER_ROLES, 'VIEWER'],
-  ) {
-    const membership = await this.prisma.membership.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
+  ): Promise<Membership> {
+    const membership = fromDoc<Membership>(
+      await this.db
+        .collection(C.memberships)
+        .doc(membershipId(workspaceId, userId))
+        .get(),
+    );
     if (
       !membership ||
       membership.status !== 'ACTIVE' ||
@@ -30,30 +48,26 @@ export class AccessService {
     return membership;
   }
 
-  async workspaceOfGroup(groupId: string) {
-    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+  async workspaceOfGroup(groupId: string): Promise<Group> {
+    const group = fromDoc<Group>(
+      await this.db.collection(C.groups).doc(groupId).get(),
+    );
     if (!group) throw new NotFoundException('Group not found');
     return group;
   }
 
-  async workspaceOfActivity(activityId: string) {
-    const activity = await this.prisma.activitySession.findUnique({
-      where: { id: activityId },
-    });
+  async workspaceOfActivity(activityId: string): Promise<ActivitySession> {
+    const activity = fromDoc<ActivitySession>(
+      await this.db.collection(C.activities).doc(activityId).get(),
+    );
     if (!activity) throw new NotFoundException('Activity not found');
     return activity;
   }
 
-  async attemptWithScope(attemptId: string) {
-    const attempt = await this.prisma.gameAttempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        state: true,
-        scenarioVersion: true,
-        activity: { include: { group: true } },
-        participant: true,
-      },
-    });
+  async attempt(attemptId: string): Promise<GameAttempt> {
+    const attempt = fromDoc<GameAttempt>(
+      await this.db.collection(C.attempts).doc(attemptId).get(),
+    );
     if (!attempt) throw new NotFoundException('Attempt not found');
     return attempt;
   }

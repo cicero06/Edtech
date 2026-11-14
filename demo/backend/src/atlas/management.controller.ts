@@ -9,7 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import type { AdultUser } from '../generated/prisma/client.js';
+import type { AdultUser } from '../firebase/models.js';
 import { AtlasAuthGuard } from './auth/atlas-auth.guard.js';
 import { Principal, type AuthPrincipal } from './auth/principal.js';
 import { ManagementService } from './management.service.js';

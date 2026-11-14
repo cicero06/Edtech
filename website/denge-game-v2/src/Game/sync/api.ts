@@ -92,7 +92,7 @@ export function syncAttempt(
 // ---------------------------------------------------------------------------
 // Staff management (facilitator console)
 //
-// `StaffAuth` carries either a Supabase JWT (`token` — the production path,
+// `StaffAuth` carries either a Firebase ID token (`token` — the production path,
 // backend resolves it to an adult principal) or a dev handle (`subject`,
 // sent as `x-atlas-user` — the backend ignores it in production).
 // ---------------------------------------------------------------------------

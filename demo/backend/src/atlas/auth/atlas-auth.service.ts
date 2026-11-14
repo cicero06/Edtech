@@ -1,104 +1,124 @@
 import { Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import type { Request } from 'express';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { FieldValue } from 'firebase-admin/firestore';
+import { C } from '../../firebase/collections.js';
+import {
+  FirebaseService,
+  fromDoc,
+} from '../../firebase/firebase.service.js';
+import type { AdultUser, Participant } from '../../firebase/models.js';
 import type { AuthPrincipal } from './principal.js';
 
 /**
- * Adult identity: Supabase Auth JWTs verified against the project's JWKS
- * (decision §8.1 — managed provider). SUPABASE_URL configures it; without
- * it only participant tokens and the dev header resolve.
+ * Identity resolution for the Atlas v2 API.
+ *
+ * 1. `Authorization: Bearer <participant token>` → participant principal
+ *    (our own opaque tokens — 64 hex chars, never contain a dot).
+ * 2. `Authorization: Bearer <Firebase ID token>` → adult principal, verified
+ *    by firebase-admin against the HarmonyTown project.
+ * 3. `x-atlas-user: <handle>` → adult principal, non-production only (dev
+ *    seam for local testing and e2e).
  */
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const supabaseJwks = SUPABASE_URL
-  ? createRemoteJWKSet(
-      new URL(`${SUPABASE_URL.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`),
-    )
-  : null;
-
 @Injectable()
 export class AtlasAuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly firebase: FirebaseService) {}
 
-  /**
-   * Resolution order:
-   * 1. `Authorization: Bearer <participant token>` → participant principal
-   *    (our own opaque tokens — 64 hex chars, never contain a dot).
-   * 2. `Authorization: Bearer <JWT>` → Supabase-verified adult principal.
-   * 3. `x-atlas-user: <authSubject>` header → adult principal (non-production
-   *    only; the dev seam until the staff UI wires a real Supabase session).
-   */
+  private get db() {
+    return this.firebase.db;
+  }
+
   async resolve(request: Request): Promise<AuthPrincipal | null> {
     const header = request.headers.authorization;
     if (header?.startsWith('Bearer ')) {
-      const raw = header.slice('Bearer '.length);
-      const participant = await this.resolveParticipantToken(raw);
-      if (participant) return participant;
-      if (raw.includes('.')) return this.resolveSupabaseJwt(raw);
+      const raw = header.slice('Bearer '.length).trim();
+      if (/^[0-9a-f]{64}$/.test(raw)) {
+        return this.resolveParticipantToken(raw);
+      }
+      if (raw.includes('.')) return this.resolveFirebaseIdToken(raw);
       return null;
     }
     if (process.env.NODE_ENV === 'production') return null;
     const subject = request.headers['x-atlas-user'];
     if (typeof subject !== 'string' || !subject.trim()) return null;
-    const authSubject = subject.trim();
-    const user = await this.prisma.adultUser.upsert({
-      where: { authSubject },
-      create: { authSubject, displayName: authSubject },
-      update: {},
-    });
+    const handle = subject.trim().replace(/[/\s]+/g, '-').slice(0, 100);
+    const user = await this.upsertAdult(`dev:${handle}`, handle, null);
     return { kind: 'adult', user };
   }
 
-  private async resolveSupabaseJwt(
+  private async resolveFirebaseIdToken(
     token: string,
   ): Promise<AuthPrincipal | null> {
-    if (!supabaseJwks || !SUPABASE_URL) return null;
-    let payload: JWTPayload;
+    let decoded;
     try {
-      const verified = await jwtVerify(token, supabaseJwks, {
-        issuer: `${SUPABASE_URL.replace(/\/$/, '')}/auth/v1`,
-        audience: 'authenticated',
-      });
-      payload = verified.payload;
+      decoded = await this.firebase.auth.verifyIdToken(token);
     } catch {
       return null; // expired, wrong project, malformed — all just "not ours"
     }
-    const authSubject = payload.sub;
-    if (!authSubject) return null;
-    const email =
-      typeof payload.email === 'string' ? payload.email : undefined;
+    const email = decoded.email ?? null;
     const displayName =
-      typeof payload.user_metadata === 'object' &&
-      payload.user_metadata !== null &&
-      typeof (payload.user_metadata as Record<string, unknown>).full_name ===
-        'string'
-        ? ((payload.user_metadata as Record<string, unknown>)
-            .full_name as string)
-        : (email ?? authSubject);
-    const user = await this.prisma.adultUser.upsert({
-      where: { authSubject },
-      create: { authSubject, displayName, email },
-      update: { displayName, email },
-    });
+      (typeof decoded.name === 'string' && decoded.name) ||
+      email ||
+      decoded.uid;
+    const user = await this.upsertAdult(decoded.uid, displayName, email);
     return { kind: 'adult', user };
+  }
+
+  private async upsertAdult(
+    authSubject: string,
+    displayName: string,
+    email: string | null,
+  ): Promise<AdultUser> {
+    const ref = this.db.collection(C.adultUsers).doc(authSubject);
+    const snap = await ref.get();
+    const existing = fromDoc<AdultUser>(snap);
+    if (
+      existing &&
+      existing.displayName === displayName &&
+      existing.email === email
+    ) {
+      return existing;
+    }
+    await ref.set(
+      {
+        authSubject,
+        displayName,
+        email,
+        ...(existing ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+    return {
+      id: authSubject,
+      authSubject,
+      displayName,
+      email,
+      createdAt: existing?.createdAt ?? new Date(),
+    };
   }
 
   private async resolveParticipantToken(
     raw: string,
   ): Promise<AuthPrincipal | null> {
     const tokenHash = createHash('sha256').update(raw).digest('hex');
-    const token = await this.prisma.participantToken.findUnique({
-      where: { tokenHash },
-      include: { participant: true },
-    });
+    const tokenSnap = await this.db
+      .collection(C.participantTokens)
+      .doc(tokenHash)
+      .get();
+    const token = tokenSnap.data() as
+      | {
+          participantId: string;
+          revokedAt?: unknown;
+          expiresAt?: { toMillis(): number } | null;
+        }
+      | undefined;
     if (!token || token.revokedAt) return null;
-    if (token.expiresAt && token.expiresAt.getTime() < Date.now()) return null;
-    return {
-      kind: 'participant',
-      participant: token.participant,
-      tokenId: token.id,
-    };
+    if (token.expiresAt && token.expiresAt.toMillis() < Date.now()) return null;
+    const participant = fromDoc<Participant>(
+      await this.db.collection(C.participants).doc(token.participantId).get(),
+    );
+    if (!participant) return null;
+    return { kind: 'participant', participant, tokenId: tokenHash };
   }
 
   async issueParticipantToken(
@@ -107,8 +127,12 @@ export class AtlasAuthService {
   ): Promise<string> {
     const raw = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(raw).digest('hex');
-    await this.prisma.participantToken.create({
-      data: { participantId, tokenHash, label },
+    await this.db.collection(C.participantTokens).doc(tokenHash).set({
+      participantId,
+      label: label ?? null,
+      expiresAt: null,
+      revokedAt: null,
+      createdAt: FieldValue.serverTimestamp(),
     });
     return raw;
   }

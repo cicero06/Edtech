@@ -1,7 +1,7 @@
 /**
- * Client for the Atlas backend (/v2) and Supabase Auth.
+ * Client for the Atlas backend (/v2) and Firebase Auth (HarmonyTown).
  * The public blog reads never need auth; the writer console signs in with
- * Supabase email+password and calls the guarded /v2/blog endpoints.
+ * Firebase email+password and calls the guarded /v2/blog endpoints.
  */
 import type { Post, PostBlock } from "./content";
 
@@ -9,10 +9,9 @@ const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   "http://localhost:3000";
 
-const SUPABASE_URL: string | undefined = import.meta.env
-  .VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY: string | undefined = import.meta.env
-  .VITE_SUPABASE_ANON_KEY as string | undefined;
+const FIREBASE_API_KEY: string =
+  (import.meta.env.VITE_FIREBASE_API_KEY as string | undefined) ??
+  "AIzaSyAIzNS71RsoRsbfFqcrJ1uWe7qzDs4gHOs";
 
 export type RemotePost = Post;
 export type OwnedPost = RemotePost & {
@@ -58,7 +57,7 @@ export function fetchPublishedPost(slug: string): Promise<RemotePost> {
   return call<RemotePost>(`/v2/blog/posts/${encodeURIComponent(slug)}`);
 }
 
-// ---------- writer auth (Supabase REST — no supabase-js needed) ----------
+// ---------- writer auth (Firebase Auth REST — no firebase SDK needed) ----------
 
 const TOKEN_KEY = "atlas:writer";
 
@@ -88,53 +87,59 @@ export function signOutWriter() {
   sessionStorage.removeItem(TOKEN_KEY);
 }
 
-async function supabaseToken(
-  grantType: string,
-  grant: Record<string, string>,
-): Promise<WriterSession> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new ApiError(0, "Supabase yapılandırması eksik");
-  }
-  const res = await fetch(
-    `${SUPABASE_URL}/auth/v1/token?grant_type=${grantType}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify(grant),
-    },
-  );
+const AUTH_ERRORS: Record<string, string> = {
+  EMAIL_NOT_FOUND: "E-posta veya parola hatalı",
+  INVALID_PASSWORD: "E-posta veya parola hatalı",
+  INVALID_LOGIN_CREDENTIALS: "E-posta veya parola hatalı",
+  INVALID_EMAIL: "Geçerli bir e-posta adresi girin",
+  USER_DISABLED: "Bu hesap devre dışı bırakılmış",
+  TOO_MANY_ATTEMPTS_TRY_LATER: "Çok fazla deneme — biraz sonra tekrar deneyin",
+};
+
+async function firebaseAuth(
+  url: string,
+  init: RequestInit,
+): Promise<{ idToken: string; refreshToken: string; expiresIn: string; email?: string }> {
+  const res = await fetch(url, { method: "POST", ...init });
   if (!res.ok) {
     const detail = (await res.json().catch(() => null)) as {
-      error_description?: string;
-      msg?: string;
-      error?: string;
+      error?: { message?: string };
     } | null;
-    throw new ApiError(
-      res.status,
-      detail?.error_description ?? detail?.msg ?? detail?.error ?? "Giriş başarısız",
-    );
+    const code = (detail?.error?.message ?? "").split(" ")[0].split(":")[0];
+    throw new ApiError(res.status, AUTH_ERRORS[code] ?? "Giriş başarısız");
   }
-  const data = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-    user: { email?: string };
+  const data = (await res.json()) as Record<string, string>;
+  return {
+    idToken: data.idToken ?? data.id_token,
+    refreshToken: data.refreshToken ?? data.refresh_token,
+    expiresIn: data.expiresIn ?? data.expires_in,
+    email: data.email,
   };
+}
+
+function storeSession(
+  r: { idToken: string; refreshToken: string; expiresIn: string; email?: string },
+  email: string,
+): WriterSession {
   const session: WriterSession = {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-    email: data.user.email ?? "",
+    accessToken: r.idToken,
+    refreshToken: r.refreshToken,
+    expiresAt: Date.now() + Number(r.expiresIn || 3600) * 1000,
+    email: r.email ?? email,
   };
   saveSession(session);
   return session;
 }
 
-export function signInWriter(email: string, password: string) {
-  return supabaseToken("password", { email, password });
+export async function signInWriter(email: string, password: string) {
+  const r = await firebaseAuth(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+    {
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    },
+  );
+  return storeSession(r, email);
 }
 
 /** Valid session, transparently refreshed once when expired. */
@@ -145,9 +150,17 @@ export async function ensureWriterSession(): Promise<WriterSession | null> {
     const raw = sessionStorage.getItem(TOKEN_KEY);
     const stored = raw ? (JSON.parse(raw) as WriterSession) : null;
     if (!stored?.refreshToken) return null;
-    return await supabaseToken("refresh_token", {
-      refresh_token: stored.refreshToken,
-    });
+    const r = await firebaseAuth(
+      `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,
+      {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: stored.refreshToken,
+        }),
+      },
+    );
+    return storeSession(r, stored.email);
   } catch {
     signOutWriter();
     return null;

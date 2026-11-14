@@ -25,3 +25,10 @@ cap*.mjs
 dressing-shots*.mjs
 website/shots/
 Attached*
+
+# Firebase servis hesabı anahtarları (asla commit edilmez)
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
