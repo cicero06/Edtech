@@ -5,7 +5,15 @@ import { render, pages, site } from "../.ssr/entry-server.js";
 // The backend publish endpoint also pings the Vercel deploy hook, so a new
 // post is folded into the site ~a minute after it goes live.
 let remotePosts = [];
-const apiBase = process.env.VITE_API_URL;
+// VITE_API_URL may be relative ("/api", same-origin backend on Vercel). Node's
+// fetch needs an absolute URL, so resolve it against the live production
+// domain — the build reads posts from the currently deployed API.
+function resolveApiBase(raw) {
+  if (!raw || /^https?:\/\//.test(raw)) return raw;
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return host ? `https://${host}${raw.startsWith("/") ? "" : "/"}${raw}` : undefined;
+}
+const apiBase = resolveApiBase(process.env.VITE_API_URL?.replace(/\/$/, ""));
 if (apiBase) {
   try {
     const res = await fetch(`${apiBase}/v2/blog/posts`);

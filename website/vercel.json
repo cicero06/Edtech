@@ -1,29 +1,80 @@
 {
-  "installCommand": "npm install && npm --prefix ./denge-kasabasi-game install && npm --prefix ./denge-game-v2 install",
-  "buildCommand": "npm run build",
+  "installCommand": "npm install && npm --prefix ./denge-kasabasi-game install && npm --prefix ./denge-game-v2 install && npm --prefix ../demo/backend ci",
+  "buildCommand": "npm --prefix ../demo/backend run build && npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/denge-kasabasi", "destination": "/denge-kasabasi/index.html" },
-    { "source": "/denge-kasabasi/", "destination": "/denge-kasabasi/index.html" },
-    { "source": "/denge-kasabasi/oyna", "destination": "/denge-kasabasi/oyna/index.html" },
-    { "source": "/denge-kasabasi/oyna/", "destination": "/denge-kasabasi/oyna/index.html" },
-    { "source": "/denge-kasabasi/ongosteri", "destination": "/denge-kasabasi/ongosteri/index.html" },
-    { "source": "/denge-kasabasi/ongosteri/", "destination": "/denge-kasabasi/ongosteri/index.html" },
-    { "source": "/kurumlar", "destination": "/kurumlar/index.html" },
-    { "source": "/kurumlar/", "destination": "/kurumlar/index.html" },
-    { "source": "/blog", "destination": "/blog/index.html" },
-    { "source": "/blog/", "destination": "/blog/index.html" },
-    { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/denge-kasabasi",
+      "destination": "/denge-kasabasi/index.html"
+    },
+    {
+      "source": "/denge-kasabasi/",
+      "destination": "/denge-kasabasi/index.html"
+    },
+    {
+      "source": "/denge-kasabasi/oyna",
+      "destination": "/denge-kasabasi/oyna/index.html"
+    },
+    {
+      "source": "/denge-kasabasi/oyna/",
+      "destination": "/denge-kasabasi/oyna/index.html"
+    },
+    {
+      "source": "/denge-kasabasi/ongosteri",
+      "destination": "/denge-kasabasi/ongosteri/index.html"
+    },
+    {
+      "source": "/denge-kasabasi/ongosteri/",
+      "destination": "/denge-kasabasi/ongosteri/index.html"
+    },
+    {
+      "source": "/kurumlar",
+      "destination": "/kurumlar/index.html"
+    },
+    {
+      "source": "/kurumlar/",
+      "destination": "/kurumlar/index.html"
+    },
+    {
+      "source": "/blog",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog/",
+      "destination": "/blog/index.html"
+    },
+    {
+      "source": "/blog/:slug",
+      "destination": "/blog/:slug/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     }
-  ]
+  ],
+  "regions": [
+    "fra1"
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  }
 }
