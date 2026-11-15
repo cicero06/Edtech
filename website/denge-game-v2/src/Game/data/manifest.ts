@@ -22,6 +22,7 @@ import {
 } from './story';
 import { NPCS } from './npcs';
 import { DECISION_EFFECTS } from './stats';
+import { MINIGAMES } from './minigames';
 
 export const SCENARIO_KEY = 'denge-kasabasi';
 
@@ -43,6 +44,8 @@ export interface ScenarioManifest {
   reportItemIds: string[];
   /** Every dialogue choice id a `choice_made` event may carry. */
   choiceIds: string[];
+  /** Workshop id -> decision ids its `minigame_completed` event may carry. */
+  minigames: Record<string, string[]>;
 }
 
 export function buildScenarioManifest(): ScenarioManifest {
@@ -66,5 +69,6 @@ export function buildScenarioManifest(): ScenarioManifest {
       ...ANNOUNCE_NPC_IDS.map((id) => `finding-${id}`),
     ],
     choiceIds: [...choiceIds].sort(),
+    minigames: Object.fromEntries(MINIGAMES.map((m) => [m.id, [...m.decisions]])),
   };
 }

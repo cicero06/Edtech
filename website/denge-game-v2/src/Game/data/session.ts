@@ -146,7 +146,9 @@ export type SessionEventType =
   | 'announce'
   | 'report'
   | 'alt-plan'
-  | 'finale';
+  | 'finale'
+  /** A district workshop finished (see data/minigames.ts). */
+  | 'minigame';
 
 export interface SessionEvent {
   at: number;

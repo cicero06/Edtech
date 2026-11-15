@@ -18,6 +18,7 @@ export const EVENT_TYPES = [
   'report_classified',
   'alt_plan_submitted',
   'finale_submitted',
+  'minigame_completed',
   'attempt_completed',
 ] as const;
 
@@ -31,6 +32,8 @@ export interface ScenarioManifest {
   icons?: string[];
   reportItemIds?: string[];
   choiceIds?: string[];
+  /** Mini-game id -> the decision ids it may report (empty: no decision). */
+  minigames?: Record<string, string[]>;
 }
 
 export const PAYLOAD_SCHEMA_VERSION = 1;
@@ -38,6 +41,7 @@ export const PAYLOAD_SCHEMA_VERSION = 1;
 const MAX_SHORT_TEXT = 120;
 const MAX_LONG_TEXT = 2000;
 const MAX_RATIONALE = 1000;
+const MAX_METRICS = 16;
 
 type Payload = Record<string, unknown>;
 
@@ -141,6 +145,53 @@ function validatePlan(payload: Payload, manifest: ScenarioManifest) {
 }
 
 /**
+ * A district workshop (Aylin, Nuri, Kemal, Rıza…). One generic event so a new
+ * mini-game needs a manifest entry, not a backend release: `gameId` names the
+ * game, `decisionId` the final pick, `score` 0–100 and `metrics` a small flat
+ * map of numbers (litres saved, cost, attempts…).
+ */
+function validateMinigame(payload: Payload, manifest: ScenarioManifest) {
+  const keys = allowedKeys(payload, ['gameId', 'decisionId', 'score', 'metrics']);
+  if (keys) return keys;
+  const game = requireString(payload, 'gameId', 60);
+  if (game) return game;
+  const gameId = payload.gameId as string;
+  const games = manifest.minigames;
+  if (games && !Object.hasOwn(games, gameId)) {
+    return `gameId outside the scenario: ${gameId}`;
+  }
+  const decision = optionalString(payload, 'decisionId', 60);
+  if (decision) return decision;
+  if (payload.decisionId !== undefined && games) {
+    const decisionCheck = inManifest(
+      [payload.decisionId as string],
+      games[gameId],
+      'decisionId',
+    );
+    if (decisionCheck) return decisionCheck;
+  }
+  if (payload.score !== undefined) {
+    const { score } = payload;
+    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) {
+      return 'score must be a number between 0 and 100';
+    }
+  }
+  if (payload.metrics !== undefined) {
+    const { metrics } = payload;
+    if (!isPlainObject(metrics)) return 'metrics must be an object';
+    const entries = Object.entries(metrics);
+    if (entries.length > MAX_METRICS) return `metrics has more than ${MAX_METRICS} keys`;
+    for (const [key, value] of entries) {
+      if (key.length > 40) return 'metrics key too long';
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return `metrics.${key} must be a finite number`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Returns `null` when the payload conforms, otherwise a human-readable
  * rejection reason. Unknown keys are always rejected.
  */
@@ -217,5 +268,7 @@ export function validateEventPayload(
       if (keys) return keys;
       return requireString(payload, 'statement', MAX_LONG_TEXT);
     }
+    case 'minigame_completed':
+      return validateMinigame(payload, manifest);
   }
 }

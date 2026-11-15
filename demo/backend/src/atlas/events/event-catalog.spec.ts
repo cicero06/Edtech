@@ -11,6 +11,7 @@ const manifest: ScenarioManifest = {
   evidenceIds: ['e-rain', 'e-bill'],
   icons: ['star', 'leaf'],
   reportItemIds: ['r1', 'r2', 'r3'],
+  minigames: { aylin: ['patch', 'replace'], kemal: [] },
 };
 
 describe('validateEventPayload', () => {
@@ -71,5 +72,36 @@ describe('validateEventPayload', () => {
         {},
       ),
     ).toBeNull();
+  });
+
+  it('validates mini-game results against the manifest', () => {
+    const ok = {
+      gameId: 'aylin',
+      decisionId: 'replace',
+      score: 80,
+      metrics: { cost: 400000, waterSaved: 20 },
+    };
+    expect(validateEventPayload('minigame_completed', ok, manifest)).toBeNull();
+    expect(
+      validateEventPayload('minigame_completed', { ...ok, gameId: 'nope' }, manifest),
+    ).toMatch(/gameId/);
+    expect(
+      validateEventPayload('minigame_completed', { ...ok, decisionId: 'x' }, manifest),
+    ).toMatch(/decisionId/);
+    expect(
+      validateEventPayload('minigame_completed', { ...ok, score: 101 }, manifest),
+    ).toMatch(/score/);
+    expect(
+      validateEventPayload(
+        'minigame_completed',
+        { ...ok, metrics: { cost: 'a lot' } },
+        manifest,
+      ),
+    ).toMatch(/metrics\.cost/);
+    expect(
+      validateEventPayload('minigame_completed', { ...ok, extra: 1 }, manifest),
+    ).toMatch(/Unexpected/);
+    // Older scenario versions have no minigames list: accepted, not enforced.
+    expect(validateEventPayload('minigame_completed', ok, {})).toBeNull();
   });
 });

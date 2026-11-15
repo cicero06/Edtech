@@ -36,6 +36,7 @@ const EVENT_LABELS: Record<SessionEvent['type'], string> = {
   report: 'Bulgu raporu hazırladı',
   'alt-plan': 'Alternatif plan sundu',
   finale: 'Kapanış yaptı',
+  minigame: 'Atölye görevini tamamladı',
 };
 
 const fmtTime = (at: number) =>

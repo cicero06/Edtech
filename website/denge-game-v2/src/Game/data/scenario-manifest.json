@@ -1,6 +1,6 @@
 {
   "scenario": "denge-kasabasi",
-  "version": "ch1-e5532f77ce",
+  "version": "ch1-171c5f08b7",
   "manifest": {
     "solutions": {
       "fountains-off": 20000,
@@ -41,6 +41,9 @@
     ],
     "choiceIds": [
       "ask-town",
+      "aylin-patch",
+      "aylin-replace",
+      "aylin-sensor",
       "closing-budget",
       "closing-evidence",
       "closing-fairness",
@@ -56,6 +59,13 @@
       "repair-well",
       "retry-alt",
       "retry-keep"
-    ]
+    ],
+    "minigames": {
+      "aylin": [
+        "patch",
+        "replace",
+        "sensor"
+      ]
+    }
   }
 }

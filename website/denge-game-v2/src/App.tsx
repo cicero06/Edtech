@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import PhaserGame from './components/PhaserGame';
 import IntroSequence from './components/IntroSequence';
 import InvestigationCard from './components/InvestigationCard';
+import AylinWorkshopModal, { type AylinWorkshopDecisionResult } from './components/AylinWorkshopModal';
 import SolutionPanel from './components/SolutionPanel';
 import FinaleCard from './components/FinaleCard';
 import AnnouncementCard from './components/AnnouncementCard';
@@ -715,7 +716,27 @@ function App() {
         )}
 
         {/* ---------------- INVESTIGATION ---------------- */}
-        {investigation && (() => {
+        {investigation && investigation.cardId === 'baraj' && (
+          <AylinWorkshopModal
+            onComplete={(result: AylinWorkshopDecisionResult) => {
+              completeInvestigation('baraj');
+              const choiceKey = `aylin-${result.decisionId}`;
+              const nextStats = applyDecision(stats, choiceKey);
+              setStats(nextStats);
+              persist({ stats: nextStats });
+              recordEvent('minigame', {
+                gameId: 'aylin',
+                decisionId: result.decisionId,
+                metrics: { cost: result.cost, waterSaved: result.waterSaved },
+              });
+            }}
+            onClose={() => setInvestigation(null)}
+            hasParkData={notebook.some((n) => n.cardId === 'park')}
+            hasMahalleData={notebook.some((n) => n.cardId === 'konut')}
+          />
+        )}
+
+        {investigation && investigation.cardId !== 'baraj' && (() => {
           const card = investigationCard(investigation.cardId);
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}

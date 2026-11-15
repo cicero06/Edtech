@@ -40,6 +40,9 @@ export const DECISION_EFFECTS: Record<string, StatChanges> = {
   'repair-well': { water: 20, economy: -10, society: 5 },
   'reduce-water': { water: 10, environment: 10, society: -5 },
   'ask-town': { society: 15, economy: -5, water: 5 },
+  'aylin-patch': { water: 10, economy: -5, society: 5 },
+  'aylin-replace': { water: 25, economy: -15, environment: 10, society: 10 },
+  'aylin-sensor': { water: 5, economy: -5, society: 5 },
 };
 
 function clamp(value: number): number {

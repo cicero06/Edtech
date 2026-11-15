@@ -1,0 +1,491 @@
+/* Aylin'in Mühendislik Atölyesi — Özel Retro-Modern Tasarım */
+
+:root {
+  --aylin-bg: #07121c;
+  --aylin-panel: #0d2430;
+  --aylin-line: #2e6070;
+  --aylin-cyan: #5ae5f3;
+  --aylin-amber: #f7c65a;
+  --aylin-red: #ff6976;
+  --aylin-green: #70e0a5;
+}
+
+.aylin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(3, 8, 13, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  backdrop-filter: blur(8px);
+}
+
+.aylin-crt {
+  width: 100%;
+  max-width: 1300px;
+  max-height: 94vh;
+  overflow-y: auto;
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(90, 229, 243, 0.35);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 50% -15%, #18495a, #07121c 55%, #03080d);
+  color: #ebfbfd;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  padding: 24px;
+}
+
+.aylin-crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0.08;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.15) 0 1px, transparent 1px 4px);
+}
+
+.aylin-panel {
+  background: linear-gradient(145deg, rgba(18, 53, 66, 0.96), rgba(7, 25, 35, 0.97));
+  border: 1px solid rgba(86, 224, 239, 0.24);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.aylin-mono {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aylin-eyebrow {
+  color: #75c7d1;
+  font: 700 11px/1.2 "DM Mono", monospace;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.aylin-topbar {
+  border-bottom: 1px solid rgba(86, 224, 239, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+  .aylin-topbar {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+/* Panoramic Observation Deck Room */
+.aylin-room {
+  position: relative;
+  min-height: 165px;
+  overflow: hidden;
+  border: 1px solid rgba(86, 224, 239, 0.25);
+  border-radius: 10px;
+  background: linear-gradient(160deg, #123f4d, #071821);
+  margin-bottom: 16px;
+}
+
+.aylin-room::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 52px, rgba(102, 228, 239, 0.08) 53px 54px),
+    linear-gradient(105deg, transparent 0 39%, rgba(106, 226, 239, 0.18) 39.5% 40%, transparent 40.5% 70%, rgba(106, 226, 239, 0.12) 70.5% 71%, transparent 71.5%);
+}
+
+.aylin-reservoir-view {
+  position: absolute;
+  right: 12%;
+  bottom: 0;
+  width: 135px;
+  height: 110px;
+  border: 5px solid #657780;
+  border-bottom: 0;
+  border-radius: 68px 68px 0 0;
+  background: linear-gradient(#36d7df, #08708a);
+  box-shadow: 0 0 35px rgba(34, 207, 225, 0.35);
+}
+
+.aylin-spill {
+  position: absolute;
+  right: 6%;
+  bottom: 0;
+  width: 74px;
+  height: 85px;
+  background: repeating-linear-gradient(90deg, #75e9ef 0 8px, #1b9bb2 8px 17px);
+  clip-path: polygon(15% 0, 85% 0, 100% 100%, 0 100%);
+  opacity: 0.85;
+}
+
+/* Character Avatar Illustration */
+.aylin-avatar {
+  position: absolute;
+  left: 18px;
+  bottom: -1px;
+  width: 84px;
+  height: 135px;
+}
+
+.aylin-hair {
+  position: absolute;
+  left: 22px;
+  top: 2px;
+  width: 48px;
+  height: 53px;
+  border-radius: 50% 52% 35% 40%;
+  background: #332b42;
+  border: 3px solid #171826;
+}
+
+.aylin-face {
+  position: absolute;
+  left: 33px;
+  top: 22px;
+  width: 34px;
+  height: 39px;
+  border-radius: 48%;
+  background: #e8ac82;
+  border: 2px solid #572f2a;
+}
+
+.aylin-face::after {
+  content: "•  •";
+  position: absolute;
+  left: 7px;
+  top: 15px;
+  color: #442a2a;
+  font: bold 9px monospace;
+  letter-spacing: 3px;
+}
+
+.aylin-body {
+  position: absolute;
+  left: 14px;
+  top: 59px;
+  width: 58px;
+  height: 75px;
+  border: 3px solid #183d51;
+  border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(90deg, #d9ae51 0 15%, #2d8496 15% 85%, #d9ae51 85%);
+}
+
+.aylin-body::after {
+  content: "A";
+  position: absolute;
+  left: 23px;
+  top: 12px;
+  font: bold 19px sans-serif;
+  color: #efffff;
+}
+
+.aylin-clip {
+  position: absolute;
+  right: -4px;
+  top: 80px;
+  width: 29px;
+  height: 40px;
+  background: #e5d18d;
+  border: 3px solid #594d3b;
+  transform: rotate(10deg);
+}
+
+.aylin-bubble {
+  position: absolute;
+  left: 122px;
+  right: 18px;
+  top: 16px;
+  max-width: 620px;
+  border: 1px solid rgba(86, 224, 239, 0.4);
+  background: rgba(3, 16, 23, 0.92);
+  border-radius: 8px;
+  padding: 13px 16px;
+  color: #d9f8fa;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.aylin-bubble::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 25px;
+  width: 16px;
+  height: 16px;
+  background: rgba(3, 16, 23, 0.92);
+  border-left: 1px solid rgba(86, 224, 239, 0.4);
+  border-bottom: 1px solid rgba(86, 224, 239, 0.4);
+  transform: rotate(45deg);
+}
+
+/* Game Layout Grid */
+.aylin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(290px, 0.8fr);
+  gap: 18px;
+}
+
+@media (max-width: 960px) {
+  .aylin-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Pipe Puzzle Board */
+.aylin-board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  max-width: 650px;
+  margin: auto;
+  padding: 14px;
+  border: 2px solid #2b6878;
+  border-radius: 8px;
+  background: #06131c;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.aylin-tile {
+  aspect-ratio: 1;
+  border: 1px solid #244c59;
+  border-radius: 6px;
+  background: #0a202b;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.aylin-tile:hover:not(:disabled) {
+  border-color: var(--aylin-cyan);
+  background: #123743;
+  transform: scale(1.04);
+}
+
+.aylin-tile.empty {
+  cursor: default;
+  background: #071923;
+  border-color: #15333e;
+}
+
+.aylin-tile.source,
+.aylin-tile.target {
+  background: #143a43;
+  border-color: #f7c65a;
+}
+
+.aylin-tile.powered {
+  background: #113e45;
+  border-color: #70e0a5;
+  box-shadow: 0 0 14px rgba(112, 224, 165, 0.35);
+}
+
+.aylin-pipe {
+  width: 82%;
+  height: 82%;
+}
+
+.aylin-pipe line {
+  stroke: #6b8790;
+  stroke-width: 13;
+  stroke-linecap: round;
+}
+
+.aylin-pipe.power line {
+  stroke: #47dbe7;
+  filter: drop-shadow(0 0 5px #40e7f0);
+}
+
+.aylin-pipe circle {
+  fill: #1b414d;
+  stroke: #8cb2b8;
+  stroke-width: 3;
+}
+
+.aylin-pipe.power circle {
+  fill: #2bc2ce;
+  stroke: #d8ffff;
+}
+
+/* Indicators and Controls */
+.aylin-stat {
+  border: 1px solid rgba(86, 224, 239, 0.2);
+  background: #05131b;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+
+.aylin-stat strong {
+  display: block;
+  font-size: 22px;
+  color: #eaffff;
+}
+
+.aylin-bar {
+  height: 10px;
+  background: #142b34;
+  border: 1px solid #315664;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.aylin-bar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #32d9e8, #72e0a5);
+  transition: width 0.3s ease;
+}
+
+.aylin-bar.critical > i {
+  background: linear-gradient(90deg, #ffb84c, #ff6976);
+}
+
+.aylin-task {
+  border-left: 3px solid var(--aylin-amber);
+  background: rgba(247, 198, 90, 0.08);
+  padding: 12px 14px;
+  border-radius: 0 6px 6px 0;
+  color: #dbe9e8;
+}
+
+.aylin-btn {
+  border: 1px solid rgba(90, 229, 243, 0.6);
+  background: #0d4a5e;
+  padding: 9px 15px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #efffff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.aylin-btn:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.aylin-btn.secondary {
+  border-color: #536d75;
+  background: #0b222c;
+}
+
+.aylin-btn.danger {
+  border-color: rgba(255, 105, 118, 0.6);
+  background: #4a1e29;
+}
+
+.aylin-badge {
+  border: 1px solid rgba(112, 224, 165, 0.4);
+  background: rgba(112, 224, 165, 0.12);
+  color: #aaf3c9;
+  padding: 5px 9px;
+  font: 11px "DM Mono", monospace;
+  border-radius: 4px;
+}
+
+/* Modals inside Workshop */
+.aylin-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(2, 9, 14, 0.88);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.aylin-modal-card {
+  max-width: 620px;
+  width: 100%;
+  border: 1px solid #f7c65a;
+  background: linear-gradient(145deg, #173b47, #071820);
+  box-shadow: 0 0 50px rgba(247, 198, 90, 0.2);
+  padding: 26px;
+  border-radius: 10px;
+}
+
+.aylin-modal-card.loss {
+  border-color: #ff6976;
+  box-shadow: 0 0 50px rgba(255, 105, 118, 0.2);
+}
+
+/* Weather Alert Center */
+.aylin-weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .aylin-weather-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aylin-radar {
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(86, 224, 239, 0.6);
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle, rgba(86, 224, 239, 0.15) 0 2px, transparent 3px 43px, rgba(86, 224, 239, 0.2) 44px 45px, transparent 46px 83px, rgba(86, 224, 239, 0.2) 84px 85px, transparent 86px),
+    linear-gradient(90deg, transparent 49.5%, rgba(86, 224, 239, 0.35) 50% 50.5%, transparent 51%),
+    linear-gradient(0deg, transparent 49.5%, rgba(86, 224, 239, 0.35) 50% 50.5%, transparent 51%);
+}
+
+.aylin-radar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50%;
+  height: 2px;
+  background: #70e0a5;
+  transform-origin: left;
+  animation: aylinScan 2.4s linear infinite;
+}
+
+@keyframes aylinScan {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aylin-forecast-option {
+  border: 1px solid #315563;
+  background: #0b202b;
+  padding: 13px 15px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  width: 100%;
+}
+
+.aylin-forecast-option:hover {
+  border-color: #56e0ef;
+  background: #123743;
+}
+
+.aylin-forecast-option.correct {
+  border-color: #70e0a5;
+  background: rgba(112, 224, 165, 0.15);
+}
+
+.aylin-forecast-option.wrong {
+  border-color: #ff6976;
+  background: rgba(255, 105, 118, 0.15);
+}

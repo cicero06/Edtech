@@ -128,8 +128,8 @@ export const INVESTIGATION_CARDS: readonly InvestigationCard[] = [
     ],
     factTitle: 'Biliyor muydun?',
     fact: 'Barajdaki su sadece bugün için değil, gelecekteki ihtiyaçlar için de önemlidir. Bu yüzden yalnızca "Şu anda ne kadar suyumuz var?" değil, "Daha sonra ne kadar suya ihtiyacımız olacak?" sorusunu da düşünmeliyiz.',
-    hint: 'Su sınırlı bir kaynaktır.',
-    datum: 'Rezerv: %43 dolu',
+    hint: 'Barajdan çıkan 80 L suyun 20 L\'si yeraltı boru sızıntısında kayboluyor.',
+    datum: 'Baraj çıkışı: 80 L',
     chart: {
       title: 'Rezerv Su Seviyesi',
       unit: '%',
@@ -205,7 +205,7 @@ export const INVESTIGATION_CARDS: readonly InvestigationCard[] = [
     factTitle: 'Biliyor muydun?',
     fact: 'Bozuk bir musluk veya patlak bir boru, fark edilmeden yüzlerce litre suyu boşa harcayabilir. Küçük kaçaklar bile büyük kayıp demektir.',
     hint: 'Suyun bir kısmı kullanılmadan önce kayboluyor olabilir.',
-    datum: 'Boru kaçağı: sokakta aktif',
+    datum: 'Konut ölçümü: 35 L (basınç düşük)',
     checkQuestion: {
       question: 'Sokaktaki boru kaçağı tamir edilmezse ne olur?',
       options: [
@@ -237,7 +237,7 @@ export const INVESTIGATION_CARDS: readonly InvestigationCard[] = [
       { icon: '🌿', text: 'Şehir yaşamını daha yaşanabilir hale getirebilir' },
     ],
     hint: 'Bir kararın çevresel sonuçlarını da düşünmeliyiz.',
-    datum: 'Park sulaması: günlük yüksek',
+    datum: 'Park ölçümü: 25 L (ıslak zemin)',
     checkQuestion: {
       question: 'Park sulamasını tamamen kesersek ne olabilir?',
       options: [
