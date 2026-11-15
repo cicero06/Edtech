@@ -41,28 +41,30 @@ export const SPRINKLER_RADIUS = 64;
  * with the stone sidewalk east of it up to x≈1102.
  */
 export const SPRINKLERS: readonly SprinklerDef[] = [
+  // Park lawns at the corners of the central square (square x 990–1410,
+  // y 785–1115; avenue y 906–994 with sidewalks either side).
   {
     id: 'park-nw',
-    x: 800,
-    y: 690,
-    sides: ['trees', 'flowers', 'asphalt', 'flowers'],
-    labels: ['Ağaç sırası', 'Çiçek saksısı', 'Kavşak asfaltı', 'Gül çalısı'],
+    x: 960,
+    y: 868,
+    sides: ['trees', 'pavement', 'asphalt', 'grass'],
+    labels: ['Ağaç sırası', 'Meydan taşları', 'Cadde asfaltı', 'Park çimi'],
     start: 2,
   },
   {
     id: 'park-ne',
-    x: 1132,
-    y: 690,
+    x: 1440,
+    y: 868,
     sides: ['trees', 'flowers', 'asphalt', 'pavement'],
-    labels: ['Kiraz ağaçları', 'Çiçek çalısı', 'Cadde asfaltı', 'Taş kaldırım'],
+    labels: ['Kiraz ağaçları', 'Çiçek tarhı', 'Cadde asfaltı', 'Meydan taşları'],
     start: 2,
   },
   {
     id: 'park-sw',
-    x: 885,
-    y: 900,
-    sides: ['trees', 'asphalt', 'trees', 'grass'],
-    labels: ['Ağaç gölgesi', 'Bulvar asfaltı', 'Ağaç sırası', 'Park çimi'],
+    x: 960,
+    y: 1090,
+    sides: ['pavement', 'pavement', 'trees', 'grass'],
+    labels: ['Kaldırım', 'Meydan taşları', 'Ağaç sırası', 'Park çimi'],
     start: 1,
   },
 ];
@@ -85,10 +87,10 @@ export const SPRINKLER_MIN_ROTATIONS = SPRINKLERS.reduce(
 // ---------------------------------------------------------------------------
 
 /** Hidden leak under Çınar Caddesi (the street ends at x≈1630), east of Nuri. */
-export const LEAK_SPOT = { x: 1560, y: 758 } as const;
+export const LEAK_SPOT = { x: 1950, y: 948 } as const;
 /** Inside this radius the radar peaks and the dig can start. */
 export const LEAK_HOT_RADIUS = 52;
-const RADAR_RANGE = 520;
+const RADAR_RANGE = 650;
 
 /** 25 dB far away → 94 dB on top of the leak. */
 export function radarDecibels(distance: number): number {

@@ -25,11 +25,11 @@ const DISTRICT_NAMES: Record<DistrictId, string> = {
 
 /** İlçe etiketlerinin harita üzerindeki okunaklı noktaları. */
 const LABEL_ANCHORS: Record<DistrictId, { x: number; y: number }> = {
-  reservoir: { x: 960, y: 190 },
-  agriculture: { x: 330, y: 770 },
-  park: { x: 960, y: 770 },
-  residential: { x: 1590, y: 770 },
-  municipality: { x: 960, y: 1300 },
+  reservoir: { x: 1200, y: 160 },
+  agriculture: { x: 410, y: 960 },
+  park: { x: 1200, y: 960 },
+  residential: { x: 1990, y: 960 },
+  municipality: { x: 1200, y: 1625 },
 };
 
 type MiniMapProps = {

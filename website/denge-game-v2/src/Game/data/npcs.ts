@@ -9,7 +9,7 @@
 
 import { TextureKeys, type TextureKey } from './assets';
 import type { DialogueChoice } from '../events/gameEvents';
-import type { DistrictId } from './districts';
+import { sc, type DistrictId } from './districts';
 import type { InvestigationId } from './story';
 
 export interface NpcDefinition {
@@ -46,7 +46,7 @@ const CHOICES: DialogueChoice[] = [
   { id: 'ask-town', text: 'Kasaba halkıyla konuş' },
 ];
 
-export const NPCS: readonly NpcDefinition[] = [
+const LEGACY_NPCS: readonly NpcDefinition[] = [
   {
     id: 'elif-teyze',
     name: 'Elif Teyze',
@@ -183,3 +183,12 @@ export const DECISION_FEEDBACK: Record<string, string> = {
   'reduce-water': 'Kasabada su tasarrufu başlatıldı!',
   'ask-town': 'Kasaba halkıyla görüşmeye karar verdin!',
 };
+
+/** Positions are authored in the original layout; the grown town scales them. */
+const MOVED_NPCS: Record<string, { x: number; y: number }> = {
+  'muhendis-aylin': { x: 640, y: 480 },
+};
+export const NPCS: readonly NpcDefinition[] = LEGACY_NPCS.map((n) => ({
+  ...n,
+  ...(MOVED_NPCS[n.id] ?? { x: sc(n.x), y: sc(n.y) }),
+}));

@@ -33,8 +33,8 @@ import {
 import { DECISION_FEEDBACK, NPCS, type NpcDefinition } from '../data/npcs';
 import {
   districtAt,
-  PARK_CENTER,
   PLAYER_SPAWN,
+  sc,
   WORLD,
   WORLD_BOUNDS,
   type District,
@@ -45,6 +45,8 @@ import {
   GROUND_LAYERS,
   GroundDepth,
   DAM,
+  DAM_SORT_Y,
+  FOUNTAIN,
   RESERVOIR_PANORAMA,
   WORLD_OBJECTS,
   type CollisionBox,
@@ -521,7 +523,7 @@ export default class GameScene extends Phaser.Scene {
       if (object.depthMode === 'ground') {
         sprite.setDepth(object.depth ?? 0);
       } else {
-        sprite.setDepth(object.y);
+        sprite.setDepth(object.sortY ?? object.y);
       }
 
       if (object.collision) {
@@ -1616,7 +1618,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Drips falling from the fountain's upper tiers - the "running" state.
     this.fountainEmitter = this.add
-      .particles(PARK_CENTER.x, 728, 'fx-drop', {
+      .particles(FOUNTAIN.x, FOUNTAIN.y - 96, 'fx-drop', {
         speedY: { min: 26, max: 55 },
         speedX: { min: -20, max: 20 },
         lifespan: 850,
@@ -1624,18 +1626,18 @@ export default class GameScene extends Phaser.Scene {
         scale: { start: 0.9, end: 0.3 },
         alpha: { start: 0.8, end: 0.1 },
       })
-      .setDepth(792);
+      .setDepth(FOUNTAIN.y + 2);
 
     // Drip hoses trace the field's vertical crop rows; emitter dots mark them.
     const hoses = this.add.graphics().setDepth(GroundDepth.DECAL + 2).setVisible(false);
     hoses.lineStyle(3, 0x24301a, 0.9);
-    for (const hx of [340, 368, 396, 424, 452]) hoses.lineBetween(hx, 936, hx, 1084);
+    for (const hx of [340, 368, 396, 424, 452].map(sc)) hoses.lineBetween(hx, sc(936), hx, sc(1084));
     hoses.lineStyle(4, 0x24301a, 0.9);
-    hoses.lineBetween(336, 1088, 470, 1088);
-    hoses.lineBetween(470, 930, 470, 1088);
+    hoses.lineBetween(sc(336), sc(1088), sc(470), sc(1088));
+    hoses.lineBetween(sc(470), sc(930), sc(470), sc(1088));
     hoses.fillStyle(0x88c7e8, 1);
-    for (const hx of [340, 368, 396, 424, 452]) {
-      for (const hy of [960, 1010, 1060]) hoses.fillCircle(hx, hy, 2.2);
+    for (const hx of [340, 368, 396, 424, 452].map(sc)) {
+      for (const hy of [960, 1010, 1060].map(sc)) hoses.fillCircle(hx, hy, 2.2);
     }
     this.fieldHoses = hoses;
   }
@@ -1741,7 +1743,7 @@ export default class GameScene extends Phaser.Scene {
           scale: { start: 0.9, end: 0.5 },
           alpha: { start: 0.55, end: 0 },
         })
-        .setDepth(DAM.y + sy + 2);
+        .setDepth(DAM_SORT_Y + 2);
       this.add
         .particles(x, DAM.y + 0.66 * sy, 'fx-foam', {
           x: { min: -24, max: 24 },
@@ -1753,7 +1755,7 @@ export default class GameScene extends Phaser.Scene {
           scale: { start: 0.6, end: 1.4 },
           alpha: { start: 0.6, end: 0 },
         })
-        .setDepth(DAM.y + sy + 3);
+        .setDepth(DAM_SORT_Y + 3);
     }
   }
 

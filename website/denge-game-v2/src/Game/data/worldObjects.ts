@@ -23,7 +23,10 @@
  */
 
 import { TextureKeys, type TextureKey } from './assets';
-import { PARK_CENTER, ROAD_WIDTH, WORLD, WORLD_TOP, type DistrictId } from './districts';
+import { ROAD_WIDTH, WORLD, WORLD_TOP, sc, TOWN_SCALE, type DistrictId } from './districts';
+
+/** Park centre in the original (unscaled) layout space the data below is authored in. */
+const PARK_CENTER = { x: 960, y: 760 } as const;
 
 /** How an object's render order is decided. */
 export type DepthMode =
@@ -54,6 +57,8 @@ export interface WorldObject {
   flipX?: boolean;
   /** Omit or set null for decoration the player can walk through. */
   collision?: CollisionBox | null;
+  /** Depth line override (default: the base line `y`). */
+  sortY?: number;
   district: DistrictId;
 }
 
@@ -122,7 +127,7 @@ const LAKE_WATER_RECTS: readonly (readonly [number, number, number, number])[] =
 const SHORE_TREE_SPOTS: readonly (readonly [number, number])[] = [[304, -178], [1486, -172], [202, -136], [376, -130], [1606, -130], [262, -130], [1546, -124], [1696, -106], [112, -106], [34, -94], [1786, -88], [1846, -58], [1630, -40], [-2, -4], [1732, 8], [1876, 50], [1666, 62], [1600, 68], [-2, 80], [1834, 98], [1780, 122], [1714, 146], [1360, 146], [70, 152], [1522, 158], [1654, 164], [1456, 170], [1582, 176], [490, 176], [256, 188], [178, 194], [316, 200], [388, 206], [1438, 242]];
 
 /** The dam sprite: world top-left + size; the spillway basin is its lower middle. */
-export const DAM = { x: 560, y: 100, width: 800, height: 380 } as const;
+const LEGACY_DAM = { x: 560, y: 100, width: 800, height: 380 } as const;
 
 
 /**
@@ -264,7 +269,7 @@ const Footprint = {
 // GROUND - base grass, district tints, water, streets
 // ---------------------------------------------------------------------------
 
-export const GROUND_LAYERS: readonly GroundLayer[] = [
+const LEGACY_GROUND_LAYERS: readonly GroundLayer[] = [
   // Whole-world grass base. Everything else is painted on top of this.
   {
     id: 'ground-base',
@@ -359,12 +364,12 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
 ] as const;
 
 /** Deep water and fenced-off field interiors are not walkable. */
-export const COLLISION_ZONES: readonly CollisionZone[] = [
+const LEGACY_COLLISION_ZONES: readonly CollisionZone[] = [
   // Open lake water — beaches stay walkable.
   ...LAKE_WATER_RECTS.map(([x, y, width, height]) => ({ id: `lake-${x}-${y}`, x, y, width, height })),
   // Dam wall (left wing, gates, right wing) and the spillway basin.
-  { id: 'dam-wall', x: DAM.x + 10, y: DAM.y + 40, width: DAM.width - 20, height: 200 },
-  { id: 'dam-basin', x: DAM.x + 270, y: DAM.y + 240, width: 300, height: 110 },
+  { id: 'dam-wall', x: LEGACY_DAM.x + 10, y: LEGACY_DAM.y + 40, width: LEGACY_DAM.width - 20, height: 200 },
+  { id: 'dam-basin', x: LEGACY_DAM.x + 270, y: LEGACY_DAM.y + 240, width: 300, height: 110 },
   // The crop plots ship with fences baked into the art - block the whole
   // decal so the player stops at the fence line instead of walking over it.
   { id: 'field-wheat-fence', x: 336, y: 507, width: 188, height: 187 },
@@ -1111,6 +1116,10 @@ const CLEARED_FOR_LAYOUT = new Set([
   'civic-hedge-east-1', 'civic-hedge-west-0',
   'civic-tree-0', 'civic-tree-1', 'civic-tree-4', 'civic-tree-5',
   'res-flowers-3',
+  // make room for the second wheat / vegetable plots of the grown farm
+  'farm-hay-1', 'farm-hay-2', 'farm-crate', 'farm-barrel', 'farm-bush-4',
+  // the corner shop takes the first plot on the north street
+  'house-north-0',
 ]);
 
 const SHORE_TREE_KINDS: readonly TextureKey[] = [
@@ -1122,9 +1131,9 @@ const LAKESIDE: readonly WorldObject[] = [
   {
     id: 'dam-front',
     textureKey: TextureKeys.DAM_FRONT,
-    x: DAM.x + DAM.width / 2,
-    y: DAM.y + DAM.height,
-    scale: DAM.width / 1000,
+    x: LEGACY_DAM.x + LEGACY_DAM.width / 2,
+    y: LEGACY_DAM.y + LEGACY_DAM.height,
+    scale: LEGACY_DAM.width / 1000,
     collision: null,
     district: 'reservoir',
   },
@@ -1165,14 +1174,219 @@ const ROADSIDE: readonly WorldObject[] = [
   deco('south-w-pine-1', TextureKeys.TREE_PINE, 20, 1000, 0.5, 'agriculture'),
 ];
 
-export const WORLD_OBJECTS: readonly WorldObject[] = [
+const LEGACY_OBJECTS: readonly WorldObject[] = [
   ...BUILDINGS,
   ...WATERWORKS,
   ...NATURE,
   ...AGRICULTURE,
   ...PROPS,
   ...DRESSING,
-  ...ROADSIDE,
   ...LAKESIDE,
-  ...LEISURE,
-].filter((o) => !CLEARED_FOR_LAYOUT.has(o.id));
+].filter((o) => !CLEARED_FOR_LAYOUT.has(o.id) && o.id !== 'park-fountain' && o.id !== 'civic-sign');
+
+// Superseded by the grown layout below (kept for reference, not placed).
+void ROADSIDE;
+void LEISURE;
+
+// ===========================================================================
+// GROWN TOWN (×TOWN_SCALE) — Unity-map structure: boulevard with a planted
+// median, a central square with the fountain, ring roads, sidewalks along
+// every road, municipality square on a through road.
+// ===========================================================================
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+const R = ROAD_WIDTH;
+const SIDEWALK = 22;
+
+/** Boulevard: two carriageways around a planted median, x centre 1200. */
+const MEDIAN = { x: 1135, width: 130 };
+const BLVD_W = { x: MEDIAN.x - R, width: R };
+const BLVD_E = { x: MEDIAN.x + MEDIAN.width, width: R };
+
+/** Central square around the fountain (the avenue and boulevard end at it). */
+export const SQUARE: Rect = { x: 990, y: 785, width: 420, height: 330 };
+export const FOUNTAIN = { x: 1200, y: 985, scale: 0.85 } as const;
+
+const AVENUE_Y = 950 - R / 2;
+const NORTH_ST_Y = 600;
+const SOUTH_RD_Y = 1480;
+const RING_W_X = 50;
+const RING_E_X = 2262;
+
+/** Municipality square south of the through road. */
+export const CIVIC_PLAZA: Rect = { x: 760, y: SOUTH_RD_Y + R + SIDEWALK, width: 880, height: 1800 - (SOUTH_RD_Y + R + SIDEWALK) };
+
+/** The dam sprite in world space (scaled with the lake). */
+export const DAM = {
+  x: sc(LEGACY_DAM.x),
+  y: sc(LEGACY_DAM.y),
+  width: sc(LEGACY_DAM.width),
+  height: sc(LEGACY_DAM.height),
+} as const;
+/** Depth line of the dam: the foot of the wall, so actors in front of it draw over it. */
+export const DAM_SORT_Y = DAM.y + Math.round(DAM.height * 0.62);
+
+const BASIN_BOTTOM = DAM.y + Math.round(DAM.height * 0.97);
+
+const H_ROADS: Rect[] = [
+  { x: RING_W_X, y: AVENUE_Y, width: SQUARE.x - RING_W_X, height: R },
+  { x: SQUARE.x + SQUARE.width, y: AVENUE_Y, width: RING_E_X + R - (SQUARE.x + SQUARE.width), height: R },
+  { x: BLVD_E.x, y: NORTH_ST_Y, width: RING_E_X + R - BLVD_E.x, height: R },
+  { x: RING_W_X, y: SOUTH_RD_Y, width: RING_E_X + R - RING_W_X, height: R },
+];
+const V_ROADS: Rect[] = [
+  { x: BLVD_W.x, y: BASIN_BOTTOM, width: R, height: SQUARE.y - BASIN_BOTTOM },
+  { x: BLVD_E.x, y: BASIN_BOTTOM, width: R, height: SQUARE.y - BASIN_BOTTOM },
+  { x: BLVD_W.x, y: SQUARE.y + SQUARE.height, width: R, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
+  { x: BLVD_E.x, y: SQUARE.y + SQUARE.height, width: R, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
+  { x: RING_W_X, y: AVENUE_Y, width: R, height: SOUTH_RD_Y + R - AVENUE_Y },
+  { x: RING_E_X, y: NORTH_ST_Y, width: R, height: SOUTH_RD_Y + R - NORTH_ST_Y },
+];
+const MEDIAN_STRIPS: Rect[] = [
+  { x: MEDIAN.x, y: BASIN_BOTTOM, width: MEDIAN.width, height: SQUARE.y - BASIN_BOTTOM },
+  { x: MEDIAN.x, y: SQUARE.y + SQUARE.height, width: MEDIAN.width, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
+];
+
+const overlap = (a: Rect, b: Rect) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+/** Sidewalk strips both sides of every road (roads draw over them at joints). */
+const SIDEWALKS: (Rect & { horizontal: boolean })[] = [
+  ...H_ROADS.flatMap((r) => [
+    { x: r.x, y: r.y - SIDEWALK, width: r.width, height: SIDEWALK, horizontal: true },
+    { x: r.x, y: r.y + r.height, width: r.width, height: SIDEWALK, horizontal: true },
+  ]),
+  ...V_ROADS.flatMap((r) => [
+    { x: r.x - SIDEWALK, y: r.y, width: SIDEWALK, height: r.height, horizontal: false },
+    { x: r.x + r.width, y: r.y, width: SIDEWALK, height: r.height, horizontal: false },
+  ]),
+].filter((w) => !MEDIAN_STRIPS.some((m) => overlap(w, m)));
+
+const JUNCTIONS: Rect[] = V_ROADS.flatMap((v) =>
+  H_ROADS.filter((h) => overlap(v, h)).map((h) => ({
+    x: Math.max(v.x, h.x),
+    y: Math.max(v.y, h.y),
+    width: Math.min(v.x + v.width, h.x + h.width) - Math.max(v.x, h.x),
+    height: Math.min(v.y + v.height, h.y + h.height) - Math.max(v.y, h.y),
+  })),
+);
+
+const ROAD_SCALE_Y = R / 127;
+const legacyGround = (id: string) => LEGACY_GROUND_LAYERS.find((l) => l.id === id)!;
+const scaledPath = (id: string): GroundLayer => {
+  const l = legacyGround(id);
+  return { ...l, x: sc(l.x), y: sc(l.y), height: sc(l.height) };
+};
+
+export const GROUND_LAYERS: readonly GroundLayer[] = [
+  { id: 'ground-base', textureKey: TextureKeys.GROUND_GRASS, x: 0, y: WORLD_TOP, width: WORLD.width, height: WORLD.height - WORLD_TOP, depth: GroundDepth.BASE, tileScale: 0.5 },
+  { id: 'ground-agriculture', textureKey: TextureKeys.GROUND_GRASS_DRY, x: 0, y: 450, width: 825, height: 1000, depth: GroundDepth.DISTRICT_TINT, tileScale: 0.5, feather: 80 },
+  { id: 'ground-park', textureKey: TextureKeys.GROUND_GRASS_LUSH, x: 825, y: 450, width: 750, height: 1000, depth: GroundDepth.DISTRICT_TINT, tileScale: 0.5, feather: 50 },
+  scaledPath('path-farmhouse'),
+  scaledPath('path-veg'),
+  ...SIDEWALKS.map((w, i) => ({
+    id: `sidewalk-${i}`,
+    textureKey: w.horizontal ? TextureKeys.SIDEWALK_H : TextureKeys.SIDEWALK_V,
+    x: w.x, y: w.y, width: w.width, height: w.height,
+    depth: GroundDepth.ROAD - 4,
+    tileScale: SIDEWALK / 44,
+  })),
+  ...MEDIAN_STRIPS.map((m, i) => ({
+    id: `median-${i}`, textureKey: TextureKeys.GROUND_PATH, ...m, depth: GroundDepth.ROAD - 4, tileScale: 0.15,
+  })),
+  ...V_ROADS.map((r, i) => ({
+    id: `road-v-${i}`, textureKey: TextureKeys.ROAD_DASH, ...r, depth: GroundDepth.ROAD - 2, scaleY: ROAD_SCALE_Y, vertical: true,
+  })),
+  ...H_ROADS.map((r, i) => ({
+    id: `road-h-${i}`, textureKey: TextureKeys.ROAD_DASH, ...r, depth: GroundDepth.ROAD, scaleY: ROAD_SCALE_Y,
+  })),
+  ...JUNCTIONS.map((j, i) => ({
+    id: `junction-${i}`, textureKey: TextureKeys.ROAD_JUNCTION, ...j, depth: GroundDepth.ROAD + 1, tileScale: 0.6,
+  })),
+  // Dam promenade: the boulevard opens onto a paved terrace below the basin.
+  { id: 'dam-terrace', textureKey: TextureKeys.GROUND_PATH, x: BLVD_W.x - SIDEWALK - 30, y: BASIN_BOTTOM - 40, width: BLVD_E.x + R + SIDEWALK + 30 - (BLVD_W.x - SIDEWALK - 30), height: 70, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 10 },
+  { id: 'square', textureKey: TextureKeys.GROUND_PATH, ...SQUARE, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 8 },
+  { id: 'civic-plaza', textureKey: TextureKeys.GROUND_PATH, ...CIVIC_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 8 },
+];
+
+/** Everything players must not walk through. */
+/** Second wheat + vegetable plots (Unity map has two of each). */
+const EXTRA_FIELDS = [
+  { id: 'field-wheat-2', key: TextureKeys.FIELD_WHEAT, x: 735, y: 867, fence: { dx: -94, dy: -187, w: 188, h: 187 } },
+  { id: 'field-veg-2', key: TextureKeys.FIELD_VEG, x: 700, y: 1379, fence: { dx: -83, dy: -186, w: 165, h: 186 } },
+] as const;
+
+export const COLLISION_ZONES: readonly CollisionZone[] = [
+  ...EXTRA_FIELDS.map((f) => ({ id: `${f.id}-fence`, x: f.x + f.fence.dx, y: f.y + f.fence.dy, width: f.fence.w, height: f.fence.h })),
+  ...LEGACY_COLLISION_ZONES.map((z) =>
+  z.id.startsWith('field-')
+    ? // fenced plots keep their sprite size: move the box, keep its size
+      { ...z, x: Math.round((z.x + z.width / 2) * TOWN_SCALE - z.width / 2), y: Math.round((z.y + z.height / 2) * TOWN_SCALE - z.height / 2) }
+    : { ...z, x: sc(z.x), y: sc(z.y), width: sc(z.width), height: sc(z.height) },
+  ),
+];
+
+/** Areas kept clear of old scenery after scaling (roads, walks, squares). */
+const KEEP_CLEAR: Rect[] = [
+  ...H_ROADS, ...V_ROADS, ...SIDEWALKS, ...MEDIAN_STRIPS, SQUARE, CIVIC_PLAZA,
+];
+const blocks = (o: WorldObject) =>
+  KEEP_CLEAR.some((r) => o.x > r.x - 14 && o.x < r.x + r.width + 14 && o.y > r.y - 6 && o.y < r.y + r.height + 46);
+
+const MOVED: Record<string, { x: number; y: number }> = {
+  windmill: { x: 215, y: 1270 },
+};
+
+const scaled: WorldObject[] = LEGACY_OBJECTS.map((o) => {
+  const moved = MOVED[o.id];
+  const isDam = o.id === 'dam-front';
+  return {
+    ...o,
+    x: moved?.x ?? sc(o.x),
+    y: moved?.y ?? sc(o.y),
+    scale: isDam ? (o.scale ?? 1) * TOWN_SCALE : o.scale,
+    sortY: isDam ? DAM_SORT_Y : o.sortY,
+  };
+}).filter((o) => o.id === 'municipality' || o.id === 'dam-front' || !blocks(o));
+
+const L = (prefix: string, key: TextureKey, pts: [number, number][], scale: number, district: DistrictId, collision: CollisionBox | null = null) =>
+  pts.map(([x, y], i) => deco(`${prefix}-${i}`, key, x, y, scale, district, collision));
+
+/** New dressing for the grown layout. */
+const TOWN_DRESSING: readonly WorldObject[] = [
+  // --- central square: fountain, benches, planters, lamps, corner trees ---
+  { id: 'park-fountain', textureKey: TextureKeys.FOUNTAIN, x: FOUNTAIN.x, y: FOUNTAIN.y, scale: FOUNTAIN.scale, collision: { width: 110, height: 34 }, district: 'park' },
+  ...L('sq-bench', TextureKeys.BENCH, [[1080, 870], [1320, 870], [1080, 1080], [1320, 1080]], 0.5, 'park', Footprint.BENCH),
+  ...L('sq-planter', TextureKeys.PLANTER, [[1030, 960], [1370, 960]], 0.55, 'park', Footprint.PLANTER),
+  ...L('sq-lamp', TextureKeys.STREET_LAMP, [[1010, 820], [1390, 820], [1010, 1105], [1390, 1105]], 0.5, 'park', Footprint.LAMP),
+  ...L('sq-tree', TextureKeys.TREE_BLOSSOM, [[1150, 830], [1250, 830]], 0.42, 'park', Footprint.TREE),
+  deco('notice-board', TextureKeys.SIGN, 1355, 1100, 0.5, 'park', Footprint.SIGN),
+  // --- boulevard median: trees, benches, lamps ---
+  ...L('median-tree', TextureKeys.TREE_ROUND_2, [[1200, 650], [1200, 760], [1200, 1210], [1200, 1330], [1200, 1450]], 0.44, 'park', Footprint.TREE),
+  ...L('median-bench', TextureKeys.BENCH_2, [[1200, 700], [1200, 1270], [1200, 1390]], 0.5, 'park', Footprint.BENCH_2),
+  ...L('blvd-lamp', TextureKeys.STREET_LAMP, [[1012, 680], [1388, 680], [1012, 1260], [1388, 1260], [1012, 1420], [1388, 1420]], 0.5, 'park', Footprint.LAMP),
+  // --- road lamps ---
+  ...L('ring-lamp', TextureKeys.STREET_LAMP, [[168, 1150], [168, 1360], [2240, 800], [2240, 1150], [2240, 1400]], 0.5, 'residential', Footprint.LAMP),
+  ...L('street-lamp', TextureKeys.STREET_LAMP, [[1650, 712], [2000, 712], [400, 1592], [1900, 1592], [600, 885], [1800, 885]], 0.5, 'residential', Footprint.LAMP),
+  // --- municipality square ---
+  ...L('civic-bench', TextureKeys.BENCH, [[900, 1660], [1500, 1660]], 0.55, 'municipality', Footprint.BENCH),
+  ...L('civic-planter', TextureKeys.PLANTER, [[830, 1760], [1000, 1640], [1400, 1640], [1570, 1760]], 0.55, 'municipality', Footprint.PLANTER),
+  ...L('civic-flowers', TextureKeys.FLOWER_BUSH, [[1060, 1790], [1340, 1790]], 0.5, 'municipality', Footprint.FLOWER_BUSH),
+  ...L('civic-trash', TextureKeys.TRASH_CAN, [[960, 1665], [1440, 1665]], 0.55, 'municipality', Footprint.TRASH),
+  // --- grown farm ---
+  ...EXTRA_FIELDS.map((f) => ({ id: f.id, textureKey: f.key, x: f.x, y: f.y, scale: 0.95, depthMode: 'ground' as const, depth: GroundDepth.DECAL, collision: null, district: 'agriculture' as const })),
+  ...L('farm-hay', TextureKeys.HAYSTACK_BIG, [[230, 1100], [290, 1130], [560, 1100]], 0.62, 'agriculture', Footprint.HAYSTACK),
+  // --- corner shop back on the avenue, residential side ---
+  deco('shop-corner-2', TextureKeys.SHOP, 1700, 860, 0.58, 'residential', Footprint.SHOP),
+  // --- southwest leisure corner ---
+  deco('playground', TextureKeys.PLAYGROUND, 360, 1770, 0.45, 'municipality', { width: 230, height: 110, offsetY: -60 }),
+  deco('gazebo', TextureKeys.GAZEBO, 640, 1775, 0.34, 'municipality', { width: 120, height: 40 }),
+  ...L('leisure-tree', TextureKeys.TREE_ROUND, [[180, 1680], [560, 1640], [720, 1660]], 0.5, 'municipality', Footprint.TREE),
+  deco('leisure-bench', TextureKeys.BENCH, 520, 1700, 0.45, 'municipality', Footprint.BENCH),
+  // --- southeast: a third row of houses on the through road ---
+  ...L('house-se', TextureKeys.HOUSE_RED, [[1790, 1760], [1990, 1760], [2190, 1760]], 0.55, 'residential', Footprint.HOUSE),
+  ...L('se-tree', TextureKeys.TREE_ROUND_2, [[1700, 1700], [2330, 1700]], 0.5, 'residential', Footprint.TREE),
+];
+
+export const WORLD_OBJECTS: readonly WorldObject[] = [...scaled, ...TOWN_DRESSING];

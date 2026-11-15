@@ -16,9 +16,19 @@
  * world position resolves to exactly one district.
  */
 
+/**
+ * The town was grown 25 % (user: "kasaba büyüsün, aradaki mesafeler
+ * artsın") — the original layout data is authored in the old 1920×1440
+ * space and scaled by TOWN_SCALE when the world is built; sprites keep their
+ * size, so everything gets more room around it.
+ */
+export const TOWN_SCALE = 1.25;
+/** Old-layout coordinate → world coordinate. */
+export const sc = (v: number) => Math.round(v * TOWN_SCALE);
+
 export const WORLD = {
-  width: 1920,
-  height: 1440,
+  width: 2400,
+  height: 1800,
 } as const;
 
 /**
@@ -26,7 +36,7 @@ export const WORLD = {
  * (Unity y = (720 - web y) / 32, top boundary 28.5 → y = -192). Everything
  * that already existed keeps its coordinates; the lake lives at y < 0.
  */
-export const WORLD_TOP = -192;
+export const WORLD_TOP = -240;
 
 /** Full playable/camera rectangle including the northern lake. */
 export const WORLD_BOUNDS = {
@@ -48,11 +58,11 @@ export interface District {
   height: number;
 }
 
-const MIDDLE_BAND_TOP = 360;
-const MIDDLE_BAND_BOTTOM = 1160;
+const MIDDLE_BAND_TOP = 450;
+const MIDDLE_BAND_BOTTOM = 1450;
 const MIDDLE_BAND_HEIGHT = MIDDLE_BAND_BOTTOM - MIDDLE_BAND_TOP;
-const PARK_LEFT = 660;
-const PARK_RIGHT = 1260;
+const PARK_LEFT = 825;
+const PARK_RIGHT = 1575;
 
 export const DISTRICTS: readonly District[] = [
   {

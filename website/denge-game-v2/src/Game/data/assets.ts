@@ -22,6 +22,8 @@ export const TextureKeys = {
   ROAD_STRAIGHT: 'road-straight',
   ROAD_DASH: 'road-dash',
   ROAD_JUNCTION: 'road-junction',
+  SIDEWALK_V: 'sidewalk-v',
+  SIDEWALK_H: 'sidewalk-h',
 
   // buildings
   TOWN_HALL: 'town-hall',
@@ -169,6 +171,8 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.ROAD_STRAIGHT, path: 'assets/ground/road-straight-v2.png', width: 194, height: 88, smooth: true },
   { key: TextureKeys.ROAD_DASH, path: 'assets/ground/road-dash-v2.png', width: 148, height: 127, smooth: true },
   // Plain asphalt (from the road tile's marking-free band) for crossings.
+  { key: TextureKeys.SIDEWALK_V, path: 'assets/ground/sidewalk-v.png', width: 44, height: 62, smooth: true },
+  { key: TextureKeys.SIDEWALK_H, path: 'assets/ground/sidewalk-h.png', width: 62, height: 44, smooth: true },
   { key: TextureKeys.ROAD_JUNCTION, path: 'assets/ground/road-junction.png', width: 148, height: 148, smooth: true },
 
   // --- pixel-art buildings (kept as fallback, not currently placed) ---

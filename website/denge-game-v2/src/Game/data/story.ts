@@ -7,6 +7,7 @@
 import { TextureKeys, type TextureKey } from './assets';
 import type { DialogueChoice } from '../events/gameEvents';
 import type { StatChanges } from './stats';
+import { sc } from './districts';
 
 export type InvestigationId = 'belediye' | 'baraj' | 'tarim' | 'konut' | 'park';
 
@@ -418,7 +419,8 @@ export const ANNOUNCE_NPC_IDS: readonly string[] = [
 ] as const;
 
 /** The civic notice board where the plan poster is hung (next to the municipality). */
-export const NOTICE_BOARD = { x: 1090, y: 1215, radius: 90 } as const;
+/** The civic notice board stands on the central square (see worldObjects 'notice-board'). */
+export const NOTICE_BOARD = { x: 1355, y: 1100, radius: 90 } as const;
 
 // ---------------------------------------------------------------------------
 // PUBLIC ANNOUNCEMENT — composing the town's post before it goes up
@@ -607,7 +609,7 @@ export interface ImplementationProp {
   collision?: { width: number; height: number };
 }
 
-export const IMPLEMENTATION_PROPS: readonly (readonly ImplementationProp[])[] = [
+const LEGACY_IMPLEMENTATION_PROPS: readonly (readonly ImplementationProp[])[] = [
   // ---- stop 1: the work starts -------------------------------------------------
   [
     // repair-pipes: a worksite on the avenue by Nuri's street
@@ -693,13 +695,20 @@ export function implementationTwist(solutionIds: readonly string[]): string | nu
  * Where each twist lives on the map - the "dikkat" pin the mini-map shows once
  * the mid-month complication surfaces.
  */
-const TWIST_SPOTS: Record<string, { x: number; y: number }> = {
+const LEGACY_TWIST_SPOTS: Record<string, { x: number; y: number }> = {
   'repair-pipes': { x: 1520, y: 880 },
   'drip-irrigation': { x: 340, y: 1120 },
   'saving-campaign': { x: 1020, y: 1250 },
   'rain-harvest': { x: 1330, y: 680 },
   'fountains-off': { x: 960, y: 760 },
 };
+
+export const IMPLEMENTATION_PROPS: readonly (readonly ImplementationProp[])[] = LEGACY_IMPLEMENTATION_PROPS.map((phase) =>
+  phase.map((p) => ({ ...p, x: sc(p.x), y: sc(p.y) })),
+);
+const TWIST_SPOTS: Record<string, { x: number; y: number }> = Object.fromEntries(
+  Object.entries(LEGACY_TWIST_SPOTS).map(([k, v]) => [k, { x: sc(v.x), y: sc(v.y) }]),
+);
 
 /** World position of the active mid-month twist, for the mini-map's ⚠ pin. */
 export function implementationTwistSpot(
