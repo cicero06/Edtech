@@ -1,6 +1,6 @@
 {
   "scenario": "denge-kasabasi",
-  "version": "ch1-171c5f08b7",
+  "version": "ch1-65ade72a90",
   "manifest": {
     "solutions": {
       "fountains-off": 20000,
@@ -65,7 +65,8 @@
         "patch",
         "replace",
         "sensor"
-      ]
+      ],
+      "kemal": []
     }
   }
 }

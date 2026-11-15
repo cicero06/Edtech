@@ -4,6 +4,7 @@ import PhaserGame from './components/PhaserGame';
 import IntroSequence from './components/IntroSequence';
 import InvestigationCard from './components/InvestigationCard';
 import AylinWorkshopModal, { type AylinWorkshopDecisionResult } from './components/AylinWorkshopModal';
+import KemalWorkshopModal from './components/KemalWorkshopModal';
 import SolutionPanel from './components/SolutionPanel';
 import FinaleCard from './components/FinaleCard';
 import AnnouncementCard from './components/AnnouncementCard';
@@ -736,7 +737,17 @@ function App() {
           />
         )}
 
-        {investigation && investigation.cardId !== 'baraj' && (() => {
+        {investigation && investigation.cardId === 'park' && (
+          <KemalWorkshopModal
+            onComplete={(result) => {
+              completeInvestigation('park');
+              recordEvent('minigame', { ...result });
+            }}
+            onClose={() => setInvestigation(null)}
+          />
+        )}
+
+        {investigation && !['baraj', 'park'].includes(investigation.cardId) && (() => {
           const card = investigationCard(investigation.cardId);
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}

@@ -26,6 +26,13 @@ export const MINIGAMES: readonly MinigameDef[] = [
     title: 'Mühendis Aylin’in Atölyesi',
     decisions: ['patch', 'replace', 'sensor'],
   },
+  {
+    id: 'kemal',
+    cardId: 'park',
+    title: 'İşçi Kemal’in Akıllı Park Atölyesi',
+    // No branching decision: the result is graded via score + metrics.
+    decisions: [],
+  },
 ];
 
 /** Result every workshop hands back to App when the student finishes. */
