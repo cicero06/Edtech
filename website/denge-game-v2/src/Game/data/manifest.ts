@@ -23,6 +23,7 @@ import {
 import { NPCS } from './npcs';
 import { DECISION_EFFECTS } from './stats';
 import { MINIGAMES } from './minigames';
+import { DECISION_STEPS } from './decisions';
 
 export const SCENARIO_KEY = 'denge-kasabasi';
 
@@ -46,6 +47,8 @@ export interface ScenarioManifest {
   choiceIds: string[];
   /** Workshop id -> decision ids its `minigame_completed` event may carry. */
   minigames: Record<string, string[]>;
+  /** Decision-trace context -> step ids its `decision_step` events may carry. */
+  decisionSteps: Record<string, string[]>;
 }
 
 export function buildScenarioManifest(): ScenarioManifest {
@@ -70,5 +73,8 @@ export function buildScenarioManifest(): ScenarioManifest {
     ],
     choiceIds: [...choiceIds].sort(),
     minigames: Object.fromEntries(MINIGAMES.map((m) => [m.id, [...m.decisions]])),
+    decisionSteps: Object.fromEntries(
+      Object.entries(DECISION_STEPS).map(([context, steps]) => [context, [...steps]]),
+    ),
   };
 }

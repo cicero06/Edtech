@@ -37,7 +37,40 @@ const EVENT_LABELS: Record<SessionEvent['type'], string> = {
   'alt-plan': 'Alternatif plan sundu',
   finale: 'Kapanış yaptı',
   minigame: 'Atölye görevini tamamladı',
+  decision: 'Karar adımı',
 };
+
+const KADIM_PREDICTION_LABELS: Record<string, string> = {
+  konut: '🏠 Evlerin içme suyu',
+  tarla: '🌾 Tarlaların sulaması',
+  park: '🌳 Parkın fıskiyeleri',
+};
+
+/** Descriptive trace of the Kadim map — behaviour, not a grade. */
+function KadimBlock({ kadim }: { kadim: NonNullable<GameSession['kadim']> }) {
+  const minutes = Math.floor(kadim.seconds / 60);
+  const seconds = kadim.seconds % 60;
+  return (
+    <ul className="report-notes-list">
+      <li>
+        🪨 Taş yerleştirme: {kadim.placeTries} deneme
+        {kadim.placeWrong > 0 ? `, ${kadim.placeWrong} kez yanlış yuva` : ', hepsi ilk seferde'}
+      </li>
+      <li>
+        💧 Kanal bağlama: {kadim.rotations} döndürme <em>(en az {kadim.minRotations} gerekiyordu)</em>
+      </li>
+      <li>💡 İpucu: {kadim.hints === 0 ? 'kullanmadı' : `${kadim.hints} kez`}</li>
+      <li>
+        🔮 Kuraklık tahmini: {KADIM_PREDICTION_LABELS[kadim.prediction] ?? kadim.prediction}
+        {kadim.predictionCorrect ? ' — içme suyu önceliğini gördü' : ' — içme suyu önceliği sonradan açıklandı'}
+      </li>
+      <li>🎚️ Kendi güveni: {kadim.confidence}/5</li>
+      <li>
+        ⏱️ Süre: {minutes} dk {seconds} sn
+      </li>
+    </ul>
+  );
+}
 
 const fmtTime = (at: number) =>
   new Date(at).toLocaleString('tr-TR', {
@@ -124,6 +157,9 @@ export default function StudentReport({
 }: StudentReportProps) {
   // Snapshot on mount - the report never writes back to the session.
   const [session] = useState<GameSession | null>(() => loadSession(student.id));
+  // Decision-trace steps are summarised in their own sections (e.g. Kadim);
+  // the timeline keeps the milestones readable.
+  const milestones = session?.events.filter((ev) => ev.type !== 'decision') ?? [];
 
   return (
     <div className="gate-card report-card" aria-label={`${student.name} raporu`}>
@@ -189,6 +225,13 @@ export default function StudentReport({
             </section>
           )}
 
+          {session.kadim && (
+            <section className="report-section">
+              <h3>Kadim Uyum Haritası · sistem düşüncesi</h3>
+              <KadimBlock kadim={session.kadim} />
+            </section>
+          )}
+
           {session.plan && (
             <section className="report-section">
               <h3>İlk plan</h3>
@@ -244,11 +287,11 @@ export default function StudentReport({
             </section>
           )}
 
-          {session.events.length > 0 && (
+          {milestones.length > 0 && (
             <section className="report-section">
-              <h3>Etkinlik izi ({session.events.length})</h3>
+              <h3>Etkinlik izi ({milestones.length})</h3>
               <ol className="report-timeline">
-                {session.events.map((ev, i) => (
+                {milestones.map((ev, i) => (
                   <li key={i}>
                     <time>{fmtTime(ev.at)}</time>
                     <span>{EVENT_LABELS[ev.type]}</span>

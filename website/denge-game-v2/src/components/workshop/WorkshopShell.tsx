@@ -13,7 +13,7 @@ export interface WorkshopChip {
 }
 
 interface Props {
-  theme: 'kemal' | 'nuri' | 'riza';
+  theme: 'kemal' | 'nuri' | 'riza' | 'kadim';
   eyebrow: string;
   title: string;
   stepLabel: string;
@@ -35,12 +35,23 @@ export function NpcFace({ texture, height = 64 }: { texture: TextureKey; height?
   const sheet = SPRITESHEET_ASSETS.find((s) => s.key === texture);
   if (!sheet) return null;
   const frameW = (sheet.frameWidth / sheet.frameHeight) * height;
+  // Grid walk sheets (Lina, player): the front-facing idle frame is column 1, row 0.
+  const col = sheet.rows > 1 ? 1 : 0;
   return (
-    <div className="ws-portrait" style={{ width: frameW }} aria-hidden>
+    <div className="ws-portrait" style={col ? { width: frameW, height } : { width: frameW }} aria-hidden>
       <img
         src={`${import.meta.env.BASE_URL}${encodeURI(sheet.path)}`}
         alt=""
-        style={{ width: frameW * sheet.columns, height }}
+        style={
+          col
+            ? {
+                width: frameW * sheet.columns,
+                height: height * sheet.rows,
+                transform: `translateX(${-col * frameW}px)`,
+                alignSelf: 'flex-start',
+              }
+            : { width: frameW * sheet.columns, height }
+        }
         draggable={false}
       />
     </div>

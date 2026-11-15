@@ -183,6 +183,7 @@ const EVENT_TYPE_MAP: Record<string, string> = {
   'alt-plan': 'alt_plan_submitted',
   finale: 'finale_submitted',
   minigame: 'minigame_completed',
+  decision: 'decision_step',
 };
 
 export function noteEvent(

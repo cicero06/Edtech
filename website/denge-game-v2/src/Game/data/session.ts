@@ -29,6 +29,7 @@ import { TextureKeys, type TextureKey } from './assets';
 import { INITIAL_STATS, type GameStats } from './stats';
 import type { InvestigationId } from './story';
 import { noteEvent, noteState } from '../sync/engine';
+import type { DecisionContext, DecisionStep } from './decisions';
 
 /** Mirrors the stage machine inside GameScene. */
 export type QuestStage =
@@ -148,7 +149,28 @@ export type SessionEventType =
   | 'alt-plan'
   | 'finale'
   /** A district workshop finished (see data/minigames.ts). */
-  | 'minigame';
+  | 'minigame'
+  /** One step of a decision trace (see data/decisions.ts). */
+  | 'decision';
+
+/** Result of the Kadim Uyum Haritası puzzle, kept for the teacher report. */
+export interface KadimResult {
+  solved: true;
+  /** All placement attempts, and how many of them were wrong slots. */
+  placeTries: number;
+  placeWrong: number;
+  rotations: number;
+  /** Fewest rotations that would have solved the scrambled board. */
+  minRotations: number;
+  hints: number;
+  seconds: number;
+  /** Prediction option id ("which use do we protect first?"). */
+  prediction: string;
+  predictionCorrect: boolean;
+  /** Self-reported confidence 1–5, given before the answer was revealed. */
+  confidence: number;
+  score: number;
+}
 
 export interface SessionEvent {
   at: number;
@@ -172,6 +194,8 @@ export interface GameSession {
   /** The public announcement the player composed for the town. */
   announcement?: { icon: string; headline: string; message: string };
   // ---- chapter 2 ------------------------------------------------------------
+  /** Kadim Uyum Haritası, solved at the mayor before the plan meeting. */
+  kadim?: KadimResult;
   /** The player's prediction, picked right after the announcement. */
   expectation?: string;
   /** Implementation timeline stop reached: 0 start, 1 mid-month, 2 day 30. */
@@ -729,6 +753,22 @@ export function recordEvent(type: SessionEventType, data?: Record<string, unknow
   // Remote attempt bound? Enqueue the typed event into the persistent
   // outbox; no-op when the student is local-only.
   noteEvent(type, data ?? {}, session.studentId);
+}
+
+/**
+ * Append one decision-trace step (see data/decisions.ts). `value` is a short
+ * code or number, `ms` how long the step took.
+ */
+export function recordDecision<C extends DecisionContext>(
+  context: C,
+  step: DecisionStep<C>,
+  value?: string | number,
+  ms?: number,
+): void {
+  const data: Record<string, unknown> = { context, step };
+  if (value !== undefined) data.value = typeof value === 'string' ? value.slice(0, 120) : value;
+  if (ms !== undefined) data.ms = Math.max(0, Math.round(ms));
+  recordEvent('decision', data);
 }
 
 /**

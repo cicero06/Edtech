@@ -8,6 +8,7 @@ import KemalWorkshop from './components/workshop/KemalWorkshop';
 import NuriWorkshop from './components/workshop/NuriWorkshop';
 import FieldHud from './components/workshop/FieldHud';
 import RizaWorkshop from './components/workshop/RizaWorkshop';
+import KadimPuzzle from './components/workshop/KadimPuzzle';
 import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
 import { minigameForCard } from './Game/data/minigames';
@@ -51,6 +52,7 @@ import {
   saveSession,
   setActiveStudent,
   type GameSession,
+  type KadimResult,
   type NotebookEntry,
   type StudentProfile,
 } from './Game/data/session';
@@ -101,6 +103,7 @@ function App() {
   const [solutionOpen, setSolutionOpen] = useState(false);
   const [solutionMode, setSolutionMode] = useState<SolutionPanelMode>('initial');
   const [announceOpen, setAnnounceOpen] = useState(false);
+  const [kadimOpen, setKadimOpen] = useState(false);
   const [timeShift, setTimeShift] = useState<{
     from: { date: string; time: string };
     to: { date: string; time: string };
@@ -183,6 +186,7 @@ function App() {
     const onMarkersChanged = (payload: MarkersChangedPayload) => setMapMarkers(payload.markers);
     const onOverviewChanged = (payload: OverviewChangedPayload) => setMapOverview(payload.active);
     const onFieldStatus = (payload: FieldStatus | null) => setFieldStatus(payload);
+    const onOpenKadim = () => setKadimOpen(true);
 
     EventBus.on(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
     EventBus.on(GameEvents.DISTRICT_CHANGED, onDistrictChanged);
@@ -199,6 +203,7 @@ function App() {
     EventBus.on(GameEvents.MARKERS_CHANGED, onMarkersChanged);
     EventBus.on(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
     EventBus.on(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
+    EventBus.on(GameEvents.OPEN_KADIM, onOpenKadim);
 
     return () => {
       EventBus.off(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
@@ -216,6 +221,7 @@ function App() {
       EventBus.off(GameEvents.MARKERS_CHANGED, onMarkersChanged);
       EventBus.off(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
       EventBus.off(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
+      EventBus.off(GameEvents.OPEN_KADIM, onOpenKadim);
     };
   }, []);
 
@@ -291,6 +297,19 @@ function App() {
   const goToField = (task: FieldTaskId) => {
     setInvestigation(null);
     EventBus.emit(GameEvents.FIELD_TASK_START, { task });
+  };
+
+  /** Kadim map solved: keep the result for the teacher, then the plan meeting opens. */
+  const finishKadim = (result: KadimResult) => {
+    persist({ kadim: result });
+    setKadimOpen(false);
+    playSfx(SoundKeys.COMPLETE, 0.8);
+    EventBus.emit(GameEvents.KADIM_COMPLETED);
+  };
+
+  const closeKadim = () => {
+    setKadimOpen(false);
+    EventBus.emit(GameEvents.INVESTIGATION_CLOSED);
   };
 
   /** A district workshop finished: notebook entry + its own analytics event. */
@@ -796,13 +815,15 @@ function App() {
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}
 
+        {kadimOpen && <KadimPuzzle onComplete={finishKadim} onClose={closeKadim} />}
+
         {solutionOpen && <SolutionPanel mode={solutionMode} onSubmit={submitPlan} />}
 
         {announceOpen && <AnnouncementCard player={player} onSubmit={submitAnnouncement} />}
 
         {finaleOpen && <FinaleCard onSubmit={submitFinale} />}
 
-        {!dialogue && !investigation && !solutionOpen && !finaleOpen && !announceOpen && !mapOverview && (
+        {!dialogue && !investigation && !kadimOpen && !solutionOpen && !finaleOpen && !announceOpen && !mapOverview && (
           <p className="controls">
             WASD / Yön tuşları ile hareket et · NPC'nin yanında <kbd>E</kbd> ile konuş ·{' '}
             <kbd>M</kbd> ile kasaba haritası · <kbd>`</kbd> ile çarpışma kutularını göster

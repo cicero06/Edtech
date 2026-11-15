@@ -63,6 +63,10 @@ export const GameEvents = {
   FIELD_TASK_START: 'field-task-start',
   /** Phaser -> React: live HUD data for the running field task (null = none). */
   FIELD_TASK_STATUS: 'field-task-status',
+  /** Phaser -> React: the mayor hands over the Kadim Uyum Haritası puzzle. */
+  OPEN_KADIM: 'open-kadim',
+  /** React -> Phaser: the Kadim puzzle was solved — the plan meeting may open. */
+  KADIM_COMPLETED: 'kadim-completed',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -222,4 +226,6 @@ export interface GameEventPayloads {
   [GameEvents.INVESTIGATION_CLOSED]: void;
   [GameEvents.FIELD_TASK_START]: FieldTaskStartPayload;
   [GameEvents.FIELD_TASK_STATUS]: FieldStatus | null;
+  [GameEvents.OPEN_KADIM]: void;
+  [GameEvents.KADIM_COMPLETED]: void;
 }

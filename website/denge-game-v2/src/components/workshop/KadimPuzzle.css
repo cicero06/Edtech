@@ -1,0 +1,195 @@
+/* Kadim Uyum Haritası — sandstone + inlaid cyan water. */
+.ws-overlay.ws-theme-kadim {
+  --ws-bg: #120d08;
+  --ws-glow: #4a3820;
+  --ws-panel: rgba(36, 27, 17, 0.96);
+  --ws-line: rgba(226, 196, 140, 0.3);
+  --ws-accent: #f0d28c;
+  --ws-accent-rgb: 240, 210, 140;
+  --ws-title: #f6e3b4;
+  --ws-btn: #7a5a2a;
+  --ws-btn-hi: #a07a3a;
+  --ws-text: #fbf3e2;
+  --ws-muted: #cdb895;
+  --kd-water: #5fd8ff;
+  --kd-water-rgb: 95, 216, 255;
+}
+
+.kd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.kd-side h2 { margin-top: 0; }
+
+/* ---- board ------------------------------------------------------------- */
+.kd-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 34px 10px 10px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #3a2c1c, #241a10);
+  box-shadow: inset 0 0 0 2px rgba(226, 196, 140, 0.25), inset 0 6px 18px rgba(0, 0, 0, 0.6);
+  aspect-ratio: 1 / 1.05;
+  /* Fit under the header/speech/chips on a laptop screen without scrolling. */
+  width: min(100%, 56vh);
+  justify-self: center;
+}
+.kd-source {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  width: calc(50% - 13px);
+  display: flex;
+  justify-content: center;
+  font: 700 12px/1 "DM Mono", ui-monospace, monospace;
+  color: var(--kd-water);
+  text-shadow: 0 0 8px rgba(var(--kd-water-rgb), 0.8);
+}
+.kd-source span::after {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 12px;
+  margin: 4px auto 0;
+  border-radius: 2px;
+  background: var(--kd-water);
+  box-shadow: 0 0 8px var(--kd-water);
+}
+
+.kd-slot {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px dashed rgba(226, 196, 140, 0.35);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ws-muted);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+.kd-slot:disabled { cursor: default; }
+.kd-slot:has(.kd-stone) { border-style: solid; border-color: rgba(30, 20, 10, 0.9); }
+.kd-compass { font: 700 12px "DM Mono", ui-monospace, monospace; letter-spacing: 0.06em; }
+.kd-clue { font-size: 14px; font-weight: 700; color: var(--ws-text); padding: 0 10px; line-height: 1.35; }
+.kd-target { border-color: rgba(var(--ws-accent-rgb), 0.7); }
+.kd-target:hover { background: rgba(var(--ws-accent-rgb), 0.12); }
+.kd-glow {
+  border: 2px solid var(--ws-accent) !important;
+  box-shadow: 0 0 0 3px rgba(var(--ws-accent-rgb), 0.35), 0 0 22px rgba(var(--ws-accent-rgb), 0.55);
+  animation: kd-breathe 1.2s ease-in-out infinite;
+}
+.kd-shake { animation: kd-shake 0.4s; border-color: var(--ws-bad); }
+
+/* ---- stone ------------------------------------------------------------- */
+.kd-stone {
+  position: absolute;
+  inset: 0;
+  background-size: 200% 200%;
+  transition: transform 0.35s cubic-bezier(0.3, 1.4, 0.6, 1);
+  box-shadow: inset 0 0 0 3px rgba(40, 28, 18, 0.9), inset 0 0 26px rgba(0, 0, 0, 0.55);
+}
+.kd-channels { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kd-groove { stroke: rgba(30, 20, 10, 0.85); stroke-width: 9; stroke-linecap: round; }
+.kd-water {
+  stroke: var(--kd-water);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-dasharray: 6 5;
+  opacity: 0;
+  transition: opacity 0.4s;
+  filter: drop-shadow(0 0 2px rgba(var(--kd-water-rgb), 0.9));
+}
+.kd-hub { fill: rgba(30, 20, 10, 0.88); stroke: rgba(226, 196, 140, 0.7); stroke-width: 1.5; }
+.kd-flow-full .kd-water { opacity: 1; animation: kd-flow 0.9s linear infinite; }
+.kd-flow-thin .kd-water { opacity: 0.6; stroke-width: 2; animation: kd-flow 2.4s linear infinite; }
+.kd-flow-dry { filter: saturate(0.4) brightness(0.8); }
+.kd-flow-full .kd-hub { stroke: var(--kd-water); }
+.kd-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(16px, 3vw, 26px);
+  pointer-events: none;
+}
+.kd-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 14, 8, 0.85);
+  color: var(--ws-title);
+  font-size: 12px;
+  font-weight: 700;
+}
+.kd-solved { box-shadow: inset 0 0 0 2px rgba(var(--kd-water-rgb), 0.6), 0 0 26px rgba(var(--kd-water-rgb), 0.25); }
+
+/* ---- tray / side ------------------------------------------------------- */
+.kd-tray { display: grid; gap: 8px; }
+.kd-tray-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: linear-gradient(160deg, rgba(150, 124, 92, 0.25), rgba(58, 44, 30, 0.4));
+  color: var(--ws-text);
+  cursor: pointer;
+  font-size: 15px;
+}
+.kd-tray-item small { display: block; color: var(--ws-muted); font-size: 12px; margin-top: 2px; }
+.kd-tray-icon { font-size: 26px; }
+.kd-selected { border: 2px solid var(--ws-accent); box-shadow: 0 0 14px rgba(var(--ws-accent-rgb), 0.4); }
+.kd-ok { color: var(--kd-water); }
+.kd-pulse { animation: kd-breathe 1s ease-in-out infinite; }
+
+.kd-options { grid-template-columns: 1fr; }
+.ws-option.kd-picked { border: 2px solid var(--ws-accent); background: rgba(var(--ws-accent-rgb), 0.14); }
+.kd-conf-title { margin-top: 16px !important; font-size: 16px !important; }
+.kd-confidence { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.kd-conf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--ws-line);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ws-text);
+  cursor: pointer;
+}
+.kd-conf b { font-size: 18px; }
+.kd-conf small { font-size: 11px; color: var(--ws-muted); line-height: 1.2; text-align: center; }
+.kd-conf:disabled { cursor: default; opacity: 0.6; }
+.kd-conf.kd-picked { opacity: 1; }
+.kd-reveal { margin-top: 12px; color: var(--ws-text); }
+
+@keyframes kd-flow { to { stroke-dashoffset: -11; } }
+@keyframes kd-breathe { 50% { filter: brightness(1.25); } }
+@keyframes kd-shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+@media (max-width: 760px) {
+  .kd-layout { grid-template-columns: 1fr; }
+  .kd-confidence small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kd-stone { transition: none; }
+  .kd-flow-full .kd-water, .kd-flow-thin .kd-water, .kd-glow, .kd-pulse, .kd-shake { animation: none; }
+}

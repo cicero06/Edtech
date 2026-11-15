@@ -223,6 +223,8 @@ export default class GameScene extends Phaser.Scene {
   // ---- Chapter 1 quest -----------------------------------------------------
   private quest: QuestStage = 'lina-intro';
   private completedCards = new Set<InvestigationId>();
+  /** Kadim Uyum Haritası solved — the mayor may open the plan meeting. */
+  private kadimSolved = false;
   /** "!" markers floating above quest NPCs, keyed by npc id. */
   private questMarkers = new Map<string, Phaser.GameObjects.Text>();
   /** Edge-of-screen arrow pointing at the current objective. */
@@ -360,6 +362,7 @@ export default class GameScene extends Phaser.Scene {
     if (saved && saved.quest !== 'lina-intro') {
       this.quest = saved.quest;
       for (const cardId of saved.completedCards) this.completedCards.add(cardId);
+      this.kadimSolved = !!saved.kadim?.solved;
       this.planIds = saved.plan?.solutionIds ?? [];
       for (const npcId of saved.announcedNpcIds ?? []) this.announcedTo.add(npcId);
       this.posterHung = saved.posterHung ?? false;
@@ -1167,7 +1170,12 @@ export default class GameScene extends Phaser.Scene {
     const id = cardId as InvestigationId;
     this.completedCards.add(id);
 
-    this.showToast('Deftere kaydedildi! 📒', anchor.x, anchor.y - anchor.displayHeight - 10);
+    // Each district workshop also earns one Kadim engraving stone.
+    const stones = DISTRICT_CARDS.filter((c) => this.completedCards.has(c)).length;
+    const toast = DISTRICT_CARDS.includes(id)
+      ? `Deftere kaydedildi! 📒  🪨 Gravür taşı ${stones}/${DISTRICT_CARDS.length}`
+      : 'Deftere kaydedildi! 📒';
+    this.showToast(toast, anchor.x, anchor.y - anchor.displayHeight - 10);
 
     if (id === 'belediye' && this.quest === 'meet-mayor') {
       this.quest = 'investigate';
@@ -1203,7 +1211,11 @@ export default class GameScene extends Phaser.Scene {
         this.setObjective('Lina ile konuş');
         break;
       case 'meeting':
-        this.setObjective('Belediye binasına dön ve çözüm planını sun');
+        this.setObjective(
+          this.kadimSolved
+            ? 'Belediye binasına dön ve çözüm planını sun'
+            : 'Belediye binasına dön: Başkan 4 gravür taşını bekliyor 🪨',
+        );
         break;
       case 'announce': {
         if (this.announceComplete()) {
@@ -1295,6 +1307,7 @@ export default class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
     EventBus.on(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
     EventBus.on(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
+    EventBus.on(GameEvents.KADIM_COMPLETED, this.handleKadimCompleted, this);
 
     // Scenes outlive neither the game nor React, so unbind on shutdown to avoid
     // stacking duplicate handlers if the scene is ever restarted.
@@ -1311,7 +1324,15 @@ export default class GameScene extends Phaser.Scene {
       EventBus.off(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
       EventBus.off(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
       EventBus.off(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
+      EventBus.off(GameEvents.KADIM_COMPLETED, this.handleKadimCompleted, this);
     });
+  }
+
+  /** Kadim map handed to the mayor: the conversation goes straight on to the plan meeting. */
+  private handleKadimCompleted(): void {
+    this.kadimSolved = true;
+    this.emitObjective();
+    EventBus.emit(GameEvents.OPEN_SOLUTION, { mode: 'initial' });
   }
 
   private handleAudioMuted(payload: { muted: boolean }): void {
@@ -2293,9 +2314,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // In the meeting stage the mayor opens the solution package panel.
+    // First the Kadim map (the four districts as one water system), then the plan.
     if (cardId === 'belediye' && this.quest === 'meeting') {
       this.beginConversation(npc);
-      EventBus.emit(GameEvents.OPEN_SOLUTION, { mode: 'initial' });
+      if (this.kadimSolved) EventBus.emit(GameEvents.OPEN_SOLUTION, { mode: 'initial' });
+      else EventBus.emit(GameEvents.OPEN_KADIM);
       return;
     }
 

@@ -12,6 +12,7 @@ const manifest: ScenarioManifest = {
   icons: ['star', 'leaf'],
   reportItemIds: ['r1', 'r2', 'r3'],
   minigames: { aylin: ['patch', 'replace'], kemal: [] },
+  decisionSteps: { kadim: ['piece_placed', 'hint_used', 'confidence_given'] },
 };
 
 describe('validateEventPayload', () => {
@@ -103,5 +104,37 @@ describe('validateEventPayload', () => {
     ).toMatch(/Unexpected/);
     // Older scenario versions have no minigames list: accepted, not enforced.
     expect(validateEventPayload('minigame_completed', ok, {})).toBeNull();
+  });
+
+  it('validates decision-trace steps against the manifest', () => {
+    const ok = { context: 'kadim', step: 'piece_placed', value: 'baraj@nw:ok', ms: 4200 };
+    expect(validateEventPayload('decision_step', ok, manifest)).toBeNull();
+    expect(
+      validateEventPayload('decision_step', { context: 'kadim', step: 'confidence_given', value: 4 }, manifest),
+    ).toBeNull();
+    expect(
+      validateEventPayload('decision_step', { ...ok, context: 'nope' }, manifest),
+    ).toMatch(/context/);
+    expect(
+      validateEventPayload('decision_step', { ...ok, step: 'teleported' }, manifest),
+    ).toMatch(/step/);
+    expect(
+      validateEventPayload('decision_step', { ...ok, value: 'x'.repeat(121) }, manifest),
+    ).toMatch(/value/);
+    expect(
+      validateEventPayload('decision_step', { ...ok, value: { nested: true } }, manifest),
+    ).toMatch(/value/);
+    expect(validateEventPayload('decision_step', { ...ok, ms: -1 }, manifest)).toMatch(/ms/);
+    expect(validateEventPayload('decision_step', { ...ok, extra: 1 }, manifest)).toMatch(
+      /Unexpected/,
+    );
+    expect(validateEventPayload('decision_step', { step: 'piece_placed' }, manifest)).toMatch(
+      /context/,
+    );
+    // Activities created before decision traces existed: accepted, not enforced.
+    expect(validateEventPayload('decision_step', ok, {})).toBeNull();
+    expect(
+      validateEventPayload('decision_step', ok, { minigames: { aylin: [] } }),
+    ).toBeNull();
   });
 });

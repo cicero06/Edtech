@@ -19,6 +19,7 @@ export const EVENT_TYPES = [
   'alt_plan_submitted',
   'finale_submitted',
   'minigame_completed',
+  'decision_step',
   'attempt_completed',
 ] as const;
 
@@ -34,6 +35,8 @@ export interface ScenarioManifest {
   choiceIds?: string[];
   /** Mini-game id -> the decision ids it may report (empty: no decision). */
   minigames?: Record<string, string[]>;
+  /** Decision-trace context id -> the step ids it may report. */
+  decisionSteps?: Record<string, string[]>;
 }
 
 export const PAYLOAD_SCHEMA_VERSION = 1;
@@ -42,6 +45,9 @@ const MAX_SHORT_TEXT = 120;
 const MAX_LONG_TEXT = 2000;
 const MAX_RATIONALE = 1000;
 const MAX_METRICS = 16;
+const MAX_DECISION_VALUE = 120;
+/** One step can't plausibly take longer than a day; guards against garbage. */
+const MAX_STEP_MS = 86_400_000;
 
 type Payload = Record<string, unknown>;
 
@@ -192,6 +198,46 @@ function validateMinigame(payload: Payload, manifest: ScenarioManifest) {
 }
 
 /**
+ * One beat of a student's decision process (decision trace): which context
+ * (`kadim`, later `plan`, workshops…), which step (`piece_placed`,
+ * `hint_used`, `confidence_given`…), an optional short value and how long the
+ * step took. Contexts/steps are enforced only when the attempt's manifest
+ * declares `decisionSteps`, so activities created before this event existed
+ * keep syncing.
+ */
+function validateDecisionStep(payload: Payload, manifest: ScenarioManifest) {
+  const keys = allowedKeys(payload, ['context', 'step', 'value', 'ms']);
+  if (keys) return keys;
+  const context = requireString(payload, 'context', 60);
+  if (context) return context;
+  const step = requireString(payload, 'step', 60);
+  if (step) return step;
+  const steps = manifest.decisionSteps;
+  if (steps) {
+    const contextId = payload.context as string;
+    if (!Object.hasOwn(steps, contextId)) {
+      return `context outside the scenario: ${contextId}`;
+    }
+    const stepCheck = inManifest([payload.step as string], steps[contextId], 'step');
+    if (stepCheck) return stepCheck;
+  }
+  const { value, ms } = payload;
+  if (value !== undefined) {
+    const okString = typeof value === 'string' && value.length <= MAX_DECISION_VALUE;
+    const okNumber = typeof value === 'number' && Number.isFinite(value);
+    if (!okString && !okNumber) {
+      return `value must be a number or a string of at most ${MAX_DECISION_VALUE} characters`;
+    }
+  }
+  if (ms !== undefined) {
+    if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0 || ms > MAX_STEP_MS) {
+      return 'ms must be a duration in milliseconds';
+    }
+  }
+  return null;
+}
+
+/**
  * Returns `null` when the payload conforms, otherwise a human-readable
  * rejection reason. Unknown keys are always rejected.
  */
@@ -270,5 +316,7 @@ export function validateEventPayload(
     }
     case 'minigame_completed':
       return validateMinigame(payload, manifest);
+    case 'decision_step':
+      return validateDecisionStep(payload, manifest);
   }
 }

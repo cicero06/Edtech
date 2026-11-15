@@ -1,6 +1,6 @@
 {
   "scenario": "denge-kasabasi",
-  "version": "ch1-9a42673770",
+  "version": "ch1-5a08e2a64c",
   "manifest": {
     "solutions": {
       "fountains-off": 20000,
@@ -69,6 +69,17 @@
       "kemal": [],
       "nuri": [],
       "riza": []
+    },
+    "decisionSteps": {
+      "kadim": [
+        "piece_placed",
+        "piece_rotated",
+        "hint_used",
+        "prediction_made",
+        "confidence_given",
+        "phase_done",
+        "completed"
+      ]
     }
   }
 }
