@@ -44,6 +44,7 @@ import {
   COLLISION_ZONES,
   GROUND_LAYERS,
   GroundDepth,
+  DAM,
   RESERVOIR_PANORAMA,
   WORLD_OBJECTS,
   type CollisionBox,
@@ -378,6 +379,7 @@ export default class GameScene extends Phaser.Scene {
     this.createImplTextures();
     this.createChapterTwoDressing();
     this.createSprinklers();
+    this.createSpillwayFx();
     // Restored chapter-2 sessions get their construction sites back.
     this.rebuildImplementation();
 
@@ -426,6 +428,16 @@ export default class GameScene extends Phaser.Scene {
         continue;
       }
       const scaleY = layer.scaleY ?? 1;
+      if (layer.vertical) {
+        // Lay the tile along x, then turn it: its length becomes the height.
+        this.add
+          .tileSprite(layer.x + layer.width / 2, layer.y + layer.height / 2, layer.height, layer.width / scaleY, layer.textureKey)
+          .setScale(1, scaleY)
+          .setAngle(90)
+          .setTileScale(layer.tileScale ?? 1)
+          .setDepth(layer.depth);
+        continue;
+      }
       this.add
         .tileSprite(
           layer.x + layer.width / 2,
@@ -443,10 +455,10 @@ export default class GameScene extends Phaser.Scene {
     // spillway basin overlaps the top of the avenue.
     const lake = RESERVOIR_PANORAMA;
     this.add
-      .image(lake.x, lake.y, TextureKeys.RESERVOIR_PANORAMA)
+      .image(lake.x, lake.y, TextureKeys.LAKE_GROUND)
       .setOrigin(0, 0)
       .setDisplaySize(lake.width, lake.height)
-      .setDepth(GroundDepth.ROAD + 10);
+      .setDepth(GroundDepth.WATER);
   }
 
   /**
@@ -1700,6 +1712,49 @@ export default class GameScene extends Phaser.Scene {
     this.refreshQuestMarkers();
     this.emitObjective();
     this.emitFieldStatus(true);
+  }
+
+  /**
+   * Animated water at the three spillway gates: falling streaks over the
+   * painted waterfalls and white foam churning in the basin.
+   */
+  private createSpillwayFx(): void {
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.9).fillEllipse(3, 6, 4, 12);
+    g.generateTexture('fx-streak', 6, 12);
+    g.clear();
+    g.fillStyle(0xffffff, 0.85).fillCircle(6, 6, 6);
+    g.generateTexture('fx-foam', 12, 12);
+    g.destroy();
+    // Gate centres as fractions of the dam sprite (measured on dam-front).
+    const gates = [0.446, 0.527, 0.608];
+    const sx = DAM.width;
+    const sy = DAM.height;
+    for (const f of gates) {
+      const x = DAM.x + f * sx;
+      this.add
+        .particles(x, DAM.y + 0.45 * sy, 'fx-streak', {
+          x: { min: -14, max: 14 },
+          speedY: { min: 90, max: 130 },
+          lifespan: 620,
+          frequency: 55,
+          scale: { start: 0.9, end: 0.5 },
+          alpha: { start: 0.55, end: 0 },
+        })
+        .setDepth(DAM.y + sy + 2);
+      this.add
+        .particles(x, DAM.y + 0.66 * sy, 'fx-foam', {
+          x: { min: -24, max: 24 },
+          y: { min: -4, max: 8 },
+          speed: { min: 6, max: 22 },
+          angle: { min: 200, max: 340 },
+          lifespan: 900,
+          frequency: 70,
+          scale: { start: 0.6, end: 1.4 },
+          alpha: { start: 0.6, end: 0 },
+        })
+        .setDepth(DAM.y + sy + 3);
+    }
   }
 
   private createSprinklers(): void {

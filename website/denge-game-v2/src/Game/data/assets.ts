@@ -21,6 +21,7 @@ export const TextureKeys = {
   WATER_DEEP: 'water-deep',
   ROAD_STRAIGHT: 'road-straight',
   ROAD_DASH: 'road-dash',
+  ROAD_JUNCTION: 'road-junction',
 
   // buildings
   TOWN_HALL: 'town-hall',
@@ -67,6 +68,10 @@ export const TextureKeys = {
   DAM_STRUCTURE: 'dam-structure',
   TREATMENT_PLANT: 'treatment-plant',
   RESERVOIR_PANORAMA: 'reservoir-panorama',
+  LAKE_GROUND: 'lake-ground',
+  DAM_FRONT: 'dam-front',
+  PLAYGROUND: 'playground',
+  GAZEBO: 'gazebo',
   DOCK: 'dock',
   STREET_LEAK: 'street-leak',
   PIPE_TRENCH: 'pipe-trench',
@@ -163,6 +168,8 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   // semi-transparent rims let grass show through as lines between tiles.
   { key: TextureKeys.ROAD_STRAIGHT, path: 'assets/ground/road-straight-v2.png', width: 194, height: 88, smooth: true },
   { key: TextureKeys.ROAD_DASH, path: 'assets/ground/road-dash-v2.png', width: 148, height: 127, smooth: true },
+  // Plain asphalt (from the road tile's marking-free band) for crossings.
+  { key: TextureKeys.ROAD_JUNCTION, path: 'assets/ground/road-junction.png', width: 148, height: 148, smooth: true },
 
   // --- pixel-art buildings (kept as fallback, not currently placed) ---
   { key: TextureKeys.TOWN_HALL, path: 'assets/buildings/town-hall.png', width: 96, height: 109 },
@@ -213,6 +220,12 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.DAM_STRUCTURE, path: 'assets/water/dam-structure.png', width: 345, height: 223, smooth: true },
   { key: TextureKeys.TREATMENT_PLANT, path: 'assets/water/treatment-plant.png', width: 274, height: 213, smooth: true },
   // Lake/dam panorama: Unity layout repainted at 1.6 px per world px (Gemini, 3 parts).
+  // Lake = textured water + sand only (trees, rocks and the dam are real
+  // world sprites on top), painted at 1.6 px per world px.
+  { key: TextureKeys.LAKE_GROUND, path: 'assets/maps/lake-ground.webp', width: 3075, height: 1024, smooth: true },
+  { key: TextureKeys.DAM_FRONT, path: 'assets/water/dam-front.webp', width: 1000, height: 474, smooth: true },
+  { key: TextureKeys.PLAYGROUND, path: 'assets/props/playground.webp', width: 600, height: 436, smooth: true },
+  { key: TextureKeys.GAZEBO, path: 'assets/props/gazebo.webp', width: 449, height: 520, smooth: true },
   { key: TextureKeys.RESERVOIR_PANORAMA, path: 'assets/maps/reservoir-panorama.webp', width: 3075, height: 1024, smooth: true },
   { key: TextureKeys.DOCK, path: 'assets/props/dock.png', width: 94, height: 127, smooth: true },
   // Chapter-2 street states: the leak beside Nuri's street, then the open trench.

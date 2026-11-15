@@ -76,6 +76,11 @@ export interface GroundLayer {
   tileScale?: number;
   /** Soft edge in world px — the layer fades into whatever lies beneath. */
   feather?: number;
+  /**
+   * Draw the tile turned 90° — lets the horizontal road tile pave the
+   * north-south ring roads so every road shares one look.
+   */
+  vertical?: boolean;
 }
 
 /** A collision rectangle with no sprite of its own (water, fields, ...). */
@@ -110,17 +115,15 @@ export const GroundDepth = {
  */
 export const RESERVOIR_PANORAMA = { x: -2, y: -208, width: 1922, height: 640 } as const;
 
-/**
- * Lowest opaque row of the panorama per 64 px column (derived from its alpha
- * channel) — everything above is lake, shore trees or dam, so not walkable.
- */
-const RESERVOIR_EDGE: readonly (readonly [number, number])[] = [
-  [0, 286], [64, 286], [128, 286], [192, 286], [256, 286], [320, 286],
-  [384, 202], [448, 197], [512, 272], [576, 334], [640, 355], [704, 374],
-  [768, 381], [832, 389], [896, 389], [960, 389], [1024, 389], [1088, 376],
-  [1152, 354], [1216, 304], [1280, 293], [1344, 283], [1408, 274], [1472, 267],
-  [1536, 267], [1600, 267], [1664, 267], [1728, 267], [1792, 267], [1856, 267],
-];
+/** Open lake water (16 px rows, world coords) — derived from the lake mask. */
+const LAKE_WATER_RECTS: readonly (readonly [number, number, number, number])[] = [[382, -208, 1024, 16], [382, -192, 1024, 16], [382, -176, 1024, 16], [382, -160, 1024, 16], [398, -144, 1008, 16], [398, -128, 1008, 16], [398, -112, 1008, 16], [382, -96, 1040, 16], [382, -80, 1040, 16], [350, -64, 1104, 16], [174, -48, 16, 16], [318, -48, 1168, 16], [158, -32, 1504, 16], [126, -16, 1568, 16], [110, 0, 1600, 16], [110, 16, 1616, 16], [110, 32, 1600, 16], [126, 48, 1552, 16], [126, 64, 1344, 16], [190, 80, 1232, 16], [238, 96, 1152, 16], [398, 112, 976, 16], [446, 128, 912, 16], [462, 144, 896, 16], [526, 160, 832, 16], [558, 176, 784, 16]];
+
+/** Shore tree spots on the grass/beach edge (from the lake art), y = base line. */
+const SHORE_TREE_SPOTS: readonly (readonly [number, number])[] = [[304, -178], [1486, -172], [202, -136], [376, -130], [1606, -130], [262, -130], [1546, -124], [1696, -106], [112, -106], [34, -94], [1786, -88], [1846, -58], [1630, -40], [-2, -4], [1732, 8], [1876, 50], [1666, 62], [1600, 68], [-2, 80], [1834, 98], [1780, 122], [1714, 146], [1360, 146], [70, 152], [1522, 158], [1654, 164], [1456, 170], [1582, 176], [490, 176], [256, 188], [178, 194], [316, 200], [388, 206], [1438, 242]];
+
+/** The dam sprite: world top-left + size; the spillway basin is its lower middle. */
+export const DAM = { x: 560, y: 100, width: 800, height: 380 } as const;
+
 
 /**
  * The north-south street is drawn with `road-straight` (194px tile: ~75px of
@@ -130,11 +133,23 @@ const RESERVOIR_EDGE: readonly (readonly [number, number])[] = [
 const STREET_X = 913;
 const STREET_WIDTH = 194;
 /** Starts at the spillway basin's lower edge in the lake panorama. */
-const STREET_TOP = 380;
+const STREET_TOP = 470;
 const STREET_BOTTOM = 1290;
 
 /** East-west asphalt avenue, drawn with the dashed-centre road tile. */
-const AVENUE = { x: 180, y: PARK_CENTER.y - ROAD_WIDTH / 2, width: 1560, height: ROAD_WIDTH };
+/** Main east-west road — now runs ring road to ring road like the Unity map. */
+const AVENUE = { x: 40, y: PARK_CENTER.y - ROAD_WIDTH / 2, width: 1880, height: ROAD_WIDTH };
+
+/**
+ * Ring roads and side streets (Unity map layout): every road joins another,
+ * nothing dead-ends in the grass. All use the dashed avenue tile.
+ */
+const RING_WEST = { x: 40, y: AVENUE.y, width: ROAD_WIDTH, height: 1440 - AVENUE.y };
+const RING_EAST = { x: 1832, y: 400, width: ROAD_WIDTH, height: 1040 };
+const NORTH_STREET = { x: 1107, y: 400, width: 1920 - 1107, height: ROAD_WIDTH };
+const SOUTH_ROAD_Y = 1180;
+const SOUTH_ROAD_WEST = { x: 40, y: SOUTH_ROAD_Y, width: 650 - 40, height: ROAD_WIDTH };
+const SOUTH_ROAD_EAST = { x: 1270, y: SOUTH_ROAD_Y, width: 1832 - 1270, height: ROAD_WIDTH };
 
 // ---------------------------------------------------------------------------
 // Small generators - keep the data declarative without 200 literal entries
@@ -295,7 +310,10 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     height: STREET_BOTTOM - STREET_TOP,
     depth: GroundDepth.ROAD,
   },
-  // East-west avenue: farmland -> park -> housing (dashed asphalt).
+  // Ring roads first (one step below) so the horizontal streets cap the joints.
+  { id: 'road-ring-west', textureKey: TextureKeys.ROAD_DASH, ...RING_WEST, depth: GroundDepth.ROAD - 2, scaleY: ROAD_WIDTH / 127, vertical: true },
+  { id: 'road-ring-east', textureKey: TextureKeys.ROAD_DASH, ...RING_EAST, depth: GroundDepth.ROAD - 2, scaleY: ROAD_WIDTH / 127, vertical: true },
+  // East-west avenue: ring road -> farmland -> park -> housing -> ring road.
   {
     id: 'road-horizontal',
     textureKey: TextureKeys.ROAD_DASH,
@@ -303,6 +321,26 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     depth: GroundDepth.ROAD,
     scaleY: AVENUE.height / 127,
   },
+  { id: 'road-north-street', textureKey: TextureKeys.ROAD_DASH, ...NORTH_STREET, depth: GroundDepth.ROAD, scaleY: ROAD_WIDTH / 127 },
+  { id: 'road-south-west', textureKey: TextureKeys.ROAD_DASH, ...SOUTH_ROAD_WEST, depth: GroundDepth.ROAD, scaleY: ROAD_WIDTH / 127 },
+  { id: 'road-south-east', textureKey: TextureKeys.ROAD_DASH, ...SOUTH_ROAD_EAST, depth: GroundDepth.ROAD, scaleY: ROAD_WIDTH / 127 },
+  // Crossings: plain asphalt over both roads so lane lines stop at the joint.
+  ...[
+    [RING_WEST.x, AVENUE.y],
+    [RING_EAST.x, AVENUE.y],
+    [RING_EAST.x, NORTH_STREET.y],
+    [RING_WEST.x, SOUTH_ROAD_Y],
+    [RING_EAST.x, SOUTH_ROAD_Y],
+  ].map(([x, y]) => ({
+    id: `road-junction-${x}-${y}`,
+    textureKey: TextureKeys.ROAD_JUNCTION,
+    x: x + 6,
+    y: y + 6,
+    width: ROAD_WIDTH - 12,
+    height: ROAD_WIDTH - 12,
+    depth: GroundDepth.ROAD + 1,
+    tileScale: 0.6,
+  })),
   // Farm tracks: farmhouse door -> avenue, avenue -> vegetable plot.
   { id: 'path-farmhouse', textureKey: TextureKeys.GROUND_DIRT, x: 190, y: 652, width: 40, height: 66, depth: GroundDepth.ROAD - 5, tileScale: 0.25, feather: 6 },
   { id: 'path-veg', textureKey: TextureKeys.GROUND_DIRT, x: 380, y: 792, width: 40, height: 128, depth: GroundDepth.ROAD - 5, tileScale: 0.25, feather: 6 },
@@ -322,14 +360,11 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
 
 /** Deep water and fenced-off field interiors are not walkable. */
 export const COLLISION_ZONES: readonly CollisionZone[] = [
-  // Lake, beaches, dam and spillway basin (see RESERVOIR_EDGE).
-  ...RESERVOIR_EDGE.map(([x, bottom]) => ({
-    id: `reservoir-edge-${x}`,
-    x,
-    y: WORLD_TOP,
-    width: 64,
-    height: bottom - WORLD_TOP,
-  })),
+  // Open lake water — beaches stay walkable.
+  ...LAKE_WATER_RECTS.map(([x, y, width, height]) => ({ id: `lake-${x}-${y}`, x, y, width, height })),
+  // Dam wall (left wing, gates, right wing) and the spillway basin.
+  { id: 'dam-wall', x: DAM.x + 10, y: DAM.y + 40, width: DAM.width - 20, height: 200 },
+  { id: 'dam-basin', x: DAM.x + 270, y: DAM.y + 240, width: 300, height: 110 },
   // The crop plots ship with fences baked into the art - block the whole
   // decal so the player stops at the fence line instead of walking over it.
   { id: 'field-wheat-fence', x: 336, y: 507, width: 188, height: 187 },
@@ -374,7 +409,7 @@ export const BUILDINGS: readonly WorldObject[] = [
   {
     id: 'windmill',
     textureKey: TextureKeys.WINDMILL,
-    x: 130,
+    x: 185,
     y: 830,
     scale: 0.62,
     collision: Footprint.WINDMILL,
@@ -425,8 +460,9 @@ export const BUILDINGS: readonly WorldObject[] = [
   {
     id: 'mansion-east',
     textureKey: TextureKeys.MANSION,
-    x: 1720,
-    y: 870,
+    x: 1740,
+    // Was y 870: its roof covered the avenue. Now it sits on the lawn below.
+    y: 962,
     scale: 0.16,
     collision: Footprint.MANSION,
     district: 'residential',
@@ -1058,6 +1094,77 @@ export const DRESSING: readonly WorldObject[] = [
   deco('hall-bench-e', TextureKeys.BENCH, 1650, 1300, 0.5, 'municipality', Footprint.BENCH),
 ];
 
+/**
+ * Objects that sat where the ring roads, side streets, playground and
+ * gazebo now are (Unity-map relayout). Filtered out here rather than
+ * deleted from the generators so the grids/rows stay readable.
+ */
+const CLEARED_FOR_LAYOUT = new Set([
+  'apartment-north', 'house-south-3',
+  'park-tree-ne-0', 'park-tree-ne-1', 'park-tree-ne-2', 'grass-patch-1',
+  'housing-tree-1', 'housing-tree-3',
+  'farm-pine-6', 'farm-pine-7', 'farm-pine-8', 'farm-pine-9', 'farm-pine-10', 'farm-pine-11',
+  'res-tree-1', 'res-north-tree-1', 'res-north-tree-2', 'res-north-tree-3', 'res-north-tree-4',
+  'res-north-bush-1', 'res-north-bush-2',
+  'hall-tree-w1', 'hall-tree-w2', 'hall-tree-w3', 'hall-flowers-w',
+  'hall-tree-e1', 'hall-tree-e3', 'hall-tree-e4',
+  'civic-hedge-east-1', 'civic-hedge-west-0',
+  'civic-tree-0', 'civic-tree-1', 'civic-tree-4', 'civic-tree-5',
+  'res-flowers-3',
+]);
+
+const SHORE_TREE_KINDS: readonly TextureKey[] = [
+  TextureKeys.TREE_ROUND, TextureKeys.TREE_PINE, TextureKeys.TREE_ROUND_2, TextureKeys.TREE_PINE, TextureKeys.TREE_ROUND,
+];
+
+/** The reservoir: dam sprite + real trees/rocks/bushes around the lake. */
+const LAKESIDE: readonly WorldObject[] = [
+  {
+    id: 'dam-front',
+    textureKey: TextureKeys.DAM_FRONT,
+    x: DAM.x + DAM.width / 2,
+    y: DAM.y + DAM.height,
+    scale: DAM.width / 1000,
+    collision: null,
+    district: 'reservoir',
+  },
+  ...SHORE_TREE_SPOTS.map(([x, y], i) =>
+    deco(`shore-tree-${i}`, SHORE_TREE_KINDS[i % SHORE_TREE_KINDS.length], x, y, 0.46 + (i % 3) * 0.04, 'reservoir', Footprint.TREE),
+  ),
+  deco('shore-rocks-w1', TextureKeys.ROCKS, 140, 120, 0.55, 'reservoir', Footprint.ROCKS),
+  deco('shore-rocks-w2', TextureKeys.ROCKS, 420, 170, 0.5, 'reservoir', Footprint.ROCKS),
+  deco('shore-rocks-e1', TextureKeys.ROCKS, 1500, 140, 0.55, 'reservoir', Footprint.ROCKS),
+  deco('shore-rocks-e2', TextureKeys.ROCKS, 1760, 30, 0.5, 'reservoir', Footprint.ROCKS),
+  deco('shore-bush-1', TextureKeys.BUSH, 560, 330, 0.55, 'reservoir', Footprint.BUSH),
+  deco('shore-bush-2', TextureKeys.FLOWER_BUSH, 1400, 330, 0.5, 'reservoir', Footprint.FLOWER_BUSH),
+  deco('shore-bush-3', TextureKeys.BUSH_SMALL, 1250, 300, 0.6, 'reservoir'),
+];
+
+/** Southwest leisure corner (Unity map): playground + gazebo among trees. */
+const LEISURE: readonly WorldObject[] = [
+  deco('playground', TextureKeys.PLAYGROUND, 300, 1432, 0.4, 'municipality', { width: 210, height: 100, offsetY: -60 }),
+  deco('gazebo', TextureKeys.GAZEBO, 535, 1436, 0.32, 'municipality', { width: 110, height: 36 }),
+  deco('leisure-bench-1', TextureKeys.BENCH, 440, 1330, 0.45, 'municipality', Footprint.BENCH),
+  deco('leisure-tree-1', TextureKeys.TREE_ROUND_2, 150, 1330, 0.5, 'municipality', Footprint.TREE),
+  deco('leisure-tree-2', TextureKeys.TREE_BLOSSOM, 625, 1335, 0.5, 'municipality', Footprint.TREE),
+  deco('leisure-flowers', TextureKeys.FLOWER_BUSH, 450, 1430, 0.45, 'municipality', Footprint.FLOWER_BUSH),
+];
+
+/** Street furniture + trees along the new roads. */
+const ROADSIDE: readonly WorldObject[] = [
+  deco('ring-w-lamp-1', TextureKeys.STREET_LAMP, 145, 930, 0.5, 'agriculture', Footprint.LAMP),
+  deco('ring-w-lamp-2', TextureKeys.STREET_LAMP, 145, 1120, 0.5, 'agriculture', Footprint.LAMP),
+  deco('ring-e-lamp-1', TextureKeys.STREET_LAMP, 1815, 600, 0.5, 'residential', Footprint.LAMP),
+  deco('ring-e-lamp-2', TextureKeys.STREET_LAMP, 1815, 1000, 0.5, 'residential', Footprint.LAMP),
+  deco('north-st-lamp-1', TextureKeys.STREET_LAMP, 1400, 520, 0.5, 'residential', Footprint.LAMP),
+  deco('north-st-lamp-2', TextureKeys.STREET_LAMP, 1660, 520, 0.5, 'residential', Footprint.LAMP),
+  deco('south-e-lamp-1', TextureKeys.STREET_LAMP, 1460, 1300, 0.5, 'municipality', Footprint.LAMP),
+  deco('south-e-lamp-2', TextureKeys.STREET_LAMP, 1700, 1300, 0.5, 'municipality', Footprint.LAMP),
+  deco('south-e-tree-1', TextureKeys.TREE_ROUND, 1620, 1420, 0.5, 'municipality', Footprint.TREE),
+  deco('south-e-tree-2', TextureKeys.TREE_BLOSSOM, 1760, 1400, 0.5, 'municipality', Footprint.TREE),
+  deco('south-w-pine-1', TextureKeys.TREE_PINE, 20, 1000, 0.5, 'agriculture'),
+];
+
 export const WORLD_OBJECTS: readonly WorldObject[] = [
   ...BUILDINGS,
   ...WATERWORKS,
@@ -1065,4 +1172,7 @@ export const WORLD_OBJECTS: readonly WorldObject[] = [
   ...AGRICULTURE,
   ...PROPS,
   ...DRESSING,
-] as const;
+  ...ROADSIDE,
+  ...LAKESIDE,
+  ...LEISURE,
+].filter((o) => !CLEARED_FOR_LAYOUT.has(o.id));
