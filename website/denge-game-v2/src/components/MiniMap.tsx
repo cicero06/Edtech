@@ -1,4 +1,4 @@
-import { DISTRICTS, WORLD, type DistrictId } from '../Game/data/districts';
+import { DISTRICTS, WORLD_BOUNDS, type DistrictId } from '../Game/data/districts';
 import type { MinimapMarker } from '../Game/events/gameEvents';
 
 /**
@@ -84,7 +84,10 @@ export default function MiniMap({ player, markers, overview, onToggle }: MiniMap
       aria-label="Kasaba haritasını aç/kapat (M)"
       title="Kasaba haritası (M)"
     >
-      <svg viewBox={`0 0 ${WORLD.width} ${WORLD.height}`} aria-hidden="true">
+      <svg
+        viewBox={`${WORLD_BOUNDS.x} ${WORLD_BOUNDS.y} ${WORLD_BOUNDS.width} ${WORLD_BOUNDS.height}`}
+        aria-hidden="true"
+      >
         {DISTRICTS.map((district) => (
           <g key={district.id}>
             <rect

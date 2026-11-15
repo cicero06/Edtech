@@ -21,6 +21,21 @@ export const WORLD = {
   height: 1440,
 } as const;
 
+/**
+ * The Unity build grew the map 192 px north for the big reservoir lake
+ * (Unity y = (720 - web y) / 32, top boundary 28.5 → y = -192). Everything
+ * that already existed keeps its coordinates; the lake lives at y < 0.
+ */
+export const WORLD_TOP = -192;
+
+/** Full playable/camera rectangle including the northern lake. */
+export const WORLD_BOUNDS = {
+  x: 0,
+  y: WORLD_TOP,
+  width: WORLD.width,
+  height: WORLD.height - WORLD_TOP,
+} as const;
+
 export type DistrictId = 'reservoir' | 'agriculture' | 'park' | 'residential' | 'municipality';
 
 export interface District {
@@ -44,9 +59,9 @@ export const DISTRICTS: readonly District[] = [
     id: 'reservoir',
     label: 'Rezervuar / Baraj',
     x: 0,
-    y: 0,
+    y: WORLD_TOP,
     width: WORLD.width,
-    height: MIDDLE_BAND_TOP,
+    height: MIDDLE_BAND_TOP - WORLD_TOP,
   },
   {
     id: 'agriculture',

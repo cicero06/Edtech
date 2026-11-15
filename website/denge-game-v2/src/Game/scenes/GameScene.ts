@@ -36,6 +36,7 @@ import {
   PARK_CENTER,
   PLAYER_SPAWN,
   WORLD,
+  WORLD_BOUNDS,
   type District,
   type DistrictId,
 } from '../data/districts';
@@ -43,6 +44,7 @@ import {
   COLLISION_ZONES,
   GROUND_LAYERS,
   GroundDepth,
+  RESERVOIR_PANORAMA,
   WORLD_OBJECTS,
   type CollisionBox,
 } from '../data/worldObjects';
@@ -431,6 +433,15 @@ export default class GameScene extends Phaser.Scene {
         .setScale(1, scaleY)
         .setDepth(layer.depth);
     }
+    // The northern lake, beaches, dock and dam come as one painted panorama
+    // (Unity's Ground_Reservoir_Lake). It sits above the roads so the
+    // spillway basin overlaps the top of the avenue.
+    const lake = RESERVOIR_PANORAMA;
+    this.add
+      .image(lake.x, lake.y, TextureKeys.RESERVOIR_PANORAMA)
+      .setOrigin(0, 0)
+      .setDisplaySize(lake.width, lake.height)
+      .setDepth(GroundDepth.ROAD + 10);
   }
 
   /**
@@ -552,7 +563,7 @@ export default class GameScene extends Phaser.Scene {
 
   private createPlayer(): void {
     // Inset the physics bounds so the sprite's head/feet stay inside the world.
-    this.physics.world.setBounds(16, 56, WORLD.width - 32, WORLD.height - 72);
+    this.physics.world.setBounds(16, WORLD_BOUNDS.y + 56, WORLD.width - 32, WORLD_BOUNDS.height - 72);
 
     // The world sprite follows the student's avatar: kız kartı Lina'nın
     // walk sheet'ini kullanır (aynı 3x4 layout, lina-* anims hazır).
@@ -659,7 +670,7 @@ export default class GameScene extends Phaser.Scene {
 
   private createCamera(): void {
     const camera = this.cameras.main;
-    camera.setBounds(0, 0, WORLD.width, WORLD.height);
+    camera.setBounds(WORLD_BOUNDS.x, WORLD_BOUNDS.y, WORLD_BOUNDS.width, WORLD_BOUNDS.height);
     camera.startFollow(this.player, true, 0.1, 0.1);
     const fitZoom = () => camera.setZoom(this.cameraZoom());
     fitZoom();
@@ -669,7 +680,7 @@ export default class GameScene extends Phaser.Scene {
   /** Close-up follows the player; the overview must fit the whole town. */
   private cameraZoom(): number {
     if (this.overview) {
-      return Math.min(this.scale.height / WORLD.height, this.scale.width / WORLD.width);
+      return Math.min(this.scale.height / WORLD_BOUNDS.height, this.scale.width / WORLD_BOUNDS.width);
     }
     return this.scale.height / VISIBLE_WORLD_HEIGHT;
   }
@@ -686,10 +697,10 @@ export default class GameScene extends Phaser.Scene {
       camera.stopFollow();
       // Wider-than-world bounds let centerOn actually center the town when
       // the zoomed-out view is broader than the map itself.
-      camera.setBounds(-2000, -2000, WORLD.width + 4000, WORLD.height + 4000);
-      camera.centerOn(WORLD.width / 2, WORLD.height / 2);
+      camera.setBounds(-2000, -2000, WORLD.width + 4000, WORLD_BOUNDS.height + 4000);
+      camera.centerOn(WORLD_BOUNDS.x + WORLD_BOUNDS.width / 2, WORLD_BOUNDS.y + WORLD_BOUNDS.height / 2);
     } else {
-      camera.setBounds(0, 0, WORLD.width, WORLD.height);
+      camera.setBounds(WORLD_BOUNDS.x, WORLD_BOUNDS.y, WORLD_BOUNDS.width, WORLD_BOUNDS.height);
       camera.startFollow(this.player, true, 0.1, 0.1);
     }
     camera.zoomTo(this.cameraZoom(), 650, 'Sine.easeInOut');

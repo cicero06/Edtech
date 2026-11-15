@@ -23,7 +23,7 @@
  */
 
 import { TextureKeys, type TextureKey } from './assets';
-import { PARK_CENTER, ROAD_WIDTH, WORLD, type DistrictId } from './districts';
+import { PARK_CENTER, ROAD_WIDTH, WORLD, WORLD_TOP, type DistrictId } from './districts';
 
 /** How an object's render order is decided. */
 export type DepthMode =
@@ -97,7 +97,26 @@ export const GroundDepth = {
 // Layout guides
 // ---------------------------------------------------------------------------
 
-const RESERVOIR_WATER = { x: 60, y: 40, width: 1800, height: 250 };
+/**
+ * The reservoir is one painted panorama ported from Unity
+ * (reservoir_upper_panorama: lake, beaches, dock, dam, spillway basin),
+ * placed exactly as Unity's Ground_Reservoir_Lake (1984 × 640 world px, top-left
+ * at (-2, -208)) and cropped at the world's east edge → 1922 px wide. The
+ * bottom edge is feathered into the town grass.
+ */
+export const RESERVOIR_PANORAMA = { x: -2, y: -208, width: 1922, height: 640 } as const;
+
+/**
+ * Lowest opaque row of the panorama per 64 px column (derived from its alpha
+ * channel) — everything above is lake, shore trees or dam, so not walkable.
+ */
+const RESERVOIR_EDGE: readonly (readonly [number, number])[] = [
+  [0, 286], [64, 286], [128, 286], [192, 286], [256, 286], [320, 286],
+  [384, 202], [448, 197], [512, 272], [576, 334], [640, 355], [704, 374],
+  [768, 381], [832, 389], [896, 389], [960, 389], [1024, 389], [1088, 376],
+  [1152, 354], [1216, 304], [1280, 293], [1344, 283], [1408, 274], [1472, 267],
+  [1536, 267], [1600, 267], [1664, 267], [1728, 267], [1792, 267], [1856, 267],
+];
 
 /**
  * The north-south street is drawn with `road-straight` (194px tile: ~75px of
@@ -106,7 +125,8 @@ const RESERVOIR_WATER = { x: 60, y: 40, width: 1800, height: 250 };
  */
 const STREET_X = 913;
 const STREET_WIDTH = 194;
-const STREET_TOP = 290;
+/** Starts at the spillway basin's lower edge in the lake panorama. */
+const STREET_TOP = 380;
 const STREET_BOTTOM = 1290;
 
 /** East-west asphalt avenue, drawn with the dashed-centre road tile. */
@@ -231,9 +251,9 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     id: 'ground-base',
     textureKey: TextureKeys.GROUND_GRASS,
     x: 0,
-    y: 0,
+    y: WORLD_TOP,
     width: WORLD.width,
-    height: WORLD.height,
+    height: WORLD.height - WORLD_TOP,
     depth: GroundDepth.BASE,
   },
   // Drier, paler grass over the farmland to read as a different district.
@@ -255,13 +275,6 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     width: 600,
     height: 800,
     depth: GroundDepth.DISTRICT_TINT,
-  },
-  // The reservoir surface - the new painted water tile.
-  {
-    id: 'reservoir-water',
-    textureKey: TextureKeys.WATER_DEEP,
-    ...RESERVOIR_WATER,
-    depth: GroundDepth.WATER,
   },
   // North-south street: dam -> park -> town hall (asphalt + promenade tile).
   {
@@ -295,10 +308,14 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
 
 /** Deep water and fenced-off field interiors are not walkable. */
 export const COLLISION_ZONES: readonly CollisionZone[] = [
-  { id: 'reservoir-body', ...RESERVOIR_WATER },
-  // Dam wall blocks the shore except where the street passes through the gate.
-  { id: 'dam-west', x: 813, y: 308, width: 100, height: 56 },
-  { id: 'dam-east', x: 988, y: 308, width: 119, height: 56 },
+  // Lake, beaches, dam and spillway basin (see RESERVOIR_EDGE).
+  ...RESERVOIR_EDGE.map(([x, bottom]) => ({
+    id: `reservoir-edge-${x}`,
+    x,
+    y: WORLD_TOP,
+    width: 64,
+    height: bottom - WORLD_TOP,
+  })),
   // The crop plots ship with fences baked into the art - block the whole
   // decal so the player stops at the fence line instead of walking over it.
   { id: 'field-wheat-fence', x: 336, y: 507, width: 188, height: 187 },
@@ -408,31 +425,12 @@ export const BUILDINGS: readonly WorldObject[] = [
 
 export const WATERWORKS: readonly WorldObject[] = [
   {
-    id: 'dam-structure',
-    textureKey: TextureKeys.DAM_STRUCTURE,
-    x: 960,
-    y: 350,
-    scale: 0.85,
-    // Collision lives in COLLISION_ZONES - the art has a gate for the street.
-    collision: null,
-    district: 'reservoir',
-  },
-  {
     id: 'treatment-plant',
     textureKey: TextureKeys.TREATMENT_PLANT,
     x: 430,
     y: 352,
     scale: 0.62,
     collision: Footprint.TREATMENT,
-    district: 'reservoir',
-  },
-  {
-    id: 'dock',
-    textureKey: TextureKeys.DOCK,
-    x: 640,
-    y: 332,
-    scale: 0.75,
-    collision: Footprint.DOCK,
     district: 'reservoir',
   },
   {
