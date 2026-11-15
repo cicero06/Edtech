@@ -1,0 +1,139 @@
+/* Çiftçi Rıza — 3D farm stage + console. Frame comes from Workshop.css. */
+.riza-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(290px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.riza-stage {
+  position: relative;
+  min-height: 480px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ws-line);
+  background: linear-gradient(#6fb8ea, #f6ead2);
+}
+.riza-canvas { position: absolute; inset: 0; cursor: grab; }
+.riza-canvas:active { cursor: grabbing; }
+.riza-loading { display: grid; place-items: center; color: #29401f; font-weight: 700; }
+
+.riza-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+  font: 700 13px Inter, system-ui, sans-serif;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.2s;
+  will-change: transform;
+}
+.riza-label.target { background: #e0761a; animation: riza-pulse 1s ease-in-out infinite; }
+.riza-label.ok { background: #2f9a55; cursor: default; }
+.riza-label.warn { background: #c0472f; cursor: default; }
+.riza-label.info { background: #2f6fb3; }
+
+.riza-help {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(20, 30, 20, 0.7);
+  pointer-events: none;
+}
+.riza-reset {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  font: 700 12px Inter, system-ui, sans-serif;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+  background: rgba(20, 30, 20, 0.7);
+  cursor: pointer;
+}
+
+.riza-console {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: linear-gradient(160deg, rgba(42, 52, 18, 0.97), rgba(20, 26, 8, 0.97));
+  padding: 14px;
+}
+
+.riza-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.riza-steps li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ws-muted); }
+.riza-steps li span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid var(--ws-line);
+}
+.riza-steps li.active { color: var(--ws-text); font-weight: 700; }
+.riza-steps li.active span { border-color: var(--ws-accent); color: var(--ws-accent); box-shadow: 0 0 0 3px rgba(var(--ws-accent-rgb), 0.2); }
+.riza-steps li.done { color: var(--ws-ok); }
+.riza-steps li.done span { border-color: var(--ws-ok); background: rgba(var(--ws-ok-rgb), 0.25); }
+
+.riza-moisture { padding: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--ws-line); }
+.riza-moisture-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.riza-moisture-head small { color: var(--ws-muted); font-size: 11px; }
+.riza-bar { display: grid; grid-template-columns: 96px 1fr 38px; gap: 8px; align-items: center; font-size: 12px; margin-top: 5px; }
+.riza-bar-track { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.riza-bar-band { position: absolute; top: 0; bottom: 0; background: rgba(var(--ws-ok-rgb), 0.28); border-left: 1px solid var(--ws-ok); border-right: 1px solid var(--ws-ok); }
+.riza-bar-fill { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 4px; transition: width 0.12s linear; }
+.riza-bar-fill.dry { background: #d9a441; }
+.riza-bar-fill.ok { background: #4fd18a; }
+.riza-bar-fill.wet { background: #3f8fd8; }
+.riza-bar-val { text-align: right; font-variant-numeric: tabular-nums; }
+
+.riza-action { width: 100%; }
+.riza-row-buttons { display: grid; gap: 6px; }
+.riza-hypo { display: grid; gap: 8px; }
+.riza-hypo-q { font-size: 14px; line-height: 1.45; font-weight: 600; }
+.riza-hypo-options { display: grid; gap: 6px; }
+.riza-hypo-options .ws-option,
+.riza-hours .ws-option { min-height: 0; padding: 9px 11px; font-size: 13px; }
+
+.riza-controls { display: grid; gap: 10px; }
+.riza-pressure { display: grid; gap: 6px; font-size: 13px; }
+.riza-pressure small { color: var(--ws-muted); }
+.riza-pressure input { width: 100%; accent-color: #f2c443; height: 24px; }
+.riza-hours { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.riza-hold { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--ws-muted); }
+.riza-hold-track { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.riza-hold-track span { display: block; height: 100%; background: linear-gradient(90deg, #f2c443, #4fd18a); transition: width 0.1s linear; }
+
+.riza-win-art { width: 170px; height: auto; flex: none; filter: drop-shadow(0 0 14px rgba(var(--ws-gold-rgb), 0.55)); }
+
+@keyframes riza-pulse {
+  50% { box-shadow: 0 0 0 6px rgba(224, 118, 26, 0.35), 0 6px 14px rgba(0, 0, 0, 0.35); }
+}
+
+@media (max-width: 900px) {
+  .riza-layout { grid-template-columns: 1fr; }
+  .riza-stage { min-height: 360px; }
+  .riza-help { display: none; }
+  .riza-win-art { width: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riza-label.target { animation: none; }
+}

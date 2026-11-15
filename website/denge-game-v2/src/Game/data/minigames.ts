@@ -39,6 +39,12 @@ export const MINIGAMES: readonly MinigameDef[] = [
     title: 'Nuri Amca’nın Tesisat Atölyesi',
     decisions: [],
   },
+  {
+    id: 'riza',
+    cardId: 'tarim',
+    title: 'Çiftçi Rıza’nın Damla Sulama Atölyesi',
+    decisions: [],
+  },
 ];
 
 /** Result every workshop hands back to App when the student finishes. */

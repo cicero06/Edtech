@@ -31,6 +31,21 @@
   overflow-y: auto;
 }
 
+/* Çiftçi Rıza — wheat gold / field green palette */
+.ws-overlay.ws-theme-riza {
+  --ws-bg: #0e1206;
+  --ws-glow: #4a5a16;
+  --ws-panel: rgba(32, 40, 12, 0.96);
+  --ws-line: rgba(220, 200, 90, 0.3);
+  --ws-accent: #f2c443;
+  --ws-accent-rgb: 242, 196, 67;
+  --ws-title: #f8e6a8;
+  --ws-btn: #5f7a1c;
+  --ws-btn-hi: #7fa02a;
+  --ws-text: #fbf8e6;
+  --ws-muted: #c9c48f;
+}
+
 /* Nuri Amca — copper / street-works palette */
 .ws-overlay.ws-theme-nuri {
   --ws-bg: #110b05;

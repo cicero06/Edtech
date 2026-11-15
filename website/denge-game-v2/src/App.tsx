@@ -7,6 +7,7 @@ import AylinWorkshopModal, { type AylinWorkshopDecisionResult } from './componen
 import KemalWorkshop from './components/workshop/KemalWorkshop';
 import NuriWorkshop from './components/workshop/NuriWorkshop';
 import FieldHud from './components/workshop/FieldHud';
+import RizaWorkshop from './components/workshop/RizaWorkshop';
 import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
 import { minigameForCard } from './Game/data/minigames';
@@ -779,6 +780,13 @@ function App() {
             field={investigation.field?.task === 'nuri-radar' ? investigation.field : undefined}
             onGoToField={() => goToField('nuri-radar')}
             onComplete={(result) => finishWorkshop('konut', result)}
+            onClose={closeWorkshop}
+          />
+        )}
+
+        {investigation?.cardId === 'tarim' && (
+          <RizaWorkshop
+            onComplete={(result) => finishWorkshop('tarim', result)}
             onClose={closeWorkshop}
           />
         )}
