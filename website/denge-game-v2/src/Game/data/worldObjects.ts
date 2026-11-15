@@ -24,6 +24,7 @@
 
 import { TextureKeys, type TextureKey } from './assets';
 import { ROAD_WIDTH, WORLD, WORLD_TOP, sc, TOWN_SCALE, type DistrictId } from './districts';
+import { SPRINKLERS } from './fieldTasks';
 
 /** Park centre in the original (unscaled) layout space the data below is authored in. */
 const PARK_CENTER = { x: 960, y: 760 } as const;
@@ -1204,9 +1205,14 @@ const MEDIAN = { x: 1135, width: 130 };
 const BLVD_W = { x: MEDIAN.x - R, width: R };
 const BLVD_E = { x: MEDIAN.x + MEDIAN.width, width: R };
 
-/** Central square around the fountain (the avenue and boulevard end at it). */
-export const SQUARE: Rect = { x: 990, y: 785, width: 420, height: 330 };
-export const FOUNTAIN = { x: 1200, y: 985, scale: 0.85 } as const;
+/**
+ * Town centre: a roundabout (user's pick from three proposals). The avenue
+ * and both boulevard carriageways join the ring; the fountain stands on the
+ * planted island. Drawn by GameScene.drawRoundabout.
+ */
+export const ROUNDABOUT = { x: 1200, y: 950, r: 205, island: 112 } as const;
+export const FOUNTAIN = { x: 1200, y: 990, scale: 0.62 } as const;
+const RB_BOX: Rect = { x: ROUNDABOUT.x - ROUNDABOUT.r - 25, y: ROUNDABOUT.y - ROUNDABOUT.r - 25, width: 2 * ROUNDABOUT.r + 50, height: 2 * ROUNDABOUT.r + 50 };
 
 const AVENUE_Y = 950 - R / 2;
 const NORTH_ST_Y = 600;
@@ -1230,22 +1236,24 @@ export const DAM_SORT_Y = DAM.y + Math.round(DAM.height * 0.62);
 const BASIN_BOTTOM = DAM.y + Math.round(DAM.height * 0.97);
 
 const H_ROADS: Rect[] = [
-  { x: RING_W_X, y: AVENUE_Y, width: SQUARE.x - RING_W_X, height: R },
-  { x: SQUARE.x + SQUARE.width, y: AVENUE_Y, width: RING_E_X + R - (SQUARE.x + SQUARE.width), height: R },
+  { x: RING_W_X, y: AVENUE_Y, width: ROUNDABOUT.x - ROUNDABOUT.r + 20 - RING_W_X, height: R },
+  { x: ROUNDABOUT.x + ROUNDABOUT.r - 20, y: AVENUE_Y, width: RING_E_X + R - (ROUNDABOUT.x + ROUNDABOUT.r - 20), height: R },
   { x: BLVD_E.x, y: NORTH_ST_Y, width: RING_E_X + R - BLVD_E.x, height: R },
   { x: RING_W_X, y: SOUTH_RD_Y, width: RING_E_X + R - RING_W_X, height: R },
 ];
+/** The boulevard runs into the ring a little (the ring is drawn over it). */
+const CUT = { top: ROUNDABOUT.y - ROUNDABOUT.r + 50, bottom: ROUNDABOUT.y + ROUNDABOUT.r - 50 };
 const V_ROADS: Rect[] = [
-  { x: BLVD_W.x, y: BASIN_BOTTOM, width: R, height: SQUARE.y - BASIN_BOTTOM },
-  { x: BLVD_E.x, y: BASIN_BOTTOM, width: R, height: SQUARE.y - BASIN_BOTTOM },
-  { x: BLVD_W.x, y: SQUARE.y + SQUARE.height, width: R, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
-  { x: BLVD_E.x, y: SQUARE.y + SQUARE.height, width: R, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
+  { x: BLVD_W.x, y: BASIN_BOTTOM, width: R, height: CUT.top - BASIN_BOTTOM },
+  { x: BLVD_E.x, y: BASIN_BOTTOM, width: R, height: CUT.top - BASIN_BOTTOM },
+  { x: BLVD_W.x, y: CUT.bottom, width: R, height: SOUTH_RD_Y - CUT.bottom },
+  { x: BLVD_E.x, y: CUT.bottom, width: R, height: SOUTH_RD_Y - CUT.bottom },
   { x: RING_W_X, y: AVENUE_Y, width: R, height: SOUTH_RD_Y + R - AVENUE_Y },
   { x: RING_E_X, y: NORTH_ST_Y, width: R, height: SOUTH_RD_Y + R - NORTH_ST_Y },
 ];
 const MEDIAN_STRIPS: Rect[] = [
-  { x: MEDIAN.x, y: BASIN_BOTTOM, width: MEDIAN.width, height: SQUARE.y - BASIN_BOTTOM },
-  { x: MEDIAN.x, y: SQUARE.y + SQUARE.height, width: MEDIAN.width, height: SOUTH_RD_Y - (SQUARE.y + SQUARE.height) },
+  { x: MEDIAN.x, y: BASIN_BOTTOM, width: MEDIAN.width, height: CUT.top - BASIN_BOTTOM },
+  { x: MEDIAN.x, y: CUT.bottom, width: MEDIAN.width, height: SOUTH_RD_Y - CUT.bottom },
 ];
 
 const overlap = (a: Rect, b: Rect) =>
@@ -1306,7 +1314,6 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
   })),
   // Dam promenade: the boulevard opens onto a paved terrace below the basin.
   { id: 'dam-terrace', textureKey: TextureKeys.GROUND_PATH, x: BLVD_W.x - SIDEWALK - 30, y: BASIN_BOTTOM - 40, width: BLVD_E.x + R + SIDEWALK + 30 - (BLVD_W.x - SIDEWALK - 30), height: 70, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 10 },
-  { id: 'square', textureKey: TextureKeys.GROUND_PATH, ...SQUARE, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 8 },
   { id: 'civic-plaza', textureKey: TextureKeys.GROUND_PATH, ...CIVIC_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 8 },
 ];
 
@@ -1329,7 +1336,7 @@ export const COLLISION_ZONES: readonly CollisionZone[] = [
 
 /** Areas kept clear of old scenery after scaling (roads, walks, squares). */
 const KEEP_CLEAR: Rect[] = [
-  ...H_ROADS, ...V_ROADS, ...SIDEWALKS, ...MEDIAN_STRIPS, SQUARE, CIVIC_PLAZA,
+  ...H_ROADS, ...V_ROADS, ...SIDEWALKS, ...MEDIAN_STRIPS, RB_BOX, CIVIC_PLAZA,
 ];
 const blocks = (o: WorldObject) =>
   KEEP_CLEAR.some((r) => o.x > r.x - 14 && o.x < r.x + r.width + 14 && o.y > r.y - 6 && o.y < r.y + r.height + 46);
@@ -1348,20 +1355,25 @@ const scaled: WorldObject[] = LEGACY_OBJECTS.map((o) => {
     scale: isDam ? (o.scale ?? 1) * TOWN_SCALE : o.scale,
     sortY: isDam ? DAM_SORT_Y : o.sortY,
   };
-}).filter((o) => o.id === 'municipality' || o.id === 'dam-front' || !blocks(o));
+}).filter(
+  (o) =>
+    o.id === 'municipality' ||
+    o.id === 'dam-front' ||
+    (!blocks(o) && !SPRINKLERS.some((k) => Math.abs(o.x - k.x) < 55 && Math.abs(o.y - k.y) < 45)),
+);
 
 const L = (prefix: string, key: TextureKey, pts: [number, number][], scale: number, district: DistrictId, collision: CollisionBox | null = null) =>
   pts.map(([x, y], i) => deco(`${prefix}-${i}`, key, x, y, scale, district, collision));
 
 /** New dressing for the grown layout. */
 const TOWN_DRESSING: readonly WorldObject[] = [
-  // --- central square: fountain, benches, planters, lamps, corner trees ---
-  { id: 'park-fountain', textureKey: TextureKeys.FOUNTAIN, x: FOUNTAIN.x, y: FOUNTAIN.y, scale: FOUNTAIN.scale, collision: { width: 110, height: 34 }, district: 'park' },
-  ...L('sq-bench', TextureKeys.BENCH, [[1080, 870], [1320, 870], [1080, 1080], [1320, 1080]], 0.5, 'park', Footprint.BENCH),
-  ...L('sq-planter', TextureKeys.PLANTER, [[1030, 960], [1370, 960]], 0.55, 'park', Footprint.PLANTER),
-  ...L('sq-lamp', TextureKeys.STREET_LAMP, [[1010, 820], [1390, 820], [1010, 1105], [1390, 1105]], 0.5, 'park', Footprint.LAMP),
-  ...L('sq-tree', TextureKeys.TREE_BLOSSOM, [[1150, 830], [1250, 830]], 0.42, 'park', Footprint.TREE),
-  deco('notice-board', TextureKeys.SIGN, 1355, 1100, 0.5, 'park', Footprint.SIGN),
+  // --- roundabout: fountain on the island, flowers, lamps/benches/trees at the corners ---
+  { id: 'park-fountain', textureKey: TextureKeys.FOUNTAIN, x: FOUNTAIN.x, y: FOUNTAIN.y, scale: FOUNTAIN.scale, collision: { width: 90, height: 28 }, district: 'park' },
+  ...L('rb-flowers', TextureKeys.FLOWER_BUSH, [[1125, 930], [1275, 930], [1130, 1045], [1270, 1045]], 0.4, 'park', Footprint.FLOWER_BUSH),
+  ...L('rb-lamp', TextureKeys.STREET_LAMP, [[985, 770], [1415, 770], [985, 1150], [1415, 1150]], 0.5, 'park', Footprint.LAMP),
+  ...L('rb-bench', TextureKeys.BENCH, [[940, 790], [1460, 790], [940, 1125], [1460, 1125]], 0.45, 'park', Footprint.BENCH),
+  ...L('rb-tree', TextureKeys.TREE_BLOSSOM, [[905, 755], [1495, 755], [905, 1200], [1495, 1200]], 0.45, 'park', Footprint.TREE),
+  deco('notice-board', TextureKeys.SIGN, 1440, 1185, 0.5, 'park', Footprint.SIGN),
   // --- boulevard median: trees, benches, lamps ---
   ...L('median-tree', TextureKeys.TREE_ROUND_2, [[1200, 650], [1200, 760], [1200, 1210], [1200, 1330], [1200, 1450]], 0.44, 'park', Footprint.TREE),
   ...L('median-bench', TextureKeys.BENCH_2, [[1200, 700], [1200, 1270], [1200, 1390]], 0.5, 'park', Footprint.BENCH_2),

@@ -41,30 +41,30 @@ export const SPRINKLER_RADIUS = 64;
  * with the stone sidewalk east of it up to x≈1102.
  */
 export const SPRINKLERS: readonly SprinklerDef[] = [
-  // Park lawns at the corners of the central square (square x 990–1410,
-  // y 785–1115; avenue y 906–994 with sidewalks either side).
+  // Park lawns at the corners of the roundabout (ring centre 1200,950,
+  // outer kerb r≈229; avenue y 906–994 with sidewalks either side).
   {
     id: 'park-nw',
-    x: 960,
-    y: 868,
+    x: 930,
+    y: 862,
     sides: ['trees', 'pavement', 'asphalt', 'grass'],
-    labels: ['Ağaç sırası', 'Meydan taşları', 'Cadde asfaltı', 'Park çimi'],
+    labels: ['Ağaç sırası', 'Göbek kaldırımı', 'Cadde asfaltı', 'Park çimi'],
     start: 2,
   },
   {
     id: 'park-ne',
-    x: 1440,
-    y: 868,
+    x: 1470,
+    y: 862,
     sides: ['trees', 'flowers', 'asphalt', 'pavement'],
-    labels: ['Kiraz ağaçları', 'Çiçek tarhı', 'Cadde asfaltı', 'Meydan taşları'],
+    labels: ['Kiraz ağaçları', 'Çiçek tarhı', 'Cadde asfaltı', 'Göbek kaldırımı'],
     start: 2,
   },
   {
     id: 'park-sw',
-    x: 960,
-    y: 1090,
+    x: 930,
+    y: 1080,
     sides: ['pavement', 'pavement', 'trees', 'grass'],
-    labels: ['Kaldırım', 'Meydan taşları', 'Ağaç sırası', 'Park çimi'],
+    labels: ['Kaldırım', 'Göbek kaldırımı', 'Ağaç sırası', 'Park çimi'],
     start: 1,
   },
 ];

@@ -46,6 +46,7 @@ import {
   GroundDepth,
   DAM,
   DAM_SORT_Y,
+  ROUNDABOUT,
   FOUNTAIN,
   RESERVOIR_PANORAMA,
   WORLD_OBJECTS,
@@ -452,6 +453,7 @@ export default class GameScene extends Phaser.Scene {
         .setTileScale(layer.tileScale ?? 1)
         .setDepth(layer.depth);
     }
+    this.drawRoundabout();
     // The northern lake, beaches, dock and dam come as one painted panorama
     // (Unity's Ground_Reservoir_Lake). It sits above the roads so the
     // spillway basin overlaps the top of the avenue.
@@ -461,6 +463,47 @@ export default class GameScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDisplaySize(lake.width, lake.height)
       .setDepth(GroundDepth.WATER);
+  }
+
+  /**
+   * The town-centre roundabout: kerbed sidewalk ring, asphalt ring with a
+   * dashed lane line, and a planted island with a paved fountain circle.
+   * Painted once into a canvas at 2× so it stays as sharp as the tiles.
+   */
+  private drawRoundabout(): void {
+    const { x, y, r, island } = ROUNDABOUT;
+    const RES = 2;
+    const size = (r + 26) * 2 * RES;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d')!;
+    const mid = size / 2;
+    const pattern = (key: string, scale: number) => {
+      const p = ctx.createPattern(this.textures.get(key).getSourceImage() as CanvasImageSource, 'repeat')!;
+      p.setTransform(new DOMMatrix().scale(scale));
+      return p;
+    };
+    const disc = (radius: number, fill: string | CanvasPattern) => {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.arc(mid, mid, radius * RES, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    disc(r + 24, pattern(TextureKeys.GROUND_PATH, 0.3 * RES));
+    disc(r, pattern(TextureKeys.ROAD_JUNCTION, 0.6 * RES));
+    ctx.strokeStyle = 'rgba(245,245,240,0.9)';
+    ctx.lineWidth = 3 * RES;
+    ctx.setLineDash([14 * RES, 12 * RES]);
+    ctx.beginPath();
+    ctx.arc(mid, mid, ((r + island) / 2 + 4) * RES, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    disc(island + 6, '#d9d2c3');
+    disc(island, pattern(TextureKeys.GROUND_GRASS_LUSH, 0.5 * RES));
+    disc(island - 34, pattern(TextureKeys.GROUND_PATH, 0.3 * RES));
+    if (this.textures.exists('roundabout')) this.textures.remove('roundabout');
+    this.textures.addCanvas('roundabout', c)?.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.add.image(x, y, 'roundabout').setDisplaySize(size / RES, size / RES).setDepth(GroundDepth.ROAD + 3);
   }
 
   /**
