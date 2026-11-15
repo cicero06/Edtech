@@ -1,0 +1,122 @@
+/* Nuri Amca — acoustic radar + pipe schematic. Frame comes from Workshop.css. */
+.nuri-street {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2c2f33, #1d1f22);
+  border: 1px solid var(--ws-line);
+}
+.nuri-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  min-height: 120px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--ws-text);
+  cursor: pointer;
+}
+.nuri-point b { font-size: 14px; }
+.nuri-point small { font-size: 11px; color: var(--ws-muted); text-align: center; line-height: 1.2; }
+.nuri-point.heard { border-style: solid; border-color: rgba(var(--ws-accent-rgb), 0.5); }
+.nuri-point.leak { border: 2px solid var(--ws-bad); background: rgba(var(--ws-bad-rgb), 0.18); }
+.nuri-meter {
+  width: 14px;
+  height: 52px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.nuri-meter span {
+  width: 100%;
+  background: linear-gradient(0deg, #4fc3f7, #ffb85c 60%, #ff6b55);
+  transition: height 0.3s ease-out;
+}
+
+.nuri-stepper { display: flex; gap: 6px; margin-bottom: 8px; }
+.nuri-stepper span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid var(--ws-line);
+  color: var(--ws-muted);
+}
+.nuri-stepper span.active { border-color: var(--ws-accent); color: var(--ws-accent); }
+.nuri-stepper span.done { background: rgba(var(--ws-ok-rgb), 0.25); border-color: var(--ws-ok); color: var(--ws-ok); }
+
+.nuri-prompt { font-size: 15px; line-height: 1.5; margin: 0 0 12px; }
+.nuri-answer {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(var(--ws-ok-rgb), 0.5);
+  background: rgba(var(--ws-ok-rgb), 0.12);
+}
+.nuri-answer.wrong { border-color: rgba(var(--ws-accent-rgb), 0.5); background: rgba(var(--ws-accent-rgb), 0.1); }
+
+.nuri-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.nuri-svg { width: 100%; height: auto; display: block; max-height: 300px; }
+.nuri-ground { fill: #2a1e12; stroke: rgba(240, 170, 80, 0.25); }
+.nuri-pipe { fill: none; stroke: #6b7480; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
+.nuri-water {
+  fill: none;
+  stroke: #4fc3f7;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 14 10;
+  animation: nuri-flow 0.8s linear infinite;
+}
+.nuri-water.murky { stroke: #b08a5a; }
+.nuri-water.danger { stroke: #ff6b55; }
+.nuri-clog { fill: #8b6a43; stroke: #d9b58a; stroke-width: 2; }
+.nuri-clog.small { opacity: 0.9; }
+.nuri-trap { fill: rgba(180, 230, 255, 0.12); stroke: #a8d8ea; stroke-width: 2; }
+.nuri-sediment { fill: #9c7444; transition: all 0.15s linear; }
+.nuri-grate { fill: #111; stroke: #555; }
+.nuri-clamp { fill: #ffb85c; stroke: #fff2dd; stroke-width: 2; }
+.nuri-tankwater { fill: rgba(79, 195, 247, 0.75); transition: all 0.14s linear; }
+.nuri-drips circle { fill: #4fc3f7; animation: nuri-drip 0.9s ease-in infinite; }
+.nuri-drips circle:nth-child(2) { animation-delay: 0.3s; }
+.nuri-drips circle:nth-child(3) { animation-delay: 0.6s; }
+.nuri-box { fill: #1d2a33; stroke: #a8d8ea; stroke-width: 2; }
+.nuri-box-label { fill: #fff; font: 700 13px Inter, system-ui, sans-serif; text-anchor: middle; }
+.nuri-label { fill: #e6d3bb; font: 600 11px Inter, system-ui, sans-serif; text-anchor: middle; }
+.nuri-label.danger { fill: #ff8a78; }
+.nuri-label.ok { fill: #5fe39a; }
+.nuri-pin circle { fill: #3a2a18; stroke: #ffb85c; stroke-width: 2; }
+.nuri-pin text { fill: #ffb85c; font: 700 11px Inter, system-ui, sans-serif; text-anchor: middle; }
+.nuri-pin.on circle { fill: #1f6b3e; stroke: #5fe39a; }
+.nuri-pin.on text { fill: #fff; }
+.nuri-pin.danger circle { fill: #6b1f16; stroke: #ff6b55; }
+.nuri-pin.danger text { fill: #fff; }
+
+@keyframes nuri-flow { to { stroke-dashoffset: -24; } }
+@keyframes nuri-drip {
+  0% { transform: translateY(-14px); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+@media (max-width: 760px) {
+  .nuri-street { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .nuri-point { min-height: 104px; }
+  .nuri-controls .ws-btn { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuri-water, .nuri-drips circle { animation: none; }
+}

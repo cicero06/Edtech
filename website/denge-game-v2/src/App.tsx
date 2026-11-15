@@ -4,7 +4,10 @@ import PhaserGame from './components/PhaserGame';
 import IntroSequence from './components/IntroSequence';
 import InvestigationCard from './components/InvestigationCard';
 import AylinWorkshopModal, { type AylinWorkshopDecisionResult } from './components/AylinWorkshopModal';
-import KemalWorkshopModal from './components/KemalWorkshopModal';
+import KemalWorkshop from './components/workshop/KemalWorkshop';
+import NuriWorkshop from './components/workshop/NuriWorkshop';
+import type { MinigameResult } from './Game/data/minigames';
+import { minigameForCard } from './Game/data/minigames';
 import SolutionPanel from './components/SolutionPanel';
 import FinaleCard from './components/FinaleCard';
 import AnnouncementCard from './components/AnnouncementCard';
@@ -269,6 +272,12 @@ function App() {
     setInvestigation(null);
     playSfx(SoundKeys.COMPLETE, 0.8);
     EventBus.emit(GameEvents.INVESTIGATION_COMPLETED, { cardId });
+  };
+
+  /** A district workshop finished: notebook entry + its own analytics event. */
+  const finishWorkshop = (cardId: string, result: MinigameResult) => {
+    completeInvestigation(cardId);
+    recordEvent('minigame', { ...result });
   };
 
   const toggleEvidence = (cardId: string) => {
@@ -737,17 +746,21 @@ function App() {
           />
         )}
 
-        {investigation && investigation.cardId === 'park' && (
-          <KemalWorkshopModal
-            onComplete={(result) => {
-              completeInvestigation('park');
-              recordEvent('minigame', { ...result });
-            }}
+        {investigation?.cardId === 'park' && (
+          <KemalWorkshop
+            onComplete={(result) => finishWorkshop('park', result)}
             onClose={() => setInvestigation(null)}
           />
         )}
 
-        {investigation && !['baraj', 'park'].includes(investigation.cardId) && (() => {
+        {investigation?.cardId === 'konut' && (
+          <NuriWorkshop
+            onComplete={(result) => finishWorkshop('konut', result)}
+            onClose={() => setInvestigation(null)}
+          />
+        )}
+
+        {investigation && !minigameForCard(investigation.cardId) && (() => {
           const card = investigationCard(investigation.cardId);
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}

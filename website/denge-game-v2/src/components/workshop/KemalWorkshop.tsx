@@ -11,9 +11,10 @@
  * the teacher can see *how* they got there, not only that they finished.
  */
 import { useMemo, useState } from 'react';
-import type { MinigameResult } from '../Game/data/minigames';
-import { SPRITESHEET_ASSETS, TextureKeys } from '../Game/data/assets';
-import { playTone } from './workshopAudio';
+import type { MinigameResult } from '../../Game/data/minigames';
+import { TextureKeys } from '../../Game/data/assets';
+import { playTone } from './audio';
+import WorkshopShell from './WorkshopShell';
 import './KemalWorkshop.css';
 
 type Dir = 0 | 1 | 2 | 3; // N, E, S, W
@@ -112,25 +113,7 @@ const STEP_LABEL: Record<Step, string> = {
   done: 'GÖREV TAMAMLANDI',
 };
 
-/** Front-facing first frame of Kemal's walk strip, like the investigation cards. */
-function KemalPortrait() {
-  const sheet = SPRITESHEET_ASSETS.find((s) => s.key === TextureKeys.WORKER_KEMAL);
-  if (!sheet) return null;
-  const height = 64;
-  const frameW = (sheet.frameWidth / sheet.frameHeight) * height;
-  return (
-    <div className="kemal-portrait" style={{ width: frameW }} aria-hidden>
-      <img
-        src={`${import.meta.env.BASE_URL}${encodeURI(sheet.path)}`}
-        alt=""
-        style={{ width: frameW * sheet.columns, height }}
-        draggable={false}
-      />
-    </div>
-  );
-}
-
-export default function KemalWorkshopModal({ onComplete, onClose }: Props) {
+export default function KemalWorkshop({ onComplete, onClose }: Props) {
   const [step, setStep] = useState<Step>('briefing');
   const [sound, setSound] = useState(true);
   const [dirs, setDirs] = useState<Dir[]>(START_DIRS);
@@ -195,146 +178,115 @@ export default function KemalWorkshopModal({ onComplete, onClose }: Props) {
     done: `Aslanımsın! Sıfır yol israfı, %4 buharlaşma ve ${WATER_SAVED_L} litre net tasarruf. Park hem yemyeşil hem de kuraklığa hazır!`,
   };
 
-  return (
-    <div className="kemal-overlay" role="dialog" aria-modal="true" aria-label="İşçi Kemal'in park atölyesi">
-      <div className="kemal-shell">
-        <header className="kemal-top">
-          <div>
-            <div className="kemal-eyebrow">HARMONY TOWN · PARK VE BAHÇELER ŞEFLİĞİ</div>
-            <h1 className="kemal-title">İşçi Kemal’in Akıllı Park Atölyesi</h1>
-          </div>
-          <div className="kemal-top-actions">
-            <span className="kemal-badge">{STEP_LABEL[step]}</span>
-            <button className="kemal-btn ghost" onClick={() => setSound(!sound)}>
-              {sound ? '🔊' : '🔇'}
-            </button>
-            <button className="kemal-btn ghost" onClick={onClose} aria-label="Kapat">
-              ✕
-            </button>
-          </div>
-        </header>
+  const aligned = wasted === 0 && step !== 'briefing';
 
-        <section className="kemal-speech">
-          <KemalPortrait />
-          <div>
-            <div className="kemal-eyebrow">👷 İŞÇİ KEMAL</div>
-            <p>{speech[step]}</p>
+  return (
+    <WorkshopShell
+      theme="kemal"
+      eyebrow="HARMONY TOWN · PARK VE BAHÇELER ŞEFLİĞİ"
+      title="İşçi Kemal’in Akıllı Park Atölyesi"
+      stepLabel={STEP_LABEL[step]}
+      npc={{ texture: TextureKeys.WORKER_KEMAL, label: '👷 İŞÇİ KEMAL' }}
+      speech={speech[step]}
+      sound={sound}
+      onToggleSound={() => setSound(!sound)}
+      onClose={onClose}
+      chips={[
+        { icon: '🚰', label: step === 'done' ? 'Debi 15 L/sn' : 'Debi 25 L/sn', ok: step === 'done' },
+        { icon: '🧱', label: aligned ? 'Yol israfı yok' : `${wasted} yolda israf`, ok: aligned },
+        { icon: '☀️', label: `Buharlaşma %${selectedHour?.loss ?? 28}`, ok: hour === 'morning' },
+        { icon: '🌿', label: step === 'done' ? `+${WATER_SAVED_L} L tasarruf` : 'Tasarruf 0 L', ok: step === 'done' },
+      ]}
+    >
+      {step === 'briefing' && (
+        <section className="ws-panel">
+          <h2>Sahada gördüklerimiz</h2>
+          <ul className="ws-facts">
+            <li>💧 Park her gün <b>25 litre</b> su alıyor.</li>
+            <li>🧱 Fıskiyelerin yanındaki <b>taş yollar ve kaldırımlar ıslak</b> — su çimlere gitmiyor.</li>
+            <li>☀️ Sulama <b>öğle saatinde</b> yapılıyor; güneş suyu buharlaştırıyor.</li>
+          </ul>
+          <button className="ws-btn primary" onClick={() => { playTone('tap', sound); setStep('align'); }}>
+            Fıskiyeleri incele →
+          </button>
+        </section>
+      )}
+
+      {step === 'align' && (
+        <section className="ws-panel">
+          <h2>Fıskiyeleri yeşil alanlara çevir</h2>
+          <p className="ws-hint">Fıskiyeye dokun: saat yönünde döner. Kırmızı = su boşa gidiyor.</p>
+          <div className="kemal-sectors">
+            {SECTORS.map((sector, i) => (
+              <SectorCard key={sector.name} index={i} sector={sector} dir={dirs[i]} onRotate={() => rotate(i)} />
+            ))}
+          </div>
+          <div className="ws-row-end">
+            <button
+              className="ws-btn primary"
+              disabled={wasted > 0}
+              onClick={() => { playTone('tap', sound); setStep('hour'); }}
+            >
+              {wasted > 0 ? `Önce ${wasted} fıskiyeyi düzelt` : 'Sulama saatine geç →'}
+            </button>
           </div>
         </section>
+      )}
 
-        <div className="kemal-chips">
-          <Chip ok={step === 'done'} label={step === 'done' ? 'Debi 15 L/sn' : 'Debi 25 L/sn'} icon="🚰" />
-          <Chip
-            ok={wasted === 0 && step !== 'briefing'}
-            label={wasted === 0 && step !== 'briefing' ? 'Yol israfı yok' : `${wasted} yolda israf`}
-            icon="🧱"
-          />
-          <Chip
-            ok={hour === 'morning'}
-            label={selectedHour ? `Buharlaşma %${selectedHour.loss}` : 'Buharlaşma %28'}
-            icon="☀️"
-          />
-          <Chip ok={step === 'done'} label={step === 'done' ? `+${WATER_SAVED_L} L tasarruf` : 'Tasarruf 0 L'} icon="🌿" />
-        </div>
-
-        {step === 'briefing' && (
-          <section className="kemal-panel">
-            <h2>Sahada gördüklerimiz</h2>
-            <ul className="kemal-facts">
-              <li>💧 Park her gün <b>25 litre</b> su alıyor.</li>
-              <li>🧱 Fıskiyelerin yanındaki <b>taş yollar ve kaldırımlar ıslak</b> — su çimlere gitmiyor.</li>
-              <li>☀️ Sulama <b>öğle saatinde</b> yapılıyor; güneş suyu buharlaştırıyor.</li>
-            </ul>
-            <button className="kemal-btn primary" onClick={() => { playTone('tap', sound); setStep('align'); }}>
-              Fıskiyeleri incele →
+      {step === 'hour' && (
+        <section className="ws-panel">
+          <h2>Hangi saatte sulamalıyız?</h2>
+          <div className="ws-options">
+            {HOURS.map((option) => {
+              const state = hour === option.id ? (option.id === 'morning' ? 'right' : 'wrong') : '';
+              return (
+                <button
+                  key={option.id}
+                  className={`ws-option ${state}`}
+                  onClick={() => pickHour(option)}
+                  disabled={hour === 'morning' && option.id !== 'morning'}
+                >
+                  <span>{option.label}</span>
+                  {hour === option.id && <small>%{option.loss} buharlaşma</small>}
+                </button>
+              );
+            })}
+          </div>
+          {hour && hour !== 'morning' && (
+            <p className="ws-hint" style={{ marginTop: 12 }}>Başka bir saat dene — en az kaybı bulmaya çalış.</p>
+          )}
+          <div className="ws-row-end">
+            <button
+              className="ws-btn primary"
+              disabled={hour !== 'morning'}
+              onClick={() => { playTone('win', sound); setStep('done'); }}
+            >
+              Sonucu gör →
             </button>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
 
-        {step === 'align' && (
-          <section className="kemal-panel">
-            <h2>Fıskiyeleri yeşil alanlara çevir</h2>
-            <p className="kemal-hint">Fıskiyeye dokun: saat yönünde döner. Kırmızı = su boşa gidiyor.</p>
-            <div className="kemal-sectors">
-              {SECTORS.map((sector, i) => (
-                <SectorCard key={sector.name} index={i} sector={sector} dir={dirs[i]} onRotate={() => rotate(i)} />
-              ))}
-            </div>
-            <div className="kemal-row-end">
-              <button
-                className="kemal-btn primary"
-                disabled={wasted > 0}
-                onClick={() => { playTone('tap', sound); setStep('hour'); }}
-              >
-                {wasted > 0 ? `Önce ${wasted} fıskiyeyi düzelt` : 'Sulama saatine geç →'}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {step === 'hour' && (
-          <section className="kemal-panel">
-            <h2>Hangi saatte sulamalıyız?</h2>
-            <div className="kemal-hours">
-              {HOURS.map((option) => {
-                const state = hour === option.id ? (option.id === 'morning' ? 'right' : 'wrong') : '';
-                return (
-                  <button
-                    key={option.id}
-                    className={`kemal-hour ${state}`}
-                    onClick={() => pickHour(option)}
-                    disabled={hour === 'morning' && option.id !== 'morning'}
-                  >
-                    <span>{option.label}</span>
-                    {hour === option.id && <small>%{option.loss} buharlaşma</small>}
-                  </button>
-                );
-              })}
-            </div>
-            {hour && hour !== 'morning' && (
-              <p className="kemal-hint">Başka bir saat dene — en az kaybı bulmaya çalış.</p>
-            )}
-            <div className="kemal-row-end">
-              <button
-                className="kemal-btn primary"
-                disabled={hour !== 'morning'}
-                onClick={() => { playTone('win', sound); setStep('done'); }}
-              >
-                Sonucu gör →
-              </button>
-            </div>
-          </section>
-        )}
-
-        {step === 'done' && (
-          <section className="kemal-panel kemal-win">
-            <div className="kemal-medal" aria-hidden>🏅</div>
-            <div>
-              <h2>Yeşil Vaha Koruyucusu rozeti kazandın!</h2>
-              <ul className="kemal-facts">
-                <li>🧱 Yol israfı: <b>0 bölge</b></li>
-                <li>☀️ Buharlaşma: <b>%28 → %4</b> (sabah 06:00)</li>
-                <li>🌿 Günlük tasarruf: <b>{WATER_SAVED_L} litre</b></li>
-              </ul>
-              <p className="kemal-hint">
-                Öğrendiğin: Yeşil alanları susuz bırakmadan da su tasarrufu yapılabilir — doğru yön ve doğru saat yeter.
-              </p>
-              <button className="kemal-btn primary" onClick={finish}>
-                📋 Kanıtı deftere işle
-              </button>
-            </div>
-          </section>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Chip({ ok, label, icon }: { ok: boolean; label: string; icon: string }) {
-  return (
-    <div className={`kemal-chip ${ok ? 'ok' : ''}`}>
-      <span aria-hidden>{icon}</span> {label} {ok && '✓'}
-    </div>
+      {step === 'done' && (
+        <section className="ws-panel ws-win">
+          <div className="ws-medal" aria-hidden>🏅</div>
+          <div>
+            <h2>Yeşil Vaha Koruyucusu rozeti kazandın!</h2>
+            <ul className="ws-facts">
+              <li>🧱 Yol israfı: <b>0 bölge</b></li>
+              <li>☀️ Buharlaşma: <b>%28 → %4</b> (sabah 06:00)</li>
+              <li>🌿 Günlük tasarruf: <b>{WATER_SAVED_L} litre</b></li>
+            </ul>
+            <p className="ws-hint">
+              Öğrendiğin: Yeşil alanları susuz bırakmadan da su tasarrufu yapılabilir — doğru yön ve doğru saat yeter.
+            </p>
+            <button className="ws-btn primary" onClick={finish}>
+              📋 Kanıtı deftere işle
+            </button>
+          </div>
+        </section>
+      )}
+    </WorkshopShell>
   );
 }
 
@@ -351,7 +303,6 @@ function SectorCard({
   onRotate: () => void;
 }) {
   const green = isGreen(sector.sides[dir]);
-  // grid cells for N, E, S, W around the centre of a 3×3 grid
   const area: Record<Dir, string> = { 0: 'n', 1: 'e', 2: 's', 3: 'w' };
   return (
     <div className={`kemal-sector ${green ? 'ok' : 'bad'}`}>

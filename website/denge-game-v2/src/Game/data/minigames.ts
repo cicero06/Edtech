@@ -33,6 +33,12 @@ export const MINIGAMES: readonly MinigameDef[] = [
     // No branching decision: the result is graded via score + metrics.
     decisions: [],
   },
+  {
+    id: 'nuri',
+    cardId: 'konut',
+    title: 'Nuri Amca’nın Tesisat Atölyesi',
+    decisions: [],
+  },
 ];
 
 /** Result every workshop hands back to App when the student finishes. */

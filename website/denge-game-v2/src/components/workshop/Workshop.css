@@ -1,0 +1,192 @@
+/*
+ * Shared look of the district workshops (Kemal, Nuri, Rıza…).
+ * Each workshop picks a theme class that only swaps the accent tokens.
+ */
+.ws-overlay {
+  --ws-bg: #04110d;
+  --ws-glow: #18513a;
+  --ws-panel: rgba(10, 38, 30, 0.96);
+  --ws-line: rgba(80, 220, 140, 0.28);
+  --ws-accent: #5fe39a;
+  --ws-accent-rgb: 95, 227, 154;
+  --ws-title: #b9f5d2;
+  --ws-btn: #13603d;
+  --ws-btn-hi: #1f8a55;
+  --ws-ok: #5fe39a;
+  --ws-ok-rgb: 95, 227, 154;
+  --ws-bad: #ff6b55;
+  --ws-bad-rgb: 255, 107, 85;
+  --ws-gold-rgb: 247, 198, 90;
+  --ws-text: #e8fbf1;
+  --ws-muted: #9cc7b3;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(2, 8, 8, 0.94);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+}
+
+/* Nuri Amca — copper / street-works palette */
+.ws-overlay.ws-theme-nuri {
+  --ws-bg: #110b05;
+  --ws-glow: #5a3815;
+  --ws-panel: rgba(40, 26, 12, 0.96);
+  --ws-line: rgba(240, 170, 80, 0.3);
+  --ws-accent: #ffb85c;
+  --ws-accent-rgb: 255, 184, 92;
+  --ws-title: #ffd9a3;
+  --ws-btn: #8a4f12;
+  --ws-btn-hi: #b26a1c;
+  --ws-text: #fff4e6;
+  --ws-muted: #d4b48d;
+}
+
+.ws-shell {
+  width: 100%;
+  max-width: 1100px;
+  max-height: 94vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--ws-line);
+  background: radial-gradient(circle at 50% -20%, var(--ws-glow), var(--ws-bg) 60%);
+  color: var(--ws-text);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.ws-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--ws-line);
+}
+.ws-top-actions { display: flex; gap: 8px; align-items: center; }
+.ws-title { margin: 4px 0 0; font-size: 22px; color: var(--ws-title); }
+.ws-eyebrow {
+  color: var(--ws-muted);
+  font: 700 11px/1.3 "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ws-badge {
+  font: 700 11px "DM Mono", ui-monospace, monospace;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ws-line);
+  background: rgba(var(--ws-accent-rgb), 0.12);
+  color: var(--ws-accent);
+}
+
+.ws-btn {
+  border: 1px solid rgba(var(--ws-accent-rgb), 0.6);
+  background: var(--ws-btn);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 40px;
+}
+.ws-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.ws-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ws-btn.ghost { background: transparent; padding: 8px 12px; }
+.ws-btn.primary { background: linear-gradient(180deg, var(--ws-btn-hi), var(--ws-btn)); }
+
+.ws-speech {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: rgba(0, 0, 0, 0.35);
+  margin-bottom: 12px;
+}
+.ws-speech p { margin: 4px 0 0; font-size: 15px; line-height: 1.5; }
+.ws-speech.alert { border-color: rgba(var(--ws-bad-rgb), 0.8); background: rgba(var(--ws-bad-rgb), 0.12); }
+.ws-portrait {
+  box-sizing: content-box;
+  height: 72px;
+  flex: none;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 4px 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: rgba(var(--ws-accent-rgb), 0.08);
+}
+.ws-portrait img { flex: none; max-width: none; }
+
+.ws-chips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ws-chip {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--ws-bad-rgb), 0.45);
+  background: rgba(var(--ws-bad-rgb), 0.14);
+}
+.ws-chip.ok { border-color: rgba(var(--ws-ok-rgb), 0.6); background: rgba(var(--ws-ok-rgb), 0.16); }
+
+.ws-panel {
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: var(--ws-panel);
+  padding: 16px;
+}
+.ws-panel h2 { margin: 0 0 10px; font-size: 18px; }
+.ws-facts { margin: 0 0 14px; padding-left: 4px; list-style: none; display: grid; gap: 8px; font-size: 15px; }
+.ws-hint { color: var(--ws-muted); font-size: 13px; margin: 0 0 12px; }
+.ws-row-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* Multiple-choice answers (prediction / hypothesis questions) */
+.ws-options { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ws-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ws-text);
+  padding: 14px;
+  min-height: 64px;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+.ws-option small { font-weight: 500; font-size: 13px; line-height: 1.4; color: var(--ws-muted); }
+.ws-option.right { border: 2px solid var(--ws-ok); background: rgba(var(--ws-ok-rgb), 0.18); }
+.ws-option.wrong { border: 2px solid var(--ws-bad); background: rgba(var(--ws-bad-rgb), 0.16); }
+.ws-option:disabled { opacity: 0.45; cursor: default; }
+.ws-option.right:disabled,
+.ws-option.wrong:disabled { opacity: 1; }
+
+.ws-win { display: flex; gap: 18px; align-items: flex-start; border-color: rgba(var(--ws-gold-rgb), 0.6); }
+.ws-medal { font-size: 64px; line-height: 1; filter: drop-shadow(0 0 12px rgba(var(--ws-gold-rgb), 0.6)); }
+
+@media (max-width: 760px) {
+  .ws-shell { padding: 14px; }
+  .ws-title { font-size: 18px; }
+  .ws-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-options { grid-template-columns: 1fr; }
+  .ws-win { flex-direction: column; }
+}
