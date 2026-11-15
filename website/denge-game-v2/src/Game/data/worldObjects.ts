@@ -1221,7 +1221,7 @@ const RING_W_X = 50;
 const RING_E_X = 2262;
 
 /** Municipality square south of the through road. */
-export const CIVIC_PLAZA: Rect = { x: 760, y: SOUTH_RD_Y + R + SIDEWALK, width: 880, height: 1800 - (SOUTH_RD_Y + R + SIDEWALK) };
+export const CIVIC_PLAZA: Rect = { x: 900, y: 1630, width: 600, height: 170 };
 
 /** The dam sprite in world space (scaled with the lake). */
 export const DAM = {
@@ -1280,6 +1280,68 @@ const JUNCTIONS: Rect[] = V_ROADS.flatMap((v) =>
   })),
 );
 
+/** Sidewalk squares at every junction corner so walks turn the corner. */
+const CORNERS: Rect[] = JUNCTIONS.flatMap((j) => [
+  { x: j.x - SIDEWALK, y: j.y - SIDEWALK, width: SIDEWALK, height: SIDEWALK },
+  { x: j.x + j.width, y: j.y - SIDEWALK, width: SIDEWALK, height: SIDEWALK },
+  { x: j.x - SIDEWALK, y: j.y + j.height, width: SIDEWALK, height: SIDEWALK },
+  { x: j.x + j.width, y: j.y + j.height, width: SIDEWALK, height: SIDEWALK },
+]);
+
+const ZEBRA = 36;
+/** Zebra crossings on every arm of every junction (and the roundabout). */
+const ZEBRAS: (Rect & { across: 'h' | 'v' })[] = [
+  ...V_ROADS.flatMap((v) =>
+    H_ROADS.filter((h) => overlap(v, h)).flatMap((h) => {
+      const jx = Math.max(v.x, h.x);
+      const jw = Math.min(v.x + v.width, h.x + h.width) - jx;
+      const jy = Math.max(v.y, h.y);
+      const jh = Math.min(v.y + v.height, h.y + h.height) - jy;
+      const out: (Rect & { across: 'h' | 'v' })[] = [];
+      if (h.x < jx - 80) out.push({ x: jx - SIDEWALK - ZEBRA - 4, y: h.y, width: ZEBRA, height: R, across: 'h' });
+      if (h.x + h.width > jx + jw + 80) out.push({ x: jx + jw + SIDEWALK + 4, y: h.y, width: ZEBRA, height: R, across: 'h' });
+      if (v.y < jy - 80) out.push({ x: v.x, y: jy - SIDEWALK - ZEBRA - 4, width: R, height: ZEBRA, across: 'v' });
+      if (v.y + v.height > jy + jh + 80) out.push({ x: v.x, y: jy + jh + SIDEWALK + 4, width: R, height: ZEBRA, across: 'v' });
+      return out;
+    }),
+  ),
+  // roundabout arms (clear of Kemal's sprinkler puddles)
+  { x: 845, y: AVENUE_Y, width: ZEBRA, height: R, across: 'h' },
+  { x: 1520, y: AVENUE_Y, width: ZEBRA, height: R, across: 'h' },
+  { x: BLVD_W.x, y: 650, width: R, height: ZEBRA, across: 'v' },
+  { x: BLVD_E.x, y: 650, width: R, height: ZEBRA, across: 'v' },
+  { x: BLVD_W.x, y: 1250, width: R, height: ZEBRA, across: 'v' },
+  { x: BLVD_E.x, y: 1250, width: R, height: ZEBRA, across: 'v' },
+];
+
+/** Paved, landscaped plaza around the spillway pool below the dam. */
+export const DAM_PLAZA: Rect = { x: 930, y: DAM_SORT_Y + 4, width: 540, height: BASIN_BOTTOM + 34 - (DAM_SORT_Y + 4) };
+
+/** Walled enclosures: town-hall grounds and the playground. */
+const CIVIC_YARD = { x: 760, y: 1625, x2: 1640, gate: 1200 };
+const PLAY_YARD = { x: 140, y: 1625, x2: 760, gate: 440 };
+const GATE_GAP = 70;
+const WALL_H = 26;
+
+interface WallRun { id: string; x: number; y: number; length: number; dir: 'h' | 'v' }
+const yardWalls = (id: string, yd: { x: number; y: number; x2: number; gate: number }): WallRun[] => [
+  { id: `${id}-n1`, x: yd.x, y: yd.y, length: yd.gate - GATE_GAP / 2 - yd.x, dir: 'h' },
+  { id: `${id}-n2`, x: yd.gate + GATE_GAP / 2, y: yd.y, length: yd.x2 - (yd.gate + GATE_GAP / 2), dir: 'h' },
+  { id: `${id}-w`, x: yd.x, y: yd.y, length: 1800 - yd.y, dir: 'v' },
+  { id: `${id}-e`, x: yd.x2, y: yd.y, length: 1800 - yd.y, dir: 'v' },
+];
+/** Straight wall runs; GameScene draws them as tiled stone + pillars. */
+export const WALL_RUNS: readonly WallRun[] = [
+  ...yardWalls('civic', CIVIC_YARD),
+  // the playground shares its east wall with the town-hall grounds
+  ...yardWalls('play', PLAY_YARD).filter((w) => w.id !== 'play-e'),
+];
+export const WALL_THICKNESS = WALL_H;
+export const GATES: readonly { x: number; y: number }[] = [
+  { x: CIVIC_YARD.gate, y: CIVIC_YARD.y + 6 },
+  { x: PLAY_YARD.gate, y: PLAY_YARD.y + 6 },
+];
+
 const ROAD_SCALE_Y = R / 127;
 const legacyGround = (id: string) => LEGACY_GROUND_LAYERS.find((l) => l.id === id)!;
 const scaledPath = (id: string): GroundLayer => {
@@ -1312,8 +1374,19 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
   ...JUNCTIONS.map((j, i) => ({
     id: `junction-${i}`, textureKey: TextureKeys.ROAD_JUNCTION, ...j, depth: GroundDepth.ROAD + 1, tileScale: 0.6,
   })),
-  // Dam promenade: the boulevard opens onto a paved terrace below the basin.
-  { id: 'dam-terrace', textureKey: TextureKeys.GROUND_PATH, x: BLVD_W.x - SIDEWALK - 30, y: BASIN_BOTTOM - 40, width: BLVD_E.x + R + SIDEWALK + 30 - (BLVD_W.x - SIDEWALK - 30), height: 70, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 10 },
+  ...CORNERS.map((c, i) => ({
+    id: `corner-${i}`, textureKey: TextureKeys.SIDEWALK_H, ...c, depth: GroundDepth.ROAD - 4, tileScale: SIDEWALK / 44,
+  })),
+  ...ZEBRAS.map((z, i) => ({
+    id: `zebra-${i}`, textureKey: z.across === 'h' ? TextureKeys.ZEBRA_V : TextureKeys.ZEBRA_H,
+    x: z.x, y: z.y, width: z.width, height: z.height, depth: GroundDepth.ROAD + 2,
+    tileScale: z.across === 'h' ? R / 88 : R / 88,
+  })),
+  // Spillway plaza: the pool sits in a paved, planted square the boulevard opens onto.
+  { id: 'dam-plaza', textureKey: TextureKeys.GROUND_PATH, ...DAM_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 12 },
+  // Lawns inside the walled yards.
+  { id: 'civic-lawn', textureKey: TextureKeys.GROUND_GRASS_LUSH, x: CIVIC_YARD.x, y: CIVIC_YARD.y, width: CIVIC_YARD.x2 - CIVIC_YARD.x, height: 200, depth: GroundDepth.ROAD + 1, tileScale: 0.5 },
+  { id: 'play-sand', textureKey: TextureKeys.GROUND_GRASS_LUSH, x: PLAY_YARD.x, y: PLAY_YARD.y, width: PLAY_YARD.x2 - PLAY_YARD.x, height: 200, depth: GroundDepth.ROAD + 1, tileScale: 0.5 },
   { id: 'civic-plaza', textureKey: TextureKeys.GROUND_PATH, ...CIVIC_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 8 },
 ];
 
@@ -1325,6 +1398,11 @@ const EXTRA_FIELDS = [
 ] as const;
 
 export const COLLISION_ZONES: readonly CollisionZone[] = [
+  ...WALL_RUNS.map((w) =>
+    w.dir === 'h'
+      ? { id: `wall-${w.id}`, x: w.x, y: w.y - 14, width: w.length, height: 16 }
+      : { id: `wall-${w.id}`, x: w.x - 8, y: w.y, width: 16, height: w.length },
+  ),
   ...EXTRA_FIELDS.map((f) => ({ id: `${f.id}-fence`, x: f.x + f.fence.dx, y: f.y + f.fence.dy, width: f.fence.w, height: f.fence.h })),
   ...LEGACY_COLLISION_ZONES.map((z) =>
   z.id.startsWith('field-')
@@ -1336,7 +1414,10 @@ export const COLLISION_ZONES: readonly CollisionZone[] = [
 
 /** Areas kept clear of old scenery after scaling (roads, walks, squares). */
 const KEEP_CLEAR: Rect[] = [
-  ...H_ROADS, ...V_ROADS, ...SIDEWALKS, ...MEDIAN_STRIPS, RB_BOX, CIVIC_PLAZA,
+  ...H_ROADS, ...V_ROADS, ...SIDEWALKS, ...MEDIAN_STRIPS, RB_BOX, CIVIC_PLAZA, DAM_PLAZA,
+  { x: CIVIC_YARD.x - 20, y: CIVIC_YARD.y - 30, width: CIVIC_YARD.x2 - CIVIC_YARD.x + 40, height: 230 },
+  { x: PLAY_YARD.x - 20, y: PLAY_YARD.y - 30, width: 40, height: 230 },
+  { x: PLAY_YARD.gate - 50, y: PLAY_YARD.y - 30, width: 100, height: 40 },
 ];
 const blocks = (o: WorldObject) =>
   KEEP_CLEAR.some((r) => o.x > r.x - 14 && o.x < r.x + r.width + 14 && o.y > r.y - 6 && o.y < r.y + r.height + 46);
@@ -1380,12 +1461,23 @@ const TOWN_DRESSING: readonly WorldObject[] = [
   ...L('blvd-lamp', TextureKeys.STREET_LAMP, [[1012, 680], [1388, 680], [1012, 1260], [1388, 1260], [1012, 1420], [1388, 1420]], 0.5, 'park', Footprint.LAMP),
   // --- road lamps ---
   ...L('ring-lamp', TextureKeys.STREET_LAMP, [[168, 1150], [168, 1360], [2240, 800], [2240, 1150], [2240, 1400]], 0.5, 'residential', Footprint.LAMP),
-  ...L('street-lamp', TextureKeys.STREET_LAMP, [[1650, 712], [2000, 712], [400, 1592], [1900, 1592], [600, 885], [1800, 885]], 0.5, 'residential', Footprint.LAMP),
-  // --- municipality square ---
-  ...L('civic-bench', TextureKeys.BENCH, [[900, 1660], [1500, 1660]], 0.55, 'municipality', Footprint.BENCH),
-  ...L('civic-planter', TextureKeys.PLANTER, [[830, 1760], [1000, 1640], [1400, 1640], [1570, 1760]], 0.55, 'municipality', Footprint.PLANTER),
-  ...L('civic-flowers', TextureKeys.FLOWER_BUSH, [[1060, 1790], [1340, 1790]], 0.5, 'municipality', Footprint.FLOWER_BUSH),
-  ...L('civic-trash', TextureKeys.TRASH_CAN, [[960, 1665], [1440, 1665]], 0.55, 'municipality', Footprint.TRASH),
+  ...L('street-lamp', TextureKeys.STREET_LAMP, [[1650, 712], [2000, 712], [300, 1588], [1900, 1592], [600, 885], [1800, 885]], 0.5, 'residential', Footprint.LAMP),
+  // --- spillway plaza: benches, lamps, flower beds, hedges along the dam foot ---
+  ...L('dp-bench', TextureKeys.BENCH, [[975, 560], [1425, 560]], 0.45, 'reservoir', Footprint.BENCH),
+  ...L('dp-lamp', TextureKeys.STREET_LAMP, [[950, 470], [1450, 470], [960, 620], [1440, 620]], 0.5, 'reservoir', Footprint.LAMP),
+  ...L('dp-flowers', TextureKeys.FLOWER_BUSH, [[1010, 610], [1390, 610], [1000, 500], [1400, 500]], 0.42, 'reservoir', Footprint.FLOWER_BUSH),
+  ...L('dp-hedge', TextureKeys.HEDGE_ROW, [[800, 440], [880, 440]], 0.6, 'reservoir', Footprint.HEDGE_ROW),
+  ...L('dp-tree', TextureKeys.TREE_ROUND_2, [[905, 540], [1495, 540]], 0.48, 'reservoir', Footprint.TREE),
+  // --- walled town-hall grounds ---
+  ...L('civic-bench', TextureKeys.BENCH, [[860, 1690], [1540, 1690]], 0.5, 'municipality', Footprint.BENCH),
+  ...L('civic-planter', TextureKeys.PLANTER, [[1120, 1650], [1280, 1650]], 0.5, 'municipality', Footprint.PLANTER),
+  ...L('civic-flowers', TextureKeys.FLOWER_BUSH, [[820, 1640], [1580, 1640], [820, 1790], [1580, 1790]], 0.45, 'municipality', Footprint.FLOWER_BUSH),
+  ...L('civic-tree', TextureKeys.TREE_ROUND_2, [[830, 1740], [1570, 1740]], 0.48, 'municipality', Footprint.TREE),
+  ...L('civic-trash', TextureKeys.TRASH_CAN, [[905, 1695], [1495, 1695]], 0.5, 'municipality', Footprint.TRASH),
+  // --- north quarter: houses on the north street ---
+  ...L('house-n2', TextureKeys.HOUSE_RED, [[1720, 560], [1920, 560], [2120, 560]], 0.55, 'residential', Footprint.HOUSE),
+  deco('apartment-n2', TextureKeys.APARTMENT, 2300, 560, 0.5, 'residential', Footprint.APARTMENT),
+  ...L('n2-tree', TextureKeys.TREE_ROUND, [[1620, 520], [1820, 470], [2020, 470], [2210, 470]], 0.48, 'residential', Footprint.TREE),
   // --- grown farm ---
   ...EXTRA_FIELDS.map((f) => ({ id: f.id, textureKey: f.key, x: f.x, y: f.y, scale: 0.95, depthMode: 'ground' as const, depth: GroundDepth.DECAL, collision: null, district: 'agriculture' as const })),
   ...L('farm-hay', TextureKeys.HAYSTACK_BIG, [[230, 1100], [290, 1130], [560, 1100]], 0.62, 'agriculture', Footprint.HAYSTACK),
@@ -1394,8 +1486,9 @@ const TOWN_DRESSING: readonly WorldObject[] = [
   // --- southwest leisure corner ---
   deco('playground', TextureKeys.PLAYGROUND, 360, 1770, 0.45, 'municipality', { width: 230, height: 110, offsetY: -60 }),
   deco('gazebo', TextureKeys.GAZEBO, 640, 1775, 0.34, 'municipality', { width: 120, height: 40 }),
-  ...L('leisure-tree', TextureKeys.TREE_ROUND, [[180, 1680], [560, 1640], [720, 1660]], 0.5, 'municipality', Footprint.TREE),
+  ...L('leisure-tree', TextureKeys.TREE_ROUND, [[185, 1660], [560, 1640], [705, 1660]], 0.5, 'municipality', Footprint.TREE),
   deco('leisure-bench', TextureKeys.BENCH, 520, 1700, 0.45, 'municipality', Footprint.BENCH),
+  ...L('leisure-flowers', TextureKeys.FLOWER_BUSH, [[180, 1790], [700, 1790]], 0.42, 'municipality', Footprint.FLOWER_BUSH),
   // --- southeast: a third row of houses on the through road ---
   ...L('house-se', TextureKeys.HOUSE_RED, [[1790, 1760], [1990, 1760], [2190, 1760]], 0.55, 'residential', Footprint.HOUSE),
   ...L('se-tree', TextureKeys.TREE_ROUND_2, [[1700, 1700], [2330, 1700]], 0.5, 'residential', Footprint.TREE),

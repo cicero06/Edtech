@@ -46,6 +46,9 @@ import {
   GroundDepth,
   DAM,
   DAM_SORT_Y,
+  GATES,
+  WALL_RUNS,
+  WALL_THICKNESS,
   ROUNDABOUT,
   FOUNTAIN,
   RESERVOIR_PANORAMA,
@@ -101,6 +104,7 @@ import {
 } from '../data/voices';
 import { loadSession, saveSession, type QuestStage } from '../data/session';
 import { VISIBLE_WORLD_HEIGHT } from '../config';
+import { TOWNSFOLK, TOWNSFOLK_TALK_RADIUS, type Townsperson } from '../data/townsfolk';
 import {
   LEAK_HOT_RADIUS,
   LEAK_SPOT,
@@ -116,6 +120,16 @@ import {
   type FieldTaskId,
   type SprinklerDef,
 } from '../data/fieldTasks';
+
+/** A strolling resident (data/townsfolk.ts). */
+interface Walker {
+  def: Townsperson;
+  sprite: Phaser.GameObjects.Sprite;
+  target: number;
+  waitUntil: number;
+  talkUntil: number;
+  line: number;
+}
 
 /** One park sprinkler on the map: head sprite, spray, wet patch, warning. */
 interface Sprinkler {
@@ -238,6 +252,7 @@ export default class GameScene extends Phaser.Scene {
   // ---- in-town workshop parts (fieldTasks.ts) ----
   private fieldTask: FieldTaskId | null = null;
   private sprinklers: Sprinkler[] = [];
+  private walkers: Walker[] = [];
   private sprinklerTurns = 0;
   private radarStartedAt = 0;
   private radarLastEmit = 0;
@@ -383,6 +398,8 @@ export default class GameScene extends Phaser.Scene {
     this.createChapterTwoDressing();
     this.createSprinklers();
     this.createSpillwayFx();
+    this.createWalls();
+    this.createTownsfolk();
     // Restored chapter-2 sessions get their construction sites back.
     this.rebuildImplementation();
 
@@ -1759,6 +1776,105 @@ export default class GameScene extends Phaser.Scene {
     this.emitFieldStatus(true);
   }
 
+  /** Low fieldstone walls around the town-hall grounds and the playground. */
+  private createWalls(): void {
+    const k = WALL_THICKNESS / 160;
+    const pillar = (x: number, y: number) =>
+      this.add.image(x, y + 6, TextureKeys.STONE_PILLAR).setOrigin(0.5, 1).setScale(34 / 169).setDepth(y + 6);
+    for (const run of WALL_RUNS) {
+      if (run.dir === 'h') {
+        this.add
+          .tileSprite(run.x, run.y, run.length, WALL_THICKNESS / k, TextureKeys.STONE_WALL_H)
+          .setOrigin(0, 1)
+          .setScale(1, k)
+          .setTileScale(k * 1, 1)
+          .setDepth(run.y);
+        for (let x = run.x; x <= run.x + run.length + 1; x += Math.max(150, run.length / Math.ceil(run.length / 200))) pillar(x, run.y);
+        pillar(run.x + run.length, run.y);
+      } else {
+        // Vertical runs in short chunks so actors sort correctly along them.
+        const CH = 60;
+        for (let y = run.y; y < run.y + run.length; y += CH) {
+          const h = Math.min(CH, run.y + run.length - y);
+          this.add
+            .tileSprite(run.x - WALL_THICKNESS / 2, y, WALL_THICKNESS / k, h, TextureKeys.STONE_WALL_V)
+            .setOrigin(0, 0)
+            .setScale(k, 1)
+            .setTileScale(1, k)
+            .setTilePosition(0, (y - run.y) / k)
+            .setDepth(y + h);
+        }
+        pillar(run.x, run.y + run.length);
+      }
+    }
+    for (const g of GATES) {
+      this.add.image(g.x, g.y, TextureKeys.STONE_GATE).setOrigin(0.5, 1).setScale(100 / 431).setDepth(g.y);
+    }
+  }
+
+  /** Residents strolling between waypoints; E makes one stop and chat. */
+  private createTownsfolk(): void {
+    for (const def of TOWNSFOLK) {
+      const [x, y] = def.path[0];
+      const sprite = this.add
+        .sprite(x, y, def.texture, 0)
+        .setOrigin(0.5, 1)
+        .setScale(def.texture === TextureKeys.TOWNS_BOY ? 0.14 : 0.165)
+        .setDepth(y);
+      this.walkers.push({ def, sprite, target: 1 % def.path.length, waitUntil: this.time.now + Math.random() * 2000, talkUntil: 0, line: 0 });
+    }
+  }
+
+  private updateTownsfolk(delta: number): void {
+    const now = this.time.now;
+    for (const w of this.walkers) {
+      if (now < w.talkUntil || now < w.waitUntil) {
+        w.sprite.setAngle(0);
+        continue;
+      }
+      const [tx, ty] = w.def.path[w.target];
+      const dx = tx - w.sprite.x;
+      const dy = ty - w.sprite.y;
+      const dist = Math.hypot(dx, dy);
+      const step = (w.def.speed * delta) / 1000;
+      if (dist <= step) {
+        w.sprite.setPosition(tx, ty).setFrame(0).setAngle(0);
+        w.target = (w.target + 1) % w.def.path.length;
+        w.waitUntil = now + w.def.pause * 1000;
+      } else {
+        w.sprite.x += (dx / dist) * step;
+        w.sprite.y += (dy / dist) * step;
+        w.sprite.setFrame(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : dy > 0 ? 0 : 2);
+        w.sprite.setAngle(Math.sin(now / 110) * 2.2);
+      }
+      w.sprite.setDepth(w.sprite.y);
+    }
+  }
+
+  private nearestWalker(): Walker | null {
+    let best: Walker | null = null;
+    let bestD = TOWNSFOLK_TALK_RADIUS;
+    for (const w of this.walkers) {
+      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, w.sprite.x, w.sprite.y);
+      if (d < bestD) {
+        bestD = d;
+        best = w;
+      }
+    }
+    return best;
+  }
+
+  private chatWith(w: Walker): void {
+    const dx = this.player.x - w.sprite.x;
+    const dy = this.player.y - w.sprite.y;
+    w.sprite.setFrame(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : dy > 0 ? 0 : 2).setAngle(0);
+    w.talkUntil = this.time.now + 3600;
+    const line = w.def.lines[w.line % w.def.lines.length];
+    w.line += 1;
+    this.playDialogueCue();
+    this.showToast(`${w.def.name}: “${line}”`, w.sprite.x, w.sprite.y - w.sprite.displayHeight - 8);
+  }
+
   /**
    * Animated water at the three spillway gates: falling streaks over the
    * painted waterfalls and white foam churning in the basin.
@@ -2436,6 +2552,8 @@ export default class GameScene extends Phaser.Scene {
       EventBus.emit(GameEvents.PLAYER_MOVED, { x: this.player.x, y: this.player.y });
     }
 
+    this.updateTownsfolk(delta);
+
     if (this.dialogueOpen || this.overview) {
       // React or the map view owns the moment; freeze but keep rendering.
       this.player.setVelocity(0, 0);
@@ -2504,7 +2622,16 @@ export default class GameScene extends Phaser.Scene {
         else this.openDialogue(nearest!);
       }
     } else {
-      this.hint.setVisible(false);
+      const walker = this.dialogueOpen ? null : this.nearestWalker();
+      if (walker) {
+        this.hint
+          .setText(`Selam ver (E)`)
+          .setPosition(walker.sprite.x, walker.sprite.y - walker.sprite.displayHeight - 6)
+          .setVisible(true);
+        if (Phaser.Input.Keyboard.JustDown(this.keys.E)) this.chatWith(walker);
+      } else {
+        this.hint.setVisible(false);
+      }
     }
   }
 

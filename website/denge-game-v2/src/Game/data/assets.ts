@@ -23,6 +23,17 @@ export const TextureKeys = {
   ROAD_DASH: 'road-dash',
   ROAD_JUNCTION: 'road-junction',
   SIDEWALK_V: 'sidewalk-v',
+  ZEBRA_V: 'zebra-v',
+  ZEBRA_H: 'zebra-h',
+  STONE_WALL_H: 'stone-wall-h',
+  STONE_WALL_V: 'stone-wall-v',
+  STONE_PILLAR: 'stone-pillar',
+  STONE_GATE: 'stone-gate',
+  TOWNS_MOTHER: 'towns-mother',
+  TOWNS_BOY: 'towns-boy',
+  TOWNS_MAN: 'towns-man',
+  TOWNS_TEEN: 'towns-teen',
+  TOWNS_GRANNY: 'towns-granny',
   SIDEWALK_H: 'sidewalk-h',
 
   // buildings
@@ -171,6 +182,13 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.ROAD_STRAIGHT, path: 'assets/ground/road-straight-v2.png', width: 194, height: 88, smooth: true },
   { key: TextureKeys.ROAD_DASH, path: 'assets/ground/road-dash-v2.png', width: 148, height: 127, smooth: true },
   // Plain asphalt (from the road tile's marking-free band) for crossings.
+  { key: TextureKeys.ZEBRA_V, path: 'assets/ground/zebra-v.png', width: 40, height: 88, smooth: true },
+  { key: TextureKeys.ZEBRA_H, path: 'assets/ground/zebra-h.png', width: 88, height: 40, smooth: true },
+  // Low fieldstone walls (Gemini): repeating segment, pillar and gate.
+  { key: TextureKeys.STONE_WALL_H, path: 'assets/props/stone-wall-h.webp', width: 1017, height: 160, smooth: true },
+  { key: TextureKeys.STONE_WALL_V, path: 'assets/props/stone-wall-v.webp', width: 160, height: 1017, smooth: true },
+  { key: TextureKeys.STONE_PILLAR, path: 'assets/props/stone-pillar.webp', width: 169, height: 300, smooth: true },
+  { key: TextureKeys.STONE_GATE, path: 'assets/props/stone-gate.webp', width: 431, height: 420, smooth: true },
   { key: TextureKeys.SIDEWALK_V, path: 'assets/ground/sidewalk-v.png', width: 44, height: 62, smooth: true },
   { key: TextureKeys.SIDEWALK_H, path: 'assets/ground/sidewalk-h.png', width: 62, height: 44, smooth: true },
   { key: TextureKeys.ROAD_JUNCTION, path: 'assets/ground/road-junction.png', width: 148, height: 148, smooth: true },
@@ -279,6 +297,18 @@ export interface SpritesheetAsset extends ImageAsset {
  * frames). Kept loaded as fallback but not currently placed.
  */
 export const SPRITESHEET_ASSETS: readonly SpritesheetAsset[] = [
+  // Townsfolk (Gemini): front, right, back, left — same order as the NPC sheets.
+  ...(['TOWNS_MOTHER', 'TOWNS_BOY', 'TOWNS_MAN', 'TOWNS_TEEN', 'TOWNS_GRANNY'] as const).map((k) => ({
+    key: TextureKeys[k],
+    path: `assets/characters/${TextureKeys[k]}.webp`,
+    width: 880,
+    height: 360,
+    frameWidth: 220,
+    frameHeight: 360,
+    columns: 4,
+    rows: 1,
+    smooth: true,
+  })),
   {
     key: TextureKeys.PLAYER,
     path: 'assets/characters/playerboy_walk.png',
