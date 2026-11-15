@@ -72,6 +72,10 @@ export interface GroundLayer {
    * 127px texture carries both edge lines that must survive into an 88px road.
    */
   scaleY?: number;
+  /** Texture-to-world scale of the repeating tile (default 1). */
+  tileScale?: number;
+  /** Soft edge in world px — the layer fades into whatever lies beneath. */
+  feather?: number;
 }
 
 /** A collision rectangle with no sprite of its own (water, fields, ...). */
@@ -255,6 +259,7 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     width: WORLD.width,
     height: WORLD.height - WORLD_TOP,
     depth: GroundDepth.BASE,
+    tileScale: 0.5,
   },
   // Drier, paler grass over the farmland to read as a different district.
   {
@@ -265,6 +270,8 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     width: 660,
     height: 800,
     depth: GroundDepth.DISTRICT_TINT,
+    tileScale: 0.5,
+    feather: 70,
   },
   // Lush grass for the central park.
   {
@@ -275,6 +282,8 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     width: 600,
     height: 800,
     depth: GroundDepth.DISTRICT_TINT,
+    tileScale: 0.5,
+    feather: 40,
   },
   // North-south street: dam -> park -> town hall (asphalt + promenade tile).
   {
@@ -299,10 +308,12 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     id: 'road-plaza',
     textureKey: TextureKeys.GROUND_PATH,
     x: 650,
-    y: 1240,
+    y: 1225,
     width: 620,
-    height: 110,
+    height: 200,
     depth: GroundDepth.ROAD,
+    tileScale: 0.15,
+    feather: 8,
   },
 ] as const;
 

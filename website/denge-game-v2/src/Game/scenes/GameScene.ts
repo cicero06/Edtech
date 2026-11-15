@@ -421,6 +421,10 @@ export default class GameScene extends Phaser.Scene {
   /** Flat floor layers: grass base, district tints, water, roads. */
   private createGround(): void {
     for (const layer of GROUND_LAYERS) {
+      if (layer.feather) {
+        this.addFeatheredLayer(layer);
+        continue;
+      }
       const scaleY = layer.scaleY ?? 1;
       this.add
         .tileSprite(
@@ -431,6 +435,7 @@ export default class GameScene extends Phaser.Scene {
           layer.textureKey,
         )
         .setScale(1, scaleY)
+        .setTileScale(layer.tileScale ?? 1)
         .setDepth(layer.depth);
     }
     // The northern lake, beaches, dock and dam come as one painted panorama
@@ -442,6 +447,49 @@ export default class GameScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDisplaySize(lake.width, lake.height)
       .setDepth(GroundDepth.ROAD + 10);
+  }
+
+  /**
+   * District grass that blends into its surroundings instead of ending in a
+   * ruler-straight line: the tile is painted into a canvas (2 px per world px
+   * so it stays as sharp as the tiled base) and its edges are faded out.
+   */
+  private addFeatheredLayer(layer: (typeof GROUND_LAYERS)[number]): void {
+    const RES = 2;
+    const w = Math.round(layer.width * RES);
+    const h = Math.round(layer.height * RES);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    const source = this.textures.get(layer.textureKey).getSourceImage() as CanvasImageSource & { width: number; height: number };
+    const tile = source.width * (layer.tileScale ?? 1) * RES;
+    const th = source.height * (layer.tileScale ?? 1) * RES;
+    for (let y = 0; y < h; y += th) {
+      for (let x = 0; x < w; x += tile) ctx.drawImage(source, x, y, tile, th);
+    }
+    // Fade each edge: 'destination-out' with a gradient from the edge inward.
+    const f = (layer.feather ?? 0) * RES;
+    ctx.globalCompositeOperation = 'destination-out';
+    const edge = (x0: number, y0: number, x1: number, y1: number, rx: number, ry: number, rw: number, rh: number) => {
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, 'rgba(0,0,0,1)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(rx, ry, rw, rh);
+    };
+    edge(0, 0, f, 0, 0, 0, f, h);
+    edge(w, 0, w - f, 0, w - f, 0, f, h);
+    edge(0, 0, 0, f, 0, 0, w, f);
+    edge(0, h, 0, h - f, 0, h - f, w, f);
+    const key = `feathered-${layer.id}`;
+    if (this.textures.exists(key)) this.textures.remove(key);
+    this.textures.addCanvas(key, canvas)?.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.add
+      .image(layer.x, layer.y, key)
+      .setOrigin(0, 0)
+      .setDisplaySize(layer.width, layer.height)
+      .setDepth(layer.depth);
   }
 
   /**

@@ -16,6 +16,7 @@ export const TextureKeys = {
   GROUND_GRASS_DRY: 'ground-grass-dry',
   GROUND_GRASS_LUSH: 'ground-grass-lush',
   GROUND_PATH: 'ground-path',
+  GROUND_DIRT: 'ground-dirt',
   WATER: 'water',
   WATER_DEEP: 'water-deep',
   ROAD_STRAIGHT: 'road-straight',
@@ -147,16 +148,21 @@ export interface ImageAsset {
 /** Plain images, loaded with `this.load.image()`. */
 export const IMAGE_ASSETS: readonly ImageAsset[] = [
   // --- pixel-art ground tiles (legacy atlas, still the seamless base) ---
-  { key: TextureKeys.GROUND_GRASS, path: 'assets/ground/grass-tile-1.png', width: 48, height: 48 },
-  { key: TextureKeys.GROUND_GRASS_DRY, path: 'assets/ground/grass-tile-2.png', width: 48, height: 48 },
-  { key: TextureKeys.GROUND_GRASS_LUSH, path: 'assets/ground/grass-tile-3.png', width: 48, height: 48 },
-  { key: TextureKeys.GROUND_PATH, path: 'assets/ground/path-tile.png', width: 12, height: 12 },
+  // Hand-painted seamless ground (Gemini, matched to the building art) —
+  // tiled at 0.5 so one 1024px texture covers 512 world px.
+  { key: TextureKeys.GROUND_GRASS, path: 'assets/ground/grass-paint.webp', width: 1024, height: 1024, smooth: true },
+  { key: TextureKeys.GROUND_GRASS_DRY, path: 'assets/ground/grass-paint-dry.webp', width: 1024, height: 1024, smooth: true },
+  { key: TextureKeys.GROUND_GRASS_LUSH, path: 'assets/ground/grass-paint-lush.webp', width: 1024, height: 1024, smooth: true },
+  { key: TextureKeys.GROUND_PATH, path: 'assets/ground/cobble-plaza.webp', width: 1024, height: 1024, smooth: true },
+  { key: TextureKeys.GROUND_DIRT, path: 'assets/ground/dirt-path.webp', width: 1024, height: 1024, smooth: true },
   { key: TextureKeys.WATER, path: 'assets/water/water-tile.png', width: 16, height: 16 },
 
   // --- smooth illustrated tiles, sliced from allassets.png ---
   { key: TextureKeys.WATER_DEEP, path: 'assets/water/water-deep.png', width: 106, height: 120, smooth: true },
-  { key: TextureKeys.ROAD_STRAIGHT, path: 'assets/ground/road-straight.png', width: 194, height: 94, smooth: true },
-  { key: TextureKeys.ROAD_DASH, path: 'assets/ground/road-dash.png', width: 152, height: 127, smooth: true },
+  // Edge rows/columns on the tiling axis cropped + made opaque: the old
+  // semi-transparent rims let grass show through as lines between tiles.
+  { key: TextureKeys.ROAD_STRAIGHT, path: 'assets/ground/road-straight-v2.png', width: 194, height: 88, smooth: true },
+  { key: TextureKeys.ROAD_DASH, path: 'assets/ground/road-dash-v2.png', width: 148, height: 127, smooth: true },
 
   // --- pixel-art buildings (kept as fallback, not currently placed) ---
   { key: TextureKeys.TOWN_HALL, path: 'assets/buildings/town-hall.png', width: 96, height: 109 },
@@ -206,8 +212,8 @@ export const IMAGE_ASSETS: readonly ImageAsset[] = [
   { key: TextureKeys.DAM_BASIN, path: 'assets/water/dam-basin.png', width: 94, height: 68 },
   { key: TextureKeys.DAM_STRUCTURE, path: 'assets/water/dam-structure.png', width: 345, height: 223, smooth: true },
   { key: TextureKeys.TREATMENT_PLANT, path: 'assets/water/treatment-plant.png', width: 274, height: 213, smooth: true },
-  // Unity's lake/dam panorama (2x Lanczos of the 1024×400 original).
-  { key: TextureKeys.RESERVOIR_PANORAMA, path: 'assets/maps/reservoir-panorama.webp', width: 1984, height: 800, smooth: true },
+  // Lake/dam panorama: Unity layout repainted at 1.6 px per world px (Gemini, 3 parts).
+  { key: TextureKeys.RESERVOIR_PANORAMA, path: 'assets/maps/reservoir-panorama.webp', width: 3075, height: 1024, smooth: true },
   { key: TextureKeys.DOCK, path: 'assets/props/dock.png', width: 94, height: 127, smooth: true },
   // Chapter-2 street states: the leak beside Nuri's street, then the open trench.
   { key: TextureKeys.STREET_LEAK, path: 'assets/water/street-leak.png', width: 1254, height: 1254, smooth: true },
