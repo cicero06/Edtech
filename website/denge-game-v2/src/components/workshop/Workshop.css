@@ -183,7 +183,52 @@
 .ws-win { display: flex; gap: 18px; align-items: flex-start; border-color: rgba(var(--ws-gold-rgb), 0.6); }
 .ws-medal { font-size: 64px; line-height: 1; filter: drop-shadow(0 0 12px rgba(var(--ws-gold-rgb), 0.6)); }
 
+/* Panorama header (Aylin-style observation deck) */
+.ws-room {
+  position: relative;
+  min-height: 170px;
+  border-radius: 10px;
+  border: 1px solid var(--ws-line);
+  background-size: cover;
+  background-position: center 60%;
+  margin-bottom: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 16px 0 12px;
+}
+.ws-room::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.15) 45%, rgba(0, 0, 0, 0.45));
+}
+.ws-room > * { position: relative; }
+.ws-room-npc .ws-portrait {
+  height: auto;
+  border: none;
+  background: none;
+  padding: 0;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+.ws-bubble {
+  align-self: center;
+  max-width: 640px;
+  margin: 14px 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--ws-accent-rgb), 0.55);
+  background: rgba(8, 10, 12, 0.88);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.ws-bubble p { margin: 4px 0 0; font-size: 15px; line-height: 1.5; }
+.ws-room.alert .ws-bubble { border-color: var(--ws-bad); background: rgba(60, 12, 8, 0.92); }
+
 @media (max-width: 760px) {
+  .ws-room { min-height: 0; padding: 0 10px; }
+  .ws-room-npc { transform: scale(0.7); transform-origin: bottom left; margin-right: -24px; }
+  .ws-bubble p { font-size: 14px; }
   .ws-shell { padding: 14px; }
   .ws-title { font-size: 18px; }
   .ws-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }

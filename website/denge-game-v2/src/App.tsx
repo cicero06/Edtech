@@ -6,6 +6,8 @@ import InvestigationCard from './components/InvestigationCard';
 import AylinWorkshopModal, { type AylinWorkshopDecisionResult } from './components/AylinWorkshopModal';
 import KemalWorkshop from './components/workshop/KemalWorkshop';
 import NuriWorkshop from './components/workshop/NuriWorkshop';
+import FieldHud from './components/workshop/FieldHud';
+import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
 import { minigameForCard } from './Game/data/minigames';
 import SolutionPanel from './components/SolutionPanel';
@@ -84,6 +86,7 @@ function App() {
   /** Typewriter: how many characters of the current line are visible. */
   const [typed, setTyped] = useState(0);
   const [investigation, setInvestigation] = useState<InvestigationPayload | null>(null);
+  const [fieldStatus, setFieldStatus] = useState<FieldStatus | null>(null);
   const [objective, setObjective] = useState<string | null>(null);
   const [notebook, setNotebook] = useState<NotebookEntry[]>([]);
   const [notebookOpen, setNotebookOpen] = useState(false);
@@ -178,6 +181,7 @@ function App() {
     const onPlayerMoved = (payload: PlayerMovedPayload) => setPlayerPos(payload);
     const onMarkersChanged = (payload: MarkersChangedPayload) => setMapMarkers(payload.markers);
     const onOverviewChanged = (payload: OverviewChangedPayload) => setMapOverview(payload.active);
+    const onFieldStatus = (payload: FieldStatus | null) => setFieldStatus(payload);
 
     EventBus.on(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
     EventBus.on(GameEvents.DISTRICT_CHANGED, onDistrictChanged);
@@ -193,6 +197,7 @@ function App() {
     EventBus.on(GameEvents.PLAYER_MOVED, onPlayerMoved);
     EventBus.on(GameEvents.MARKERS_CHANGED, onMarkersChanged);
     EventBus.on(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
+    EventBus.on(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
 
     return () => {
       EventBus.off(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
@@ -209,6 +214,7 @@ function App() {
       EventBus.off(GameEvents.PLAYER_MOVED, onPlayerMoved);
       EventBus.off(GameEvents.MARKERS_CHANGED, onMarkersChanged);
       EventBus.off(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
+      EventBus.off(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
     };
   }, []);
 
@@ -272,6 +278,18 @@ function App() {
     setInvestigation(null);
     playSfx(SoundKeys.COMPLETE, 0.8);
     EventBus.emit(GameEvents.INVESTIGATION_COMPLETED, { cardId });
+  };
+
+  /** Workshop closed with ✕ before finishing — the scene must unfreeze. */
+  const closeWorkshop = () => {
+    setInvestigation(null);
+    EventBus.emit(GameEvents.INVESTIGATION_CLOSED);
+  };
+
+  /** Workshop sends the student into town (sprinklers / radar). */
+  const goToField = (task: FieldTaskId) => {
+    setInvestigation(null);
+    EventBus.emit(GameEvents.FIELD_TASK_START, { task });
   };
 
   /** A district workshop finished: notebook entry + its own analytics event. */
@@ -520,6 +538,7 @@ function App() {
         )}
 
         {objective && <div className="objective-pill">🎯 {objective}</div>}
+        {fieldStatus && !investigation && !dialogue && <FieldHud status={fieldStatus} />}
 
         {/* Time-of-day tint sits over the world, under the HUD. */}
         <div className="day-tint" style={{ background: dayTint ?? 'transparent' }} />
@@ -740,7 +759,7 @@ function App() {
                 metrics: { cost: result.cost, waterSaved: result.waterSaved },
               });
             }}
-            onClose={() => setInvestigation(null)}
+            onClose={closeWorkshop}
             hasParkData={notebook.some((n) => n.cardId === 'park')}
             hasMahalleData={notebook.some((n) => n.cardId === 'konut')}
           />
@@ -748,15 +767,19 @@ function App() {
 
         {investigation?.cardId === 'park' && (
           <KemalWorkshop
+            field={investigation.field?.task === 'kemal-sprinklers' ? investigation.field : undefined}
+            onGoToField={() => goToField('kemal-sprinklers')}
             onComplete={(result) => finishWorkshop('park', result)}
-            onClose={() => setInvestigation(null)}
+            onClose={closeWorkshop}
           />
         )}
 
         {investigation?.cardId === 'konut' && (
           <NuriWorkshop
+            field={investigation.field?.task === 'nuri-radar' ? investigation.field : undefined}
+            onGoToField={() => goToField('nuri-radar')}
             onComplete={(result) => finishWorkshop('konut', result)}
-            onClose={() => setInvestigation(null)}
+            onClose={closeWorkshop}
           />
         )}
 

@@ -95,6 +95,33 @@ import {
 } from '../data/voices';
 import { loadSession, saveSession, type QuestStage } from '../data/session';
 import { VISIBLE_WORLD_HEIGHT } from '../config';
+import {
+  LEAK_HOT_RADIUS,
+  LEAK_SPOT,
+  SPRAY_DISTANCE,
+  SPRINKLERS,
+  SPRINKLER_MIN_ROTATIONS,
+  SPRINKLER_RADIUS,
+  isGreenSurface,
+  radarDecibels,
+  solvedDir,
+  type Dir,
+  type FieldResult,
+  type FieldTaskId,
+  type SprinklerDef,
+} from '../data/fieldTasks';
+
+/** One park sprinkler on the map: head sprite, spray, wet patch, warning. */
+interface Sprinkler {
+  def: SprinklerDef;
+  dir: Dir;
+  head: Phaser.GameObjects.Image;
+  fan: Phaser.GameObjects.Graphics;
+  spray: Phaser.GameObjects.Particles.ParticleEmitter;
+  wet: Phaser.GameObjects.Ellipse;
+  warn: Phaser.GameObjects.Text;
+  ring: Phaser.GameObjects.Ellipse;
+}
 
 type Facing = 'down' | 'up' | 'left' | 'right';
 
@@ -202,6 +229,19 @@ export default class GameScene extends Phaser.Scene {
   private implObjects: Phaser.GameObjects.GameObject[] = [];
   /** World sprites by data id, so the chapter can restyle them (dry fountain). */
   private worldSprites = new Map<string, Phaser.GameObjects.Image>();
+  // ---- in-town workshop parts (fieldTasks.ts) ----
+  private fieldTask: FieldTaskId | null = null;
+  private sprinklers: Sprinkler[] = [];
+  private sprinklerTurns = 0;
+  private radarStartedAt = 0;
+  private radarLastEmit = 0;
+  /** dB a moment ago — the trend compares against this, not the last frame. */
+  private radarBaseDb = 0;
+  private radarBaseAt = 0;
+  private radarTrend: 'up' | 'down' | 'same' = 'same';
+  private leakFound = false;
+  /** Field part already done — the workshop resumes after it when reopened. */
+  private fieldResults = new Map<InvestigationId, FieldResult>();
   /** Solution ids the world currently shows - switches to the alt plan on retry. */
   private worldPlanIds: string[] = [];
   /**
@@ -335,6 +375,7 @@ export default class GameScene extends Phaser.Scene {
     this.createGuideArrow();
     this.createImplTextures();
     this.createChapterTwoDressing();
+    this.createSprinklers();
     // Restored chapter-2 sessions get their construction sites back.
     this.rebuildImplementation();
 
@@ -794,6 +835,8 @@ export default class GameScene extends Phaser.Scene {
       case 'meet-mayor':
         return id === 'belediye';
       case 'investigate':
+        if (this.fieldTask === 'kemal-sprinklers' && id === 'park') return false;
+        if (this.fieldTask === 'nuri-radar' && id === 'konut') return false;
         return !!id && id !== 'belediye' && !this.completedCards.has(id);
       case 'report':
         return npc.definition.id === 'lina';
@@ -839,6 +882,19 @@ export default class GameScene extends Phaser.Scene {
   /** Current world position the guide arrow should point at, if any. */
   private questTarget(): { x: number; y: number } | null {
     if (this.quest === 'lina-intro' || this.quest === 'done' || this.dialogueOpen) return null;
+    if (this.fieldTask === 'nuri-radar') return null;
+    if (this.fieldTask === 'kemal-sprinklers') {
+      const crooked = this.sprinklers.filter((s) => !this.isAligned(s));
+      if (crooked.length === 0) return null;
+      return crooked
+        .map((s) => ({ x: s.def.x, y: s.def.y }))
+        .reduce((a, b) =>
+          Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y) <
+          Phaser.Math.Distance.Between(this.player.x, this.player.y, a.x, a.y)
+            ? b
+            : a,
+        );
+    }
 
     if (
       this.quest === 'report' ||
@@ -954,7 +1010,7 @@ export default class GameScene extends Phaser.Scene {
 
   private openInvestigation(npc: Npc, cardId: InvestigationId): void {
     this.beginConversation(npc);
-    EventBus.emit(GameEvents.OPEN_INVESTIGATION, { cardId });
+    EventBus.emit(GameEvents.OPEN_INVESTIGATION, { cardId, field: this.fieldResults.get(cardId) });
   }
 
   private handleInvestigationCompleted(cardId: string): void {
@@ -983,6 +1039,14 @@ export default class GameScene extends Phaser.Scene {
         this.setObjective('Belediye binasına git ve Başkan ile konuş');
         break;
       case 'investigate': {
+        if (this.fieldTask === 'kemal-sprinklers') {
+          this.setObjective(`🚿 Parktaki fıskiyeleri çimlere çevir (${this.alignedSprinklers()}/${this.sprinklers.length})`);
+          break;
+        }
+        if (this.fieldTask === 'nuri-radar') {
+          this.setObjective('🎧 Radarla Çınar Caddesi’nde gizli kaçağı bul');
+          break;
+        }
         const done = DISTRICT_CARDS.filter((c) => this.completedCards.has(c)).length;
         this.setObjective(`Bölgeleri incele ve deftere kaydet (${done}/${DISTRICT_CARDS.length})`);
         break;
@@ -1081,6 +1145,8 @@ export default class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.AUDIO_MUTED, this.handleAudioMuted, this);
     EventBus.on(GameEvents.MAP_TOGGLED, this.toggleOverview, this);
     EventBus.on(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
+    EventBus.on(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
+    EventBus.on(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
 
     // Scenes outlive neither the game nor React, so unbind on shutdown to avoid
     // stacking duplicate handlers if the scene is ever restarted.
@@ -1095,6 +1161,8 @@ export default class GameScene extends Phaser.Scene {
       EventBus.off(GameEvents.AUDIO_MUTED, this.handleAudioMuted, this);
       EventBus.off(GameEvents.MAP_TOGGLED, this.toggleOverview, this);
       EventBus.off(GameEvents.ANNOUNCE_SUBMITTED, this.handleAnnounceSubmitted, this);
+      EventBus.off(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
+      EventBus.off(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
     });
   }
 
@@ -1385,7 +1453,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   /** Nuri's street, on the avenue's south edge - the leak lives here. */
-  private static readonly LEAK_SPOT = { x: 1500, y: 786 } as const;
 
   /** One-time canvas textures for chapter-2 dressing: barrier, patch, particles. */
   private createImplTextures(): void {
@@ -1422,7 +1489,7 @@ export default class GameScene extends Phaser.Scene {
 
   /** Persistent chapter-2 dressing; applyWorldDressing flips its visibility. */
   private createChapterTwoDressing(): void {
-    const { x: lx, y: ly } = GameScene.LEAK_SPOT;
+    const { x: lx, y: ly } = LEAK_SPOT;
 
     // The leak is a pre-existing problem - on stage from chapter 1.
     this.leakDecal = this.add
@@ -1515,7 +1582,7 @@ export default class GameScene extends Phaser.Scene {
     const fountainsOff = started && this.worldPlanIds.includes('fountains-off');
     const drip = this.worldPlanIds.includes('drip-irrigation');
 
-    const leakVisible = !pipes || !started;
+    const leakVisible = (!pipes || !started) && this.leakRevealed();
     this.leakDecal?.setVisible(leakVisible);
     if (this.leakEmitter) {
       this.leakEmitter.setVisible(leakVisible);
@@ -1551,6 +1618,261 @@ export default class GameScene extends Phaser.Scene {
       if (!drip && this.implPhase >= 2) field.setTint(0xc9ae72);
       else field.clearTint();
     }
+  }
+
+  // =========================================================================
+  // IN-TOWN WORKSHOP PARTS — Kemal's sprinklers, Nuri's acoustic radar
+  // =========================================================================
+
+  /** Workshop closed with ✕ before finishing: give control back. */
+  private handleInvestigationClosed(): void {
+    this.endConversation();
+  }
+
+  private handleFieldTaskStart(payload: { task: FieldTaskId }): void {
+    this.endConversation();
+    this.fieldTask = payload.task;
+    if (payload.task === 'nuri-radar') {
+      this.radarStartedAt = this.time.now;
+      this.radarBaseAt = 0;
+      this.radarTrend = 'same';
+    }
+    this.playSlice(SoundKeys.TICK, 0, 600, 0.6);
+    this.refreshQuestMarkers();
+    this.emitObjective();
+    this.emitFieldStatus(true);
+  }
+
+  private createSprinklers(): void {
+    const g = this.add.graphics();
+    // Pop-up sprinkler: stone base, brass riser, blue rotor head.
+    g.fillStyle(0x000000, 0.25).fillEllipse(22, 38, 40, 12);
+    g.fillStyle(0x8c8f8a).fillEllipse(22, 34, 34, 13);
+    g.lineStyle(2, 0x5d605b).strokeEllipse(22, 34, 34, 13);
+    g.fillStyle(0xc99a45).fillRoundedRect(15, 12, 14, 22, 4);
+    g.lineStyle(2, 0x7a5a20).strokeRoundedRect(15, 12, 14, 22, 4);
+    g.fillStyle(0x2f86d6).fillCircle(22, 12, 10);
+    g.lineStyle(2.5, 0x123f66).strokeCircle(22, 12, 10);
+    g.fillStyle(0xbfe6ff).fillCircle(19, 9, 3);
+    g.generateTexture('fx-sprinkler', 44, 44);
+    g.destroy();
+
+    const parkDone = this.completedCards.has('park');
+    for (const def of SPRINKLERS) {
+      const wet = this.add.ellipse(def.x, def.y, 70, 34, 0x3fa7d6, 0.35).setDepth(GroundDepth.DECAL + 4);
+      const ring = this.add
+        .ellipse(def.x, def.y - 4, 64, 26)
+        .setStrokeStyle(3, 0xff5a3c, 0.95)
+        .setDepth(GroundDepth.DECAL + 5);
+      this.tweens.add({ targets: ring, scaleX: 1.25, scaleY: 1.25, alpha: 0.2, duration: 800, repeat: -1 });
+      const fan = this.add.graphics().setDepth(def.y + 2);
+      const head = this.add.image(def.x, def.y, 'fx-sprinkler').setOrigin(0.5, 0.86).setDepth(def.y + 3);
+      const warn = this.add
+        .text(def.x, def.y, '⚠', { fontFamily: 'Arial', fontSize: '24px', color: '#ffdd55', stroke: '#5a1a00', strokeThickness: 5 })
+        .setOrigin(0.5, 1)
+        .setDepth(UI_DEPTH - 1);
+      this.tweens.add({ targets: warn, y: '-=6', duration: 450, yoyo: true, repeat: -1 });
+      const spray = this.add.particles(def.x, def.y - 30, 'fx-drop', { emitting: true }).setDepth(def.y + 4);
+      const sprinkler: Sprinkler = {
+        def,
+        dir: parkDone ? solvedDir(def) : def.start,
+        head,
+        fan,
+        spray,
+        wet,
+        warn,
+        ring,
+      };
+      this.sprinklers.push(sprinkler);
+      this.pointSprinkler(sprinkler);
+    }
+  }
+
+  /** Aims the spray and moves the wet patch onto whatever lies that way. */
+  private pointSprinkler(s: Sprinkler): void {
+    const angle = [-90, 0, 90, 180][s.dir];
+    const rad = Phaser.Math.DegToRad(angle);
+    const speed = SPRAY_DISTANCE / 0.45;
+    s.spray.setConfig({
+      lifespan: 480,
+      frequency: 28,
+      quantity: 3,
+      speed: { min: speed * 0.7, max: speed },
+      angle: { min: angle - 18, max: angle + 18 },
+      scale: { start: 1.7, end: 0.7 },
+      alpha: { start: 1, end: 0.2 },
+      gravityY: 40,
+      tint: [0xbfe9ff, 0x7ec4e8, 0xffffff],
+    });
+    const ox = s.def.x;
+    const oy = s.def.y - 30;
+    const tx = s.def.x + Math.cos(rad) * SPRAY_DISTANCE;
+    const ty = s.def.y - 6 + Math.sin(rad) * SPRAY_DISTANCE;
+    const green = this.isAligned(s);
+
+    // A translucent water fan from the nozzle to where the water lands.
+    const spread = Phaser.Math.DegToRad(20);
+    s.fan.clear();
+    s.fan.fillStyle(green ? 0x8fd8ff : 0xffb0a0, 0.28);
+    s.fan.fillTriangle(
+      ox,
+      oy,
+      ox + Math.cos(rad - spread) * SPRAY_DISTANCE * 1.1,
+      oy + Math.sin(rad - spread) * SPRAY_DISTANCE * 1.1 + 24,
+      ox + Math.cos(rad + spread) * SPRAY_DISTANCE * 1.1,
+      oy + Math.sin(rad + spread) * SPRAY_DISTANCE * 1.1 + 24,
+    );
+    s.wet
+      .setPosition(tx, ty)
+      .setFillStyle(green ? 0x3fa7d6 : 0x4f86b8, green ? 0.3 : 0.75)
+      .setStrokeStyle(green ? 0 : 3, 0xbfe6ff, green ? 0 : 0.8);
+    s.warn.setPosition(tx, ty - 14).setVisible(!green);
+    s.ring.setVisible(!green);
+  }
+
+  private isAligned(s: Sprinkler): boolean {
+    return isGreenSurface(s.def.sides[s.dir]);
+  }
+
+  private alignedSprinklers(): number {
+    return this.sprinklers.filter((s) => this.isAligned(s)).length;
+  }
+
+  private rotateSprinkler(s: Sprinkler): void {
+    s.dir = ((s.dir + 1) % 4) as Dir;
+    this.sprinklerTurns += 1;
+    this.tweens.add({ targets: s.head, scaleX: 1.25, scaleY: 0.85, duration: 90, yoyo: true });
+    this.pointSprinkler(s);
+    const green = this.isAligned(s);
+    this.playSlice(green ? SoundKeys.COMPLETE : SoundKeys.TICK, 0, green ? 900 : 400, 0.5);
+    this.showToast(
+      green ? `✓ ${s.def.labels[s.dir]} sulanıyor` : `⚠ Su ${s.def.labels[s.dir].toLocaleLowerCase('tr')} üzerine gidiyor`,
+      s.def.x,
+      s.def.y - 34,
+    );
+    this.emitObjective();
+    this.emitFieldStatus(true);
+
+    if (this.alignedSprinklers() === this.sprinklers.length) {
+      const result: FieldResult = {
+        task: 'kemal-sprinklers',
+        rotations: this.sprinklerTurns,
+        extraTurns: Math.max(0, this.sprinklerTurns - SPRINKLER_MIN_ROTATIONS),
+      };
+      this.finishFieldTask('park', result, 'Harika! Bütün fıskiyeler artık yeşil alanları suluyor 🌿');
+    }
+  }
+
+  private leakRevealed(): boolean {
+    return this.leakFound || this.completedCards.has('konut') || this.implPhase >= 0;
+  }
+
+  /**
+   * Runs every frame while a field task is active. Returns true when it owns
+   * the interaction hint this frame (so NPC hints stay hidden).
+   */
+  private updateFieldTask(): boolean {
+    if (!this.fieldTask) return false;
+
+    if (this.fieldTask === 'kemal-sprinklers') {
+      let nearest: Sprinkler | null = null;
+      let best = SPRINKLER_RADIUS;
+      for (const s of this.sprinklers) {
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.def.x, s.def.y);
+        if (d <= best) {
+          best = d;
+          nearest = s;
+        }
+      }
+      if (!nearest) return false;
+      this.hint
+        .setText('Fıskiyeyi çevir (E)')
+        .setPosition(nearest.def.x, nearest.def.y - 40)
+        .setVisible(true);
+      if (Phaser.Input.Keyboard.JustDown(this.keys.E)) this.rotateSprinkler(nearest);
+      return true;
+    }
+
+    // nuri-radar
+    const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, LEAK_SPOT.x, LEAK_SPOT.y);
+    const hot = d <= LEAK_HOT_RADIUS;
+    this.emitFieldStatus(false);
+    if (hot && !this.leakFound) {
+      this.leakFound = true;
+      this.applyWorldDressing();
+      this.cameras.main.shake(260, 0.004);
+      this.playSlice(SoundKeys.COMPLETE, 0, 1200, 0.6);
+      this.showToast('🚨 94 dB — kaçak burada!', LEAK_SPOT.x, LEAK_SPOT.y - 30);
+    }
+    if (!hot) return false;
+    this.hint
+      .setText('Kazıyı aç, boruya ulaş (E)')
+      .setPosition(LEAK_SPOT.x, LEAK_SPOT.y - 40)
+      .setVisible(true);
+    if (Phaser.Input.Keyboard.JustDown(this.keys.E)) {
+      const seconds = Math.round((this.time.now - this.radarStartedAt) / 1000);
+      this.finishFieldTask('konut', { task: 'nuri-radar', seconds }, null);
+    }
+    return true;
+  }
+
+  /** Field part done: remember it and reopen the workshop where it left off. */
+  private finishFieldTask(cardId: InvestigationId, result: FieldResult, toast: string | null): void {
+    this.fieldTask = null;
+    this.fieldResults.set(cardId, result);
+    this.emitFieldStatus(true);
+    if (toast) this.showToast(toast, this.player.x, this.player.y - 60);
+    this.refreshQuestMarkers();
+    this.emitObjective();
+
+    this.dialogueOpen = true;
+    this.hint.setVisible(false);
+    this.player.setVelocity(0, 0);
+    this.player.anims.stop();
+    this.stopWaddle();
+    this.setIdleFrame();
+    this.time.delayedCall(toast ? 900 : 150, () => {
+      EventBus.emit(GameEvents.OPEN_INVESTIGATION, { cardId, field: result });
+    });
+  }
+
+  /** Feeds the React HUD; radar updates are throttled to ~8 Hz. */
+  private emitFieldStatus(force: boolean): void {
+    if (!this.fieldTask) {
+      if (force) EventBus.emit(GameEvents.FIELD_TASK_STATUS, null);
+      return;
+    }
+    if (this.fieldTask === 'kemal-sprinklers') {
+      EventBus.emit(GameEvents.FIELD_TASK_STATUS, {
+        task: 'kemal-sprinklers',
+        aligned: this.alignedSprinklers(),
+        total: this.sprinklers.length,
+        near: null,
+      });
+      return;
+    }
+    const now = this.time.now;
+    if (!force && now - this.radarLastEmit < 120) return;
+    this.radarLastEmit = now;
+    const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, LEAK_SPOT.x, LEAK_SPOT.y);
+    const db = radarDecibels(d);
+    // Compare with the reading ~0.6 s ago so "louder / quieter" survives
+    // standing still between steps.
+    if (this.radarBaseAt === 0) {
+      this.radarBaseDb = db;
+      this.radarBaseAt = now;
+    } else if (now - this.radarBaseAt > 600) {
+      if (db > this.radarBaseDb) this.radarTrend = 'up';
+      else if (db < this.radarBaseDb) this.radarTrend = 'down';
+      this.radarBaseDb = db;
+      this.radarBaseAt = now;
+    }
+    EventBus.emit(GameEvents.FIELD_TASK_STATUS, {
+      task: 'nuri-radar',
+      db,
+      trend: this.radarTrend,
+      hot: d <= LEAK_HOT_RADIUS,
+    });
   }
 
   /** Shared freeze + emit for every NPC dialogue card. */
@@ -1971,6 +2293,7 @@ export default class GameScene extends Phaser.Scene {
 
   /** Shows the hint for the closest NPC in range and handles the E press. */
   private updateNearestNpc(): void {
+    if (this.updateFieldTask()) return;
     let nearest: Npc | null = null;
     let nearestDistance = Number.POSITIVE_INFINITY;
 

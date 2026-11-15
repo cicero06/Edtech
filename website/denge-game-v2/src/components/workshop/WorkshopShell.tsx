@@ -21,6 +21,8 @@ interface Props {
   speech: string;
   /** Speech turns red — used for safety warnings. */
   alert?: boolean;
+  /** Panorama behind the NPC (file under public/assets/workshops/). */
+  backdrop?: string;
   chips: WorkshopChip[];
   sound: boolean;
   onToggleSound: () => void;
@@ -29,10 +31,9 @@ interface Props {
 }
 
 /** Front-facing first frame of an NPC walk strip, like the investigation cards. */
-export function NpcFace({ texture }: { texture: TextureKey }) {
+export function NpcFace({ texture, height = 64 }: { texture: TextureKey; height?: number }) {
   const sheet = SPRITESHEET_ASSETS.find((s) => s.key === texture);
   if (!sheet) return null;
-  const height = 64;
   const frameW = (sheet.frameWidth / sheet.frameHeight) * height;
   return (
     <div className="ws-portrait" style={{ width: frameW }} aria-hidden>
@@ -66,13 +67,28 @@ export default function WorkshopShell(props: Props) {
           </div>
         </header>
 
-        <section className={`ws-speech ${props.alert ? 'alert' : ''}`} aria-live="polite">
-          <NpcFace texture={props.npc.texture} />
-          <div>
-            <div className="ws-eyebrow">{props.npc.label}</div>
-            <p>{props.speech}</p>
-          </div>
-        </section>
+        {props.backdrop ? (
+          <section
+            className={`ws-room ${props.alert ? 'alert' : ''}`}
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}assets/workshops/${props.backdrop})` }}
+          >
+            <div className="ws-room-npc">
+              <NpcFace texture={props.npc.texture} height={118} />
+            </div>
+            <div className="ws-bubble" aria-live="polite">
+              <div className="ws-eyebrow">{props.npc.label}</div>
+              <p>{props.speech}</p>
+            </div>
+          </section>
+        ) : (
+          <section className={`ws-speech ${props.alert ? 'alert' : ''}`} aria-live="polite">
+            <NpcFace texture={props.npc.texture} />
+            <div>
+              <div className="ws-eyebrow">{props.npc.label}</div>
+              <p>{props.speech}</p>
+            </div>
+          </section>
+        )}
 
         <div className="ws-chips">
           {props.chips.map((chip) => (

@@ -1,73 +1,24 @@
 /**
- * İşçi Kemal's smart-park workshop — the web port of the Unity mini-game
+ * İşçi Kemal's smart-park workshop — web port of the Unity mini-game
  * (GameHUD.Kemal.cs). Replaces the plain Park investigation card.
  *
- *   1. briefing — Kemal explains the 25 L park reading and the wet paths
- *   2. align    — turn 3 sprinklers so none spray onto asphalt
- *   3. hour     — predict the watering time with the least evaporation
+ *   1. briefing — Kemal explains the 25 L park reading and the wet paths,
+ *                 then sends the student into the park
+ *   2. (in town) — three real sprinklers spray onto paths; the student walks
+ *                 up and turns each one onto grass (GameScene, fieldTasks.ts)
+ *   3. hour     — back with Kemal: predict the watering time with the least
+ *                 evaporation
  *   4. done     — "Yeşil Vaha Koruyucusu" badge, +10 L saved
  *
- * The student's path (rotations, wrong guesses) is reported as metrics so
- * the teacher can see *how* they got there, not only that they finished.
+ * Metrics include the in-town turns, so the teacher sees how the student
+ * got there, not only that they finished.
  */
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { MinigameResult } from '../../Game/data/minigames';
+import type { FieldResult } from '../../Game/data/fieldTasks';
 import { TextureKeys } from '../../Game/data/assets';
 import { playTone } from './audio';
 import WorkshopShell from './WorkshopShell';
-import './KemalWorkshop.css';
-
-type Dir = 0 | 1 | 2 | 3; // N, E, S, W
-type Surface = 'grass' | 'flowers' | 'trees' | 'asphalt' | 'pavement';
-
-interface Sector {
-  name: string;
-  /** What lies in each direction (N, E, S, W) from the sprinkler. */
-  sides: [Surface, Surface, Surface, Surface];
-  labels: [string, string, string, string];
-}
-
-const SECTORS: readonly Sector[] = [
-  {
-    name: 'Merkez Havuz & Bulvar',
-    sides: ['asphalt', 'flowers', 'asphalt', 'grass'],
-    labels: ['Bulvar yolu', 'Refüj çiçekleri', 'Kavşak asfaltı', 'Park çimi'],
-  },
-  {
-    name: 'Kiraz Parkı & Kamelya',
-    sides: ['trees', 'pavement', 'flowers', 'asphalt'],
-    labels: ['Kiraz ağaçları', 'Mahalle kaldırımı', 'Gül tarhı', 'Cadde asfaltı'],
-  },
-  {
-    name: 'Çocuk Parkı',
-    sides: ['pavement', 'asphalt', 'asphalt', 'grass'],
-    labels: ['Tarla sınır yolu', 'Belediye caddesi', 'Çevre yolu', 'Oyun parkı çimi'],
-  },
-];
-
-const SURFACE_ICON: Record<Surface, string> = {
-  grass: '🌿',
-  flowers: '🌸',
-  trees: '🌳',
-  asphalt: '⬛',
-  pavement: '🧱',
-};
-
-const isGreen = (s: Surface) => s === 'grass' || s === 'flowers' || s === 'trees';
-const ARROWS = ['⬆', '➔', '⬇', '⬅'] as const;
-
-/** Every sprinkler starts pointing at a path — the problem Kemal reported. */
-const START_DIRS: Dir[] = [0, 1, 0];
-/** Fewest taps that fix all three (rotation is clockwise only). */
-const MIN_ROTATIONS = SECTORS.reduce((sum, sector, i) => {
-  let steps = 0;
-  let d = START_DIRS[i];
-  while (!isGreen(sector.sides[d])) {
-    d = ((d + 1) % 4) as Dir;
-    steps++;
-  }
-  return sum + steps;
-}, 0);
 
 interface HourOption {
   id: 'noon' | 'morning' | 'night';
@@ -99,43 +50,33 @@ const HOURS: readonly HourOption[] = [
 
 const WATER_SAVED_L = 10;
 
+type KemalField = Extract<FieldResult, { task: 'kemal-sprinklers' }>;
+
 interface Props {
+  /** Set once the sprinklers in the park are fixed. */
+  field?: KemalField;
+  onGoToField: () => void;
   onComplete: (result: MinigameResult) => void;
   onClose: () => void;
 }
 
-type Step = 'briefing' | 'align' | 'hour' | 'done';
+type Step = 'briefing' | 'hour' | 'done';
 
 const STEP_LABEL: Record<Step, string> = {
   briefing: 'ADIM 1 · SAHA GÖZLEMİ',
-  align: 'ADIM 2 · FISKİYE HİZASI',
   hour: 'ADIM 3 · SULAMA SAATİ',
   done: 'GÖREV TAMAMLANDI',
 };
 
-export default function KemalWorkshop({ onComplete, onClose }: Props) {
-  const [step, setStep] = useState<Step>('briefing');
+export default function KemalWorkshop({ field, onGoToField, onComplete, onClose }: Props) {
+  const [step, setStep] = useState<Step>(field ? 'hour' : 'briefing');
   const [sound, setSound] = useState(true);
-  const [dirs, setDirs] = useState<Dir[]>(START_DIRS);
-  const [rotations, setRotations] = useState(0);
   const [hour, setHour] = useState<HourOption['id'] | null>(null);
   const [wrongHourPicks, setWrongHourPicks] = useState(0);
   const [firstGuess, setFirstGuess] = useState<HourOption['id'] | null>(null);
 
-  const wasted = useMemo(
-    () => dirs.filter((d, i) => !isGreen(SECTORS[i].sides[d])).length,
-    [dirs],
-  );
   const selectedHour = HOURS.find((h) => h.id === hour) ?? null;
-
-  const rotate = (i: number) => {
-    const next = [...dirs];
-    next[i] = ((next[i] + 1) % 4) as Dir;
-    setDirs(next);
-    setRotations((r) => r + 1);
-    const nowWasted = next.filter((d, k) => !isGreen(SECTORS[k].sides[d])).length;
-    playTone(nowWasted === 0 ? 'win' : 'tap', sound);
-  };
+  const aligned = !!field;
 
   const pickHour = (option: HourOption) => {
     if (hour === 'morning') return;
@@ -150,7 +91,8 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
   };
 
   const finish = () => {
-    const extraTurns = Math.max(0, rotations - MIN_ROTATIONS);
+    const rotations = field?.rotations ?? 0;
+    const extraTurns = field?.extraTurns ?? 0;
     const score = Math.max(40, Math.min(100, 100 - wrongHourPicks * 15 - extraTurns * 2));
     onComplete({
       gameId: 'kemal',
@@ -167,18 +109,12 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
 
   const speech: Record<Step, string> = {
     briefing:
-      'Merhaba genç dostum! Parkta ölçtüğümüz 25 litre suyun bir kısmı çimlere hiç ulaşmıyor. Fıskiyeler taş yollara su sıçratıyor, üstelik öğle sıcağında suluyoruz. Gel, birlikte düzeltelim!',
-    align:
-      wasted > 0
-        ? `Dikkat! ${wasted} fıskiye hâlâ yola ya da kaldırıma su basıyor. Fıskiyeye dokunarak yönünü çimlere, çiçeklere veya ağaçlara çevir.`
-        : 'Harika hizalama! Yollar kuru, bütün su yeşil alanlara gidiyor. Şimdi sulama saatine bakalım.',
+      'Merhaba genç dostum! Parkta ölçtüğümüz 25 litre suyun bir kısmı çimlere hiç ulaşmıyor. Fıskiyeler taş yollara ve asfalta su sıçratıyor. Parka çık, her fıskiyenin yanına git ve suyu yeşil alanlara çevir!',
     hour: selectedHour
       ? selectedHour.feedback
-      : 'Sence hangi saatte sularsak suyun en azı buharlaşır? Tahminini seç, sonucu birlikte görelim.',
+      : 'Aslanım! Fıskiyelerin hepsi artık çimleri suluyor, yollar kuru. Şimdi son soru: sence hangi saatte sularsak suyun en azı buharlaşır?',
     done: `Aslanımsın! Sıfır yol israfı, %4 buharlaşma ve ${WATER_SAVED_L} litre net tasarruf. Park hem yemyeşil hem de kuraklığa hazır!`,
   };
-
-  const aligned = wasted === 0 && step !== 'briefing';
 
   return (
     <WorkshopShell
@@ -188,12 +124,13 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
       stepLabel={STEP_LABEL[step]}
       npc={{ texture: TextureKeys.WORKER_KEMAL, label: '👷 İŞÇİ KEMAL' }}
       speech={speech[step]}
+      backdrop="kemal-park.webp"
       sound={sound}
       onToggleSound={() => setSound(!sound)}
       onClose={onClose}
       chips={[
         { icon: '🚰', label: step === 'done' ? 'Debi 15 L/sn' : 'Debi 25 L/sn', ok: step === 'done' },
-        { icon: '🧱', label: aligned ? 'Yol israfı yok' : `${wasted} yolda israf`, ok: aligned },
+        { icon: '🧱', label: aligned ? 'Yol israfı yok' : 'Fıskiyeler yola su basıyor', ok: aligned },
         { icon: '☀️', label: `Buharlaşma %${selectedHour?.loss ?? 28}`, ok: hour === 'morning' },
         { icon: '🌿', label: step === 'done' ? `+${WATER_SAVED_L} L tasarruf` : 'Tasarruf 0 L', ok: step === 'done' },
       ]}
@@ -203,33 +140,15 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
           <h2>Sahada gördüklerimiz</h2>
           <ul className="ws-facts">
             <li>💧 Park her gün <b>25 litre</b> su alıyor.</li>
-            <li>🧱 Fıskiyelerin yanındaki <b>taş yollar ve kaldırımlar ıslak</b> — su çimlere gitmiyor.</li>
+            <li>🧱 Fıskiyelerin yanındaki <b>taş yollar ve asfalt ıslak</b> — su çimlere gitmiyor.</li>
             <li>☀️ Sulama <b>öğle saatinde</b> yapılıyor; güneş suyu buharlaştırıyor.</li>
           </ul>
-          <button className="ws-btn primary" onClick={() => { playTone('tap', sound); setStep('align'); }}>
-            Fıskiyeleri incele →
+          <p className="ws-hint">
+            Parkta 3 fıskiye var. Yanına git, <b>E</b> tuşuyla çevir. Su yola düşüyorsa yerde ⚠ yanar.
+          </p>
+          <button className="ws-btn primary" onClick={() => { playTone('tap', sound); onGoToField(); }}>
+            🚿 Parka çık, fıskiyeleri düzelt →
           </button>
-        </section>
-      )}
-
-      {step === 'align' && (
-        <section className="ws-panel">
-          <h2>Fıskiyeleri yeşil alanlara çevir</h2>
-          <p className="ws-hint">Fıskiyeye dokun: saat yönünde döner. Kırmızı = su boşa gidiyor.</p>
-          <div className="kemal-sectors">
-            {SECTORS.map((sector, i) => (
-              <SectorCard key={sector.name} index={i} sector={sector} dir={dirs[i]} onRotate={() => rotate(i)} />
-            ))}
-          </div>
-          <div className="ws-row-end">
-            <button
-              className="ws-btn primary"
-              disabled={wasted > 0}
-              onClick={() => { playTone('tap', sound); setStep('hour'); }}
-            >
-              {wasted > 0 ? `Önce ${wasted} fıskiyeyi düzelt` : 'Sulama saatine geç →'}
-            </button>
-          </div>
         </section>
       )}
 
@@ -273,7 +192,7 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
           <div>
             <h2>Yeşil Vaha Koruyucusu rozeti kazandın!</h2>
             <ul className="ws-facts">
-              <li>🧱 Yol israfı: <b>0 bölge</b></li>
+              <li>🚿 3 fıskiyeyi <b>{field?.rotations ?? 0}</b> çevirmede düzelttin.</li>
               <li>☀️ Buharlaşma: <b>%28 → %4</b> (sabah 06:00)</li>
               <li>🌿 Günlük tasarruf: <b>{WATER_SAVED_L} litre</b></li>
             </ul>
@@ -287,47 +206,5 @@ export default function KemalWorkshop({ onComplete, onClose }: Props) {
         </section>
       )}
     </WorkshopShell>
-  );
-}
-
-/** Plus-shaped plot: sprinkler in the centre, the four surfaces around it. */
-function SectorCard({
-  index,
-  sector,
-  dir,
-  onRotate,
-}: {
-  index: number;
-  sector: Sector;
-  dir: Dir;
-  onRotate: () => void;
-}) {
-  const green = isGreen(sector.sides[dir]);
-  const area: Record<Dir, string> = { 0: 'n', 1: 'e', 2: 's', 3: 'w' };
-  return (
-    <div className={`kemal-sector ${green ? 'ok' : 'bad'}`}>
-      <div className="kemal-sector-head">
-        <b>Sektör {index + 1}</b>
-        <span>{sector.name}</span>
-      </div>
-      <div className="kemal-plot">
-        {([0, 1, 2, 3] as Dir[]).map((d) => (
-          <div
-            key={d}
-            className={`kemal-cell ${area[d]} ${isGreen(sector.sides[d]) ? 'green' : 'hard'} ${d === dir ? 'wet' : ''}`}
-            title={sector.labels[d]}
-          >
-            <span aria-hidden>{SURFACE_ICON[sector.sides[d]]}</span>
-            <small>{sector.labels[d]}</small>
-          </div>
-        ))}
-        <button className="kemal-sprinkler" onClick={onRotate} aria-label={`Sektör ${index + 1} fıskiyesini döndür`}>
-          {ARROWS[dir]}
-        </button>
-      </div>
-      <div className="kemal-sector-foot">
-        {green ? `✓ ${sector.labels[dir]} sulanıyor` : `⚠ Su ${sector.labels[dir].toLocaleLowerCase('tr')} üzerine gidiyor`}
-      </div>
-    </div>
   );
 }

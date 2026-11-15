@@ -6,6 +6,7 @@
 import type { DistrictId } from '../data/districts';
 import type { QuestStage } from '../data/session';
 import type { ChartSeries } from '../data/story';
+import type { FieldResult, FieldStatus, FieldTaskId } from '../data/fieldTasks';
 
 export const GameEvents = {
   /** Phaser -> React: an NPC conversation should be shown. */
@@ -56,6 +57,12 @@ export const GameEvents = {
   OPEN_ANNOUNCE: 'open-announce',
   /** React -> Phaser: the player posted the town announcement. */
   ANNOUNCE_SUBMITTED: 'announce-submitted',
+  /** React -> Phaser: a workshop was closed (✕) without finishing — unfreeze. */
+  INVESTIGATION_CLOSED: 'investigation-closed',
+  /** React -> Phaser: a workshop sent the student out into town (sprinklers, radar). */
+  FIELD_TASK_START: 'field-task-start',
+  /** Phaser -> React: live HUD data for the running field task (null = none). */
+  FIELD_TASK_STATUS: 'field-task-status',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -80,6 +87,12 @@ export interface DialoguePayload {
 export interface InvestigationPayload {
   /** Key into INVESTIGATION_CARDS in data/story.ts. */
   cardId: string;
+  /** Set when the workshop reopens after its in-town part is done. */
+  field?: FieldResult;
+}
+
+export interface FieldTaskStartPayload {
+  task: FieldTaskId;
 }
 
 export interface ObjectivePayload {
@@ -206,4 +219,7 @@ export interface GameEventPayloads {
   [GameEvents.MARKERS_CHANGED]: MarkersChangedPayload;
   [GameEvents.OPEN_ANNOUNCE]: void;
   [GameEvents.ANNOUNCE_SUBMITTED]: AnnounceSubmittedPayload;
+  [GameEvents.INVESTIGATION_CLOSED]: void;
+  [GameEvents.FIELD_TASK_START]: FieldTaskStartPayload;
+  [GameEvents.FIELD_TASK_STATUS]: FieldStatus | null;
 }
