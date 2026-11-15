@@ -1212,10 +1212,12 @@ const BLVD_E = { x: MEDIAN.x + MEDIAN.width, width: R };
  */
 export const ROUNDABOUT = { x: 1200, y: 950, r: 205, island: 112 } as const;
 export const FOUNTAIN = { x: 1200, y: 990, scale: 0.62 } as const;
+/** Arm geometry the roundabout canvas cuts into its kerb ring. */
+export const ROUNDABOUT_ARMS = { avenueY: 950 - ROAD_WIDTH / 2, road: ROAD_WIDTH, blvdW: 1135 - ROAD_WIDTH, blvdE: 1265, median: { x: 1135, width: 130 }, sidewalk: 22 } as const;
 const RB_BOX: Rect = { x: ROUNDABOUT.x - ROUNDABOUT.r - 25, y: ROUNDABOUT.y - ROUNDABOUT.r - 25, width: 2 * ROUNDABOUT.r + 50, height: 2 * ROUNDABOUT.r + 50 };
 
 const AVENUE_Y = 950 - R / 2;
-const NORTH_ST_Y = 600;
+const NORTH_ST_Y = 660;
 const SOUTH_RD_Y = 1480;
 const RING_W_X = 50;
 const RING_E_X = 2262;
@@ -1234,6 +1236,8 @@ export const DAM = {
 export const DAM_SORT_Y = DAM.y + Math.round(DAM.height * 0.62);
 
 const BASIN_BOTTOM = DAM.y + Math.round(DAM.height * 0.97);
+/** The boulevard starts cleanly at the bottom edge of the spillway plaza. */
+const BLVD_TOP = BASIN_BOTTOM + 34;
 
 const H_ROADS: Rect[] = [
   { x: RING_W_X, y: AVENUE_Y, width: ROUNDABOUT.x - ROUNDABOUT.r + 20 - RING_W_X, height: R },
@@ -1244,15 +1248,15 @@ const H_ROADS: Rect[] = [
 /** The boulevard runs into the ring a little (the ring is drawn over it). */
 const CUT = { top: ROUNDABOUT.y - ROUNDABOUT.r + 50, bottom: ROUNDABOUT.y + ROUNDABOUT.r - 50 };
 const V_ROADS: Rect[] = [
-  { x: BLVD_W.x, y: BASIN_BOTTOM, width: R, height: CUT.top - BASIN_BOTTOM },
-  { x: BLVD_E.x, y: BASIN_BOTTOM, width: R, height: CUT.top - BASIN_BOTTOM },
+  { x: BLVD_W.x, y: BLVD_TOP, width: R, height: CUT.top - BLVD_TOP },
+  { x: BLVD_E.x, y: BLVD_TOP, width: R, height: CUT.top - BLVD_TOP },
   { x: BLVD_W.x, y: CUT.bottom, width: R, height: SOUTH_RD_Y - CUT.bottom },
   { x: BLVD_E.x, y: CUT.bottom, width: R, height: SOUTH_RD_Y - CUT.bottom },
   { x: RING_W_X, y: AVENUE_Y, width: R, height: SOUTH_RD_Y + R - AVENUE_Y },
   { x: RING_E_X, y: NORTH_ST_Y, width: R, height: SOUTH_RD_Y + R - NORTH_ST_Y },
 ];
 const MEDIAN_STRIPS: Rect[] = [
-  { x: MEDIAN.x, y: BASIN_BOTTOM, width: MEDIAN.width, height: CUT.top - BASIN_BOTTOM },
+  { x: MEDIAN.x, y: BLVD_TOP, width: MEDIAN.width, height: CUT.top - BLVD_TOP },
   { x: MEDIAN.x, y: CUT.bottom, width: MEDIAN.width, height: SOUTH_RD_Y - CUT.bottom },
 ];
 
@@ -1308,8 +1312,6 @@ const ZEBRAS: (Rect & { across: 'h' | 'v' })[] = [
   // roundabout arms (clear of Kemal's sprinkler puddles)
   { x: 845, y: AVENUE_Y, width: ZEBRA, height: R, across: 'h' },
   { x: 1520, y: AVENUE_Y, width: ZEBRA, height: R, across: 'h' },
-  { x: BLVD_W.x, y: 650, width: R, height: ZEBRA, across: 'v' },
-  { x: BLVD_E.x, y: 650, width: R, height: ZEBRA, across: 'v' },
   { x: BLVD_W.x, y: 1250, width: R, height: ZEBRA, across: 'v' },
   { x: BLVD_E.x, y: 1250, width: R, height: ZEBRA, across: 'v' },
 ];
@@ -1383,7 +1385,7 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     tileScale: z.across === 'h' ? R / 88 : R / 88,
   })),
   // Spillway plaza: the pool sits in a paved, planted square the boulevard opens onto.
-  { id: 'dam-plaza', textureKey: TextureKeys.GROUND_PATH, ...DAM_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 12 },
+  { id: 'dam-plaza', textureKey: TextureKeys.GROUND_PATH, ...DAM_PLAZA, depth: GroundDepth.ROAD + 2, tileScale: 0.15, feather: 3 },
   // Lawns inside the walled yards.
   { id: 'civic-lawn', textureKey: TextureKeys.GROUND_GRASS_LUSH, x: CIVIC_YARD.x, y: CIVIC_YARD.y, width: CIVIC_YARD.x2 - CIVIC_YARD.x, height: 200, depth: GroundDepth.ROAD + 1, tileScale: 0.5 },
   { id: 'play-sand', textureKey: TextureKeys.GROUND_GRASS_LUSH, x: PLAY_YARD.x, y: PLAY_YARD.y, width: PLAY_YARD.x2 - PLAY_YARD.x, height: 200, depth: GroundDepth.ROAD + 1, tileScale: 0.5 },
@@ -1452,7 +1454,7 @@ const TOWN_DRESSING: readonly WorldObject[] = [
   { id: 'park-fountain', textureKey: TextureKeys.FOUNTAIN, x: FOUNTAIN.x, y: FOUNTAIN.y, scale: FOUNTAIN.scale, collision: { width: 90, height: 28 }, district: 'park' },
   ...L('rb-flowers', TextureKeys.FLOWER_BUSH, [[1125, 930], [1275, 930], [1130, 1045], [1270, 1045]], 0.4, 'park', Footprint.FLOWER_BUSH),
   ...L('rb-lamp', TextureKeys.STREET_LAMP, [[985, 770], [1415, 770], [985, 1150], [1415, 1150]], 0.5, 'park', Footprint.LAMP),
-  ...L('rb-bench', TextureKeys.BENCH, [[940, 790], [1460, 790], [940, 1125], [1460, 1125]], 0.45, 'park', Footprint.BENCH),
+  ...L('rb-bench', TextureKeys.BENCH, [[860, 790], [1540, 790], [850, 1160], [1550, 1160]], 0.45, 'park', Footprint.BENCH),
   ...L('rb-tree', TextureKeys.TREE_BLOSSOM, [[905, 755], [1495, 755], [905, 1200], [1495, 1200]], 0.45, 'park', Footprint.TREE),
   deco('notice-board', TextureKeys.SIGN, 1440, 1185, 0.5, 'park', Footprint.SIGN),
   // --- boulevard median: trees, benches, lamps ---
@@ -1461,11 +1463,11 @@ const TOWN_DRESSING: readonly WorldObject[] = [
   ...L('blvd-lamp', TextureKeys.STREET_LAMP, [[1012, 680], [1388, 680], [1012, 1260], [1388, 1260], [1012, 1420], [1388, 1420]], 0.5, 'park', Footprint.LAMP),
   // --- road lamps ---
   ...L('ring-lamp', TextureKeys.STREET_LAMP, [[168, 1150], [168, 1360], [2240, 800], [2240, 1150], [2240, 1400]], 0.5, 'residential', Footprint.LAMP),
-  ...L('street-lamp', TextureKeys.STREET_LAMP, [[1650, 712], [2000, 712], [300, 1588], [1900, 1592], [600, 885], [1800, 885]], 0.5, 'residential', Footprint.LAMP),
+  ...L('street-lamp', TextureKeys.STREET_LAMP, [[1650, 785], [2000, 785], [300, 1588], [1900, 1592], [600, 885], [1800, 885]], 0.5, 'residential', Footprint.LAMP),
   // --- spillway plaza: benches, lamps, flower beds, hedges along the dam foot ---
-  ...L('dp-bench', TextureKeys.BENCH, [[975, 560], [1425, 560]], 0.45, 'reservoir', Footprint.BENCH),
-  ...L('dp-lamp', TextureKeys.STREET_LAMP, [[950, 470], [1450, 470], [960, 620], [1440, 620]], 0.5, 'reservoir', Footprint.LAMP),
-  ...L('dp-flowers', TextureKeys.FLOWER_BUSH, [[1010, 610], [1390, 610], [1000, 500], [1400, 500]], 0.42, 'reservoir', Footprint.FLOWER_BUSH),
+  ...L('dp-bench', TextureKeys.BENCH, [[985, 585], [1415, 585]], 0.45, 'reservoir', Footprint.BENCH),
+  ...L('dp-lamp', TextureKeys.STREET_LAMP, [[950, 470], [1450, 470]], 0.5, 'reservoir', Footprint.LAMP),
+  ...L('dp-flowers', TextureKeys.FLOWER_BUSH, [[1000, 500], [1400, 500]], 0.42, 'reservoir', Footprint.FLOWER_BUSH),
   ...L('dp-hedge', TextureKeys.HEDGE_ROW, [[800, 440], [880, 440]], 0.6, 'reservoir', Footprint.HEDGE_ROW),
   ...L('dp-tree', TextureKeys.TREE_ROUND_2, [[905, 540], [1495, 540]], 0.48, 'reservoir', Footprint.TREE),
   // --- walled town-hall grounds ---

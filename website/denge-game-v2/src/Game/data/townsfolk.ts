@@ -64,7 +64,7 @@ export const TOWNSFOLK: readonly Townsperson[] = [
     id: 'teen-north',
     name: 'Zeynep',
     texture: TextureKeys.TOWNS_TEEN,
-    path: [[1420, 708], [2210, 708]],
+    path: [[1420, 772], [2210, 772]],
     speed: 48,
     pause: 2,
     lines: [

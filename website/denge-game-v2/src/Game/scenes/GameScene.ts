@@ -50,6 +50,7 @@ import {
   WALL_RUNS,
   WALL_THICKNESS,
   ROUNDABOUT,
+  ROUNDABOUT_ARMS,
   FOUNTAIN,
   RESERVOIR_PANORAMA,
   WORLD_OBJECTS,
@@ -507,7 +508,21 @@ export default class GameScene extends Phaser.Scene {
       ctx.fill();
     };
     disc(r + 24, pattern(TextureKeys.GROUND_PATH, 0.3 * RES));
-    disc(r, pattern(TextureKeys.ROAD_JUNCTION, 0.6 * RES));
+    // Open the kerb ring where the roads come in: asphalt arms (and the
+    // boulevard median) run from the canvas edge into the ring.
+    const A = ROUNDABOUT_ARMS;
+    const ox = x - size / RES / 2;
+    const oy = y - size / RES / 2;
+    const band = (bx: number, by: number, bw: number, bh: number, fill: string | CanvasPattern) => {
+      ctx.fillStyle = fill;
+      ctx.fillRect((bx - ox) * RES, (by - oy) * RES, bw * RES, bh * RES);
+    };
+    const asphalt = pattern(TextureKeys.ROAD_JUNCTION, 0.6 * RES);
+    band(ox, A.avenueY, size / RES, A.road, asphalt);
+    band(A.blvdW, oy, A.road, size / RES, asphalt);
+    band(A.blvdE, oy, A.road, size / RES, asphalt);
+    band(A.median.x, oy, A.median.width, size / RES, pattern(TextureKeys.GROUND_PATH, 0.3 * RES));
+    disc(r, asphalt);
     ctx.strokeStyle = 'rgba(245,245,240,0.9)';
     ctx.lineWidth = 3 * RES;
     ctx.setLineDash([14 * RES, 12 * RES]);
