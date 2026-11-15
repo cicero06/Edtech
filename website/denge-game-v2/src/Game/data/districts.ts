@@ -65,7 +65,7 @@ export const DISTRICTS: readonly District[] = [
   },
   {
     id: 'agriculture',
-    label: 'Tarim Bolgesi',
+    label: 'Tarım Bölgesi',
     x: 0,
     y: MIDDLE_BAND_TOP,
     width: PARK_LEFT,
@@ -81,7 +81,7 @@ export const DISTRICTS: readonly District[] = [
   },
   {
     id: 'residential',
-    label: 'Konut Bolgesi',
+    label: 'Konut Bölgesi',
     x: PARK_RIGHT,
     y: MIDDLE_BAND_TOP,
     width: WORLD.width - PARK_RIGHT,

@@ -42,8 +42,8 @@ export interface NpcDefinition {
 
 const CHOICES: DialogueChoice[] = [
   { id: 'repair-well', text: 'Eski kuyuyu onar' },
-  { id: 'reduce-water', text: 'Su kullanimini azalt' },
-  { id: 'ask-town', text: 'Kasaba halkiyla konus' },
+  { id: 'reduce-water', text: 'Su kullanımını azalt' },
+  { id: 'ask-town', text: 'Kasaba halkıyla konuş' },
 ];
 
 export const NPCS: readonly NpcDefinition[] = [
@@ -57,9 +57,9 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.075,
     district: 'agriculture',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     dialogue: {
-      text: 'Tarlalar kuruyor evladim, sulama suyu yetmiyor. Genc biri olarak sence ne yapmaliyiz?',
+      text: 'Tarlalar kuruyor evladım, sulama suyu yetmiyor. Genç biri olarak sence ne yapmalıyız?',
       choices: CHOICES,
     },
     collision: { width: 250, height: 20 },
@@ -74,17 +74,17 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.14,
     district: 'park',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     followsPlayer: true,
     dialogue: {
-      text: 'Cesmenin suyu bile azaldi, goruyor musun? Okulda da iki gundur su kesik. Sence kasaba ne yapmalı?',
+      text: 'Çeşmenin suyu bile azaldı, görüyor musun? Okulda da iki gündür su kesik. Sence kasaba ne yapmalı?',
       choices: CHOICES,
     },
     collision: { width: 26, height: 12 },
   },
   {
     id: 'mayor',
-    name: 'Belediye Baskani',
+    name: 'Belediye Başkanı',
     textureKey: TextureKeys.MAYOR,
     frame: 0,
     x: 820,
@@ -92,10 +92,10 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.52,
     district: 'municipality',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     investigationId: 'belediye',
     dialogue: {
-      text: 'Kasabanin su butcesi kritik seviyede. Karar vermeden once her kesimi dinlemeliyiz. Sen ne oneriyorsun?',
+      text: 'Kasabanın su bütçesi kritik seviyede. Karar vermeden önce her kesimi dinlemeliyiz. Sen ne öneriyorsun?',
       choices: CHOICES,
     },
     collision: { width: 28, height: 14 },
@@ -110,7 +110,7 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.12,
     district: 'reservoir',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     investigationId: 'baraj',
     dialogue: {
       text: 'Son haftalarda rezervuar seviyesi düştü. Yağış az ama sorunun tek nedeni bu olmayabilir.',
@@ -128,7 +128,7 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.12,
     district: 'agriculture',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     investigationId: 'tarim',
     dialogue: {
       text: 'Bu yıl hava daha sıcak. Ürünleri korumak için daha çok suluyoruz. Damla sulama suyu azaltır ama kurulumu pahalı.',
@@ -146,7 +146,7 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.13,
     district: 'residential',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     investigationId: 'konut',
     dialogue: {
       text: 'Evlerde su basıncı azaldı. Sokakta bir sızıntı da var diyorlar; hep birlikte bakmak gerek.',
@@ -164,7 +164,7 @@ export const NPCS: readonly NpcDefinition[] = [
     scale: 0.13,
     district: 'park',
     interactionRadius: 90,
-    hint: 'E ile konus',
+    hint: 'Konuş (E)',
     investigationId: 'park',
     dialogue: {
       text: 'Parkı yeşil tutmak ve çeşmeyi çalıştırmak için de su kullanıyoruz. Sence hepsi aynı ölçüde gerekli mi?',
@@ -179,7 +179,7 @@ export const NPCS: readonly NpcDefinition[] = [
  * The authoritative stat effects live in `./stats.ts`.
  */
 export const DECISION_FEEDBACK: Record<string, string> = {
-  'repair-well': 'Kuyunun onarilmasina karar verdin!',
-  'reduce-water': 'Kasabada su tasarrufu baslatildi!',
-  'ask-town': 'Kasaba halkiyla gorusmeye karar verdin!',
+  'repair-well': 'Kuyunun onarılmasına karar verdin!',
+  'reduce-water': 'Kasabada su tasarrufu başlatıldı!',
+  'ask-town': 'Kasaba halkıyla görüşmeye karar verdin!',
 };

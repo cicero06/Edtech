@@ -303,6 +303,9 @@ export const GROUND_LAYERS: readonly GroundLayer[] = [
     depth: GroundDepth.ROAD,
     scaleY: AVENUE.height / 127,
   },
+  // Farm tracks: farmhouse door -> avenue, avenue -> vegetable plot.
+  { id: 'path-farmhouse', textureKey: TextureKeys.GROUND_DIRT, x: 190, y: 652, width: 40, height: 66, depth: GroundDepth.ROAD - 5, tileScale: 0.25, feather: 6 },
+  { id: 'path-veg', textureKey: TextureKeys.GROUND_DIRT, x: 380, y: 792, width: 40, height: 128, depth: GroundDepth.ROAD - 5, tileScale: 0.25, feather: 6 },
   // Town hall plaza keeps the cobblestone paving - civic square, not a street.
   {
     id: 'road-plaza',
@@ -993,10 +996,73 @@ export const PROPS: readonly WorldObject[] = [
 ] as const;
 
 /** Everything the scene should instantiate as a depth-sorted world sprite. */
+// ---------------------------------------------------------------------------
+// DRESSING — fills the bare lawns so the town reads as lived-in (closer to
+// the density of the Unity map). Only the smooth illustrated sprites.
+// ---------------------------------------------------------------------------
+
+const deco = (
+  id: string,
+  textureKey: TextureKey,
+  x: number,
+  y: number,
+  scale: number,
+  district: DistrictId,
+  collision: CollisionBox | null = null,
+): WorldObject => ({ id, textureKey, x, y, scale, district, collision });
+
+export const DRESSING: readonly WorldObject[] = [
+  // --- farmland: hay, bushes, tufts around the plots ---
+  deco('farm-hay-1', TextureKeys.HAYSTACK_BIG, 590, 600, 0.7, 'agriculture', Footprint.HAYSTACK),
+  deco('farm-hay-2', TextureKeys.HAYSTACK_BIG, 626, 640, 0.6, 'agriculture', Footprint.HAYSTACK),
+  deco('farm-hay-3', TextureKeys.HAYSTACK_BIG, 200, 1040, 0.65, 'agriculture', Footprint.HAYSTACK),
+  deco('farm-crate', TextureKeys.CRATE, 545, 1000, 0.6, 'agriculture', Footprint.CRATE),
+  deco('farm-barrel', TextureKeys.BARREL_WOOD, 520, 1012, 0.65, 'agriculture', Footprint.BARREL),
+  deco('farm-bush-1', TextureKeys.BUSH_SMALL, 470, 440, 0.6, 'agriculture'),
+  deco('farm-bush-2', TextureKeys.BUSH, 620, 470, 0.6, 'agriculture', Footprint.BUSH),
+  deco('farm-bush-3', TextureKeys.BUSH_SMALL, 240, 1130, 0.6, 'agriculture'),
+  deco('farm-bush-4', TextureKeys.BUSH, 600, 1120, 0.55, 'agriculture', Footprint.BUSH),
+  deco('farm-tuft-1', TextureKeys.GRASS_PATCH, 420, 470, 0.7, 'agriculture'),
+  deco('farm-tuft-2', TextureKeys.GRASS_PATCH, 160, 560, 0.7, 'agriculture'),
+  deco('farm-tuft-3', TextureKeys.GRASS_PATCH, 560, 900, 0.7, 'agriculture'),
+  deco('farm-tuft-4', TextureKeys.GRASS_PATCH, 150, 960, 0.7, 'agriculture'),
+
+  // --- residential lawn between the avenue and the southern houses ---
+  deco('res-flowers-1', TextureKeys.FLOWER_BUSH, 1468, 930, 0.55, 'residential', Footprint.FLOWER_BUSH),
+  deco('res-flowers-2', TextureKeys.FLOWER_BUSH, 1574, 930, 0.55, 'residential', Footprint.FLOWER_BUSH),
+  deco('res-flowers-3', TextureKeys.FLOWER_BUSH, 1790, 930, 0.55, 'residential', Footprint.FLOWER_BUSH),
+  deco('res-bench', TextureKeys.BENCH_2, 1620, 880, 0.6, 'residential', Footprint.BENCH_2),
+  deco('res-tree-1', TextureKeys.TREE_ROUND, 1885, 905, 0.5, 'residential', Footprint.TREE),
+  deco('res-bush-1', TextureKeys.BUSH_SMALL, 1440, 850, 0.6, 'residential'),
+  deco('res-tuft-1', TextureKeys.GRASS_PATCH, 1600, 960, 0.7, 'residential'),
+  deco('res-tuft-2', TextureKeys.GRASS_PATCH, 1300, 960, 0.7, 'residential'),
+
+  // --- north lawn behind the northern houses ---
+  deco('res-north-tree-1', TextureKeys.TREE_ROUND, 1330, 470, 0.5, 'residential', Footprint.TREE),
+  deco('res-north-tree-2', TextureKeys.TREE_BLOSSOM, 1470, 455, 0.5, 'residential', Footprint.TREE),
+  deco('res-north-tree-3', TextureKeys.TREE_ROUND_2, 1610, 470, 0.52, 'residential', Footprint.TREE),
+  deco('res-north-tree-4', TextureKeys.TREE_ROUND, 1760, 455, 0.5, 'residential', Footprint.TREE),
+  deco('res-north-bush-1', TextureKeys.BUSH, 1400, 500, 0.55, 'residential', Footprint.BUSH),
+  deco('res-north-bush-2', TextureKeys.FLOWER_BUSH, 1690, 505, 0.5, 'residential', Footprint.FLOWER_BUSH),
+
+  // --- lawns either side of the town hall ---
+  deco('hall-tree-w1', TextureKeys.TREE_ROUND_2, 200, 1240, 0.52, 'municipality', Footprint.TREE),
+  deco('hall-tree-w2', TextureKeys.TREE_BLOSSOM, 330, 1330, 0.5, 'municipality', Footprint.TREE),
+  deco('hall-tree-w3', TextureKeys.TREE_ROUND, 120, 1390, 0.5, 'municipality', Footprint.TREE),
+  deco('hall-flowers-w', TextureKeys.FLOWER_BUSH, 420, 1400, 0.5, 'municipality', Footprint.FLOWER_BUSH),
+  deco('hall-tree-e1', TextureKeys.TREE_ROUND_2, 1400, 1250, 0.52, 'municipality', Footprint.TREE),
+  deco('hall-tree-e2', TextureKeys.TREE_BLOSSOM, 1560, 1330, 0.5, 'municipality', Footprint.TREE),
+  deco('hall-tree-e3', TextureKeys.TREE_ROUND, 1730, 1250, 0.5, 'municipality', Footprint.TREE),
+  deco('hall-tree-e4', TextureKeys.TREE_ROUND_2, 1860, 1380, 0.52, 'municipality', Footprint.TREE),
+  deco('hall-flowers-e', TextureKeys.FLOWER_BUSH, 1480, 1400, 0.5, 'municipality', Footprint.FLOWER_BUSH),
+  deco('hall-bench-e', TextureKeys.BENCH, 1650, 1300, 0.5, 'municipality', Footprint.BENCH),
+];
+
 export const WORLD_OBJECTS: readonly WorldObject[] = [
   ...BUILDINGS,
   ...WATERWORKS,
   ...NATURE,
   ...AGRICULTURE,
   ...PROPS,
+  ...DRESSING,
 ] as const;
