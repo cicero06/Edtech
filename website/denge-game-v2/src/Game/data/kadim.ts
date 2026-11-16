@@ -101,6 +101,14 @@ export const KADIM_SCRAMBLE: Record<KadimPieceId, number> = {
   park: 2,
 };
 
+/** Stones earned so far, derived from the district cards in the notebook. */
+export function collectedStones(cardIds: readonly string[]): KadimPieceId[] {
+  return KADIM_PIECES.filter((p) => cardIds.includes(p.cardId)).map((p) => p.id);
+}
+
+/** The stone a finished district workshop hands over, if any. */
+export const stoneForCard = (cardId: string) => KADIM_PIECES.find((p) => p.cardId === cardId);
+
 export const pieceAt = (slot: KadimSlot) => KADIM_PIECES.find((p) => p.home === slot)!;
 
 /** Channel directions of a piece after `rotation` quarter turns clockwise. */

@@ -1,0 +1,132 @@
+/* Kadim stones: reward pop-up + HUD tracker. Sandstone with cyan inlay. */
+.kst-face {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 22%;
+  background-size: 200% 200%;
+  box-shadow:
+    inset 0 0 0 2px rgba(40, 28, 18, 0.9),
+    inset 0 0 14px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(240, 210, 140, 0.55);
+}
+.kst-face-icon {
+  display: grid;
+  place-items: center;
+  width: 44%;
+  height: 44%;
+  border-radius: 50%;
+  background: rgba(30, 20, 10, 0.85);
+  box-shadow: 0 0 0 2px #5fd8ff, 0 0 10px rgba(95, 216, 255, 0.7);
+  font-size: calc(1em);
+}
+
+/* ---- reward ------------------------------------------------------------ */
+.kst-reward {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  background: radial-gradient(circle at 50% 45%, rgba(20, 14, 6, 0.55), rgba(0, 0, 0, 0.15) 60%);
+  animation: kst-fade 3.4s ease forwards;
+  cursor: pointer;
+}
+.kst-reward-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  max-width: min(560px, 92vw);
+  padding: 22px 26px;
+  border-radius: 18px;
+  border: 1px solid rgba(240, 210, 140, 0.55);
+  background: linear-gradient(160deg, rgba(58, 44, 28, 0.97), rgba(26, 19, 11, 0.97));
+  color: #fbf3e2;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(240, 210, 140, 0.25);
+  animation: kst-rise 3.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+.kst-reward-card .kst-face { font-size: 34px; animation: kst-spin-in 0.9s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.kst-rays {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  width: 132px;
+  height: 132px;
+  margin-top: -66px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent, rgba(240, 210, 140, 0.45), transparent 30%, rgba(95, 216, 255, 0.35), transparent 60%, rgba(240, 210, 140, 0.45), transparent 90%);
+  filter: blur(6px);
+  transform: scale(1.7);
+  animation: kst-rays 3s linear infinite;
+  pointer-events: none;
+}
+.kst-reward-text { display: grid; gap: 6px; position: relative; }
+.kst-reward-text strong { font-size: 22px; color: #f6e3b4; }
+.kst-reward-text span { font-size: 15px; line-height: 1.45; }
+.kst-reward-text em { font-style: normal; font-size: 13px; color: #5fd8ff; }
+.kst-eyebrow { font: 700 11px "DM Mono", ui-monospace, monospace; letter-spacing: 0.12em; color: #cdb895; }
+
+/* ---- tracker (under the notebook button, top-right) --------------------- */
+.kst-tracker {
+  position: absolute;
+  top: 64px;
+  right: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(26, 19, 11, 0.78);
+  border: 1px solid rgba(240, 210, 140, 0.35);
+  backdrop-filter: blur(5px);
+}
+.kst-socket {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px dashed rgba(240, 210, 140, 0.35);
+  font-size: 13px;
+}
+.kst-socket.kst-has { border: none; }
+.kst-socket .kst-face { font-size: 11px; }
+.kst-empty { opacity: 0.35; filter: grayscale(1); }
+.kst-fresh { animation: kst-land 1.1s 2.6s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.kst-go {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f6e3b4;
+  white-space: nowrap;
+}
+.kst-complete { border-color: #5fd8ff; animation: kst-call 1.6s ease-in-out infinite; }
+
+@keyframes kst-fade { 0%, 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes kst-rise {
+  0% { transform: translateY(40px) scale(0.85); opacity: 0; }
+  12% { transform: translateY(0) scale(1); opacity: 1; }
+  74% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translate(38vw, -42vh) scale(0.2); opacity: 0; }
+}
+@keyframes kst-spin-in { from { transform: rotate(-200deg) scale(0.3); } to { transform: none; } }
+@keyframes kst-rays { to { transform: scale(1.7) rotate(360deg); } }
+@keyframes kst-land {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.6); box-shadow: 0 0 18px #5fd8ff; }
+  100% { transform: scale(1); }
+}
+@keyframes kst-call { 50% { box-shadow: 0 0 16px rgba(95, 216, 255, 0.6); } }
+
+@media (max-width: 760px) {
+  .kst-reward-card { flex-direction: column; text-align: center; }
+  .kst-rays { left: 50%; margin-left: -66px; top: 22px; margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kst-reward, .kst-reward-card, .kst-reward-card .kst-face, .kst-rays, .kst-fresh, .kst-complete { animation: none; }
+}

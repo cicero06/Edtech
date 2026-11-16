@@ -9,6 +9,8 @@ import NuriWorkshop from './components/workshop/NuriWorkshop';
 import FieldHud from './components/workshop/FieldHud';
 import RizaWorkshop from './components/workshop/RizaWorkshop';
 import KadimPuzzle from './components/workshop/KadimPuzzle';
+import { KadimTracker, StoneReward } from './components/KadimStones';
+import { collectedStones, stoneForCard, type KadimPieceId } from './Game/data/kadim';
 import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
 import { minigameForCard } from './Game/data/minigames';
@@ -104,6 +106,9 @@ function App() {
   const [solutionMode, setSolutionMode] = useState<SolutionPanelMode>('initial');
   const [announceOpen, setAnnounceOpen] = useState(false);
   const [kadimOpen, setKadimOpen] = useState(false);
+  /** Kadim map already handed to the mayor — the stone tracker retires. */
+  const [kadimDone, setKadimDone] = useState(false);
+  const [stoneReward, setStoneReward] = useState<{ pieceId: KadimPieceId; count: number } | null>(null);
   const [timeShift, setTimeShift] = useState<{
     from: { date: string; time: string };
     to: { date: string; time: string };
@@ -280,6 +285,11 @@ function App() {
       ];
       setNotebook(next);
       persist({ notebook: next });
+      // A district workshop also hands over a Kadim engraving stone — show it.
+      const stone = stoneForCard(card.id);
+      if (stone) {
+        setStoneReward({ pieceId: stone.id, count: collectedStones(next.map((n) => n.cardId)).length });
+      }
     }
     recordEvent('investigation', { cardId });
     setInvestigation(null);
@@ -303,6 +313,7 @@ function App() {
   const finishKadim = (result: KadimResult) => {
     persist({ kadim: result });
     setKadimOpen(false);
+    setKadimDone(true);
     playSfx(SoundKeys.COMPLETE, 0.8);
     EventBus.emit(GameEvents.KADIM_COMPLETED);
   };
@@ -426,6 +437,7 @@ function App() {
       setIntroStage('complete');
     } else {
       setNotebook([]);
+      setKadimDone(false);
       setStats({ ...INITIAL_STATS });
       setEvidencePicked(new Set());
       saveSession(newSession(student));
@@ -461,6 +473,7 @@ function App() {
   /** Copies a stored session into React state; the scene restores the rest. */
   const hydrate = (session: GameSession) => {
     setNotebook(session.notebook);
+    setKadimDone(!!session.kadim);
     setStats(session.stats);
     setEvidencePicked(new Set(session.evidence));
     setMuted(session.muted);
@@ -584,6 +597,20 @@ function App() {
           >
             📒<span className="notebook-count">{notebook.length}</span>
           </button>
+        )}
+
+        {!kadimDone && collectedStones(notebook.map((n) => n.cardId)).length > 0 && (
+          <KadimTracker
+            collected={collectedStones(notebook.map((n) => n.cardId))}
+            fresh={stoneReward?.pieceId ?? null}
+          />
+        )}
+        {stoneReward && (
+          <StoneReward
+            pieceId={stoneReward.pieceId}
+            count={stoneReward.count}
+            onDone={() => setStoneReward(null)}
+          />
         )}
 
         <MiniMap
