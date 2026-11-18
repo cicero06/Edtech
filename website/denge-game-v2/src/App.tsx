@@ -263,7 +263,10 @@ function App() {
   }, [dialogue, dialoguePage]);
 
   useEffect(() => {
-    playRecordedVoice(dialogue?.voiceFiles?.[dialoguePage]);
+    if (!dialogue) return;
+    const lines = [dialogue.text, ...(dialogue.pages ?? [])];
+    const pageText = lines[dialoguePage] ?? '';
+    playRecordedVoice(dialogue.voiceFiles?.[dialoguePage], dialogue.npcId, pageText);
     return stopVoice;
   }, [dialogue, dialoguePage]);
 

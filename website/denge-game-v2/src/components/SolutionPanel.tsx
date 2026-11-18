@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   HORIZON_LABELS,
@@ -9,8 +9,12 @@ import {
   type SolutionCard,
   type Stakeholder,
 } from '../Game/data/story';
-
+import { activeFacts, activeScenario } from '../Game/scenario';
+import { simulate, type SolutionId } from '../Game/scenario/model';
 import type { SolutionPanelMode } from '../Game/events/gameEvents';
+import type { CouncilFloatingBadge } from './workshop/council/MayorCouncilDiorama';
+
+const MayorCouncilDiorama = lazy(() => import('./workshop/council/MayorCouncilDiorama'));
 
 type SolutionPanelProps = {
   mode?: SolutionPanelMode;
@@ -71,6 +75,9 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const speechSupported = getSpeechRecognitionCtor() !== null;
 
+  const scenario = activeScenario();
+  const f = activeFacts();
+
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
@@ -121,6 +128,11 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
   const spent = SOLUTION_CARDS.filter((c) => picked.has(c.id)).reduce((sum, c) => sum + c.cost, 0);
   const remaining = SOLUTION_BUDGET - spent;
   const selected = SOLUTION_CARDS.filter((c) => picked.has(c.id));
+  const pickedList = useMemo(() => [...picked], [picked]);
+  const outcome = useMemo(
+    () => simulate(scenario.params, pickedList),
+    [scenario.params, pickedList],
+  );
 
   /** Every stakeholder axis the current package touches. */
   const covered = new Set<Stakeholder>(selected.flatMap((c) => c.serves));
@@ -137,40 +149,136 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
     });
   };
 
+  const toggleById = (id: SolutionId) => {
+    const card = SOLUTION_CARDS.find((c) => c.id === id);
+    if (card) toggle(card);
+  };
+
+  const councilBadges = useMemo<CouncilFloatingBadge[]>(() => {
+    const hasRepair = picked.has('repair-pipes');
+    const hasDrip = picked.has('drip-irrigation');
+    const hasRain = picked.has('rain-harvest');
+    const hasFountains = picked.has('fountains-off');
+    const hasSaving = picked.has('saving-campaign');
+
+    return [
+      {
+        id: 'mayor',
+        name: '🏛️ Başkan Adil',
+        statusText:
+          pickedList.length === 0
+            ? `Hoş geldin! Bütçemiz ${tl(SOLUTION_BUDGET)}`
+            : `Kalan: ${tl(remaining)} · 30. Gün: %${outcome.reservoirAfter}`,
+        tone: 'mayor',
+      },
+      {
+        id: 'aylin',
+        name: '💧 Mühendis Aylin',
+        statusText:
+          hasRepair || hasRain
+            ? `✓ Rezerv %${outcome.reservoirBefore} → %${outcome.reservoirAfter}`
+            : `Baraj %${f.reservoirPct} · Kaçak %${f.leakPct}`,
+        tone: hasRepair || hasRain ? 'active' : 'waiting',
+        linkedSolutionId: 'rain-harvest',
+      },
+      {
+        id: 'nuri',
+        name: '🏠 Nuri Amca',
+        statusText: hasRepair
+          ? `✓ Kaçak ${f.leakL} → ${outcome.leakAfterL} L/dk`
+          : hasSaving
+            ? `✓ Evlerde ${outcome.homesSavingL} L/dk tasarruf`
+            : `Sokak kaçağı: ${f.leakL} L/dk`,
+        tone: hasRepair || hasSaving ? 'active' : 'waiting',
+        linkedSolutionId: 'repair-pipes',
+      },
+      {
+        id: 'riza',
+        name: '🌾 Çiftçi Rıza',
+        statusText: hasDrip
+          ? `✓ Damla sulama: ${f.farmL} → ${outcome.farmAfterL} L/dk`
+          : `Tarla kanalı: ${f.farmL} L/dk`,
+        tone: hasDrip ? 'active' : 'waiting',
+        linkedSolutionId: 'drip-irrigation',
+      },
+      {
+        id: 'kemal',
+        name: '🌳 İşçi Kemal',
+        statusText:
+          hasFountains || hasRain
+            ? `✓ Park şebeke yükü: ${outcome.parkAfterL} L/dk`
+            : `Park tüketimi: ${f.parkL} L/dk`,
+        tone: hasFountains || hasRain ? 'active' : 'waiting',
+        linkedSolutionId: 'fountains-off',
+      },
+    ];
+  }, [picked, pickedList.length, remaining, outcome, f]);
+
   return (
-    <div className="investigation-overlay" role="dialog" aria-label="Belediye toplantısı - çözüm paketi">
-      <div className="investigation-card solution-card-panel">
+    <div className="investigation-overlay" role="dialog" aria-label="Belediye toplantısı - 3B Meclis Salonu">
+      <div className="investigation-card solution-card-panel council-3d-modal">
         <header className="investigation-header">
-          <h2>{isRetry ? '🔄 ALTERNATİF PLAN' : '🏛️ BELEDİYE TOPLANTISI'}</h2>
+          <h2>{isRetry ? '🔄 3B BELEDİYE MECLİSİ · ALTERNATİF PLAN' : '🏛️ 3B BELEDİYE MECLİS SALONU'}</h2>
           <p>
             {isRetry
-              ? 'Lina: "Aynı gün, aynı bütçe, aynı koşullar — sadece kararın farklı. Neyi değiştirirdin?"'
-              : 'Başkan: "Defterindeki kanıtlarla bir çözüm paketi hazırla. Bütçemiz sınırlı — hepsini seçemezsin, iyi düşün!"'}
+              ? 'Lina: "Meclis üyelerimiz tekrar masada. Aynı bütçe ve koşullarda bu kez hangi kararları seçerdin?"'
+              : `Başkan Adil ve 4 bölge temsilcimiz meclis salonunda seni bekliyor! Masadaki 3B kasaba maketinden veya aşağıdaki listeden çözüm paketini kur.`}
           </p>
         </header>
 
-        <div className="solution-budget">
-          <span>Kalan bütçe</span>
-          <strong>{tl(remaining)}</strong>
+        {/* 3D Three.js Council Chamber Diorama */}
+        <div className="council-3d-wrapper">
+          <Suspense
+            fallback={
+              <div className="council-3d-loading">
+                🏛️ 3B Belediye Meclis Salonu ve Başkanlık Makamı hazırlanıyor…
+              </div>
+            }
+          >
+            <MayorCouncilDiorama
+              state={{
+                pickedIds: pickedList,
+                remainingBudget: remaining,
+                reservoirBefore: outcome.reservoirBefore,
+                reservoirAfter: outcome.reservoirAfter,
+              }}
+              badges={councilBadges}
+              onToggleSolution={toggleById}
+            />
+          </Suspense>
         </div>
 
-        {/* Balance meter: which town needs the package currently covers */}
-        <div className="balance-meter" aria-label="Planın karşıladığı ihtiyaçlar">
-          <span className="balance-meter-title">Planın karşıladığı:</span>
-          {STAKEHOLDERS.map((axis) => (
-            <span key={axis} className={`balance-chip${covered.has(axis) ? ' lit' : ''}`}>
-              {STAKEHOLDER_LABELS[axis]}
-            </span>
-          ))}
+        <div className="council-metrics-strip">
+          <div className="solution-budget">
+            <span>Kalan Belediye Bütçesi</span>
+            <strong>{tl(remaining)}</strong>
+          </div>
+          <div className="council-projection-pill">
+            <span>📊 30. Gün Baraj Tahmini:</span>
+            <strong>
+              %{outcome.reservoirBefore} → %{outcome.reservoirAfter}
+            </strong>
+            <em>(Plansız: %{outcome.reservoirNoPlan})</em>
+          </div>
+          <div className="balance-meter" aria-label="Planın karşıladığı ihtiyaçlar">
+            <span className="balance-meter-title">Kapsanan:</span>
+            {STAKEHOLDERS.map((axis) => (
+              <span key={axis} className={`balance-chip${covered.has(axis) ? ' lit' : ''}`}>
+                {STAKEHOLDER_LABELS[axis]}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="solution-list">
           {SOLUTION_CARDS.map((card) => {
             const isSelected = picked.has(card.id);
             const affordable = isSelected || card.cost <= remaining;
+            const savedL = Math.round(outcome.savedL[card.id as SolutionId] ?? 0);
             return (
               <button
                 key={card.id}
+                type="button"
                 className={`solution-item${isSelected ? ' picked' : ''}`}
                 onClick={() => toggle(card)}
                 disabled={!affordable}
@@ -186,6 +294,9 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                   <span className="solution-badges">
                     <em className="badge badge-evidence">🔎 {RESOLVES_LABELS[card.resolves]}</em>
                     <em className="badge badge-horizon">⏳ {HORIZON_LABELS[card.horizon]}</em>
+                    {isSelected && savedL > 0 && (
+                      <em className="badge badge-water-gain">💧 +{savedL} L/dk kazanç</em>
+                    )}
                   </span>
                 </span>
                 <span className="solution-check">{isSelected ? '✓' : '+'}</span>
@@ -197,7 +308,8 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
         {askingWhy ? (
           <div className="rationale-step">
             <p className="rationale-question">
-              🗣️ Başkan soruyor: <strong>Bu çözümleri neden seçtin? Kasabada neleri korumak, neleri feda etmek istedin?</strong>
+              🗣️ Başkan Adil soruyor:{' '}
+              <strong>Bu çözümleri neden seçtin? Kasabada neleri korumak, neleri feda etmek istedin?</strong>
             </p>
             <div className="rationale-choices">
               {RATIONALE_CHOICES.map((choice) => (
@@ -249,7 +361,7 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                 disabled={!rationale.trim()}
                 onClick={() => onSubmit(selected, spent, rationale.trim())}
               >
-                PLANI BELEDİYEYE SUN → ({tl(spent)})
+                PLANI MECLİSE SUN → ({tl(spent)})
               </button>
             </div>
           </div>

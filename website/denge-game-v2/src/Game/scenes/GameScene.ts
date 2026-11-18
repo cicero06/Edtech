@@ -68,13 +68,10 @@ import {
   EXPECTATION_CHOICES,
   EXPECTATION_FEEDBACK,
   IMPLEMENTATION_PROPS,
-  IMPLEMENT_END_PAGES,
-  IMPLEMENT_MID_PAGES,
   LINA_CLOSING_CHOICES,
   LINA_CLOSING_FEEDBACK,
   LINA_CLOSING_PAGES,
   LINA_EXPECTATION_PAGES,
-  LINA_INTRO_PAGES,
   LINA_REPORT_TEXT,
   LINA_RETRY_PAGES,
   MAYOR_DEBRIEF_PAGES,
@@ -88,18 +85,20 @@ import {
   linaComparePages,
   mayorFinalePages,
   mayorFollowUpChoices,
-  mayorReactionPages,
   npcPlanReaction,
   type InvestigationId,
 } from '../data/story';
-import { reviewOutcome, scenarioTwist, twistIsScenarioText } from '../scenario';
 import {
-  announceVoice,
+  reviewOutcome,
+  scenarioImplementPages,
+  scenarioLinaIntroPages,
+  scenarioMayorReactionPages,
+  scenarioNpcPlanReaction,
+  scenarioNpcSmallTalk,
+} from '../scenario';
+import {
   compareVoiceFiles,
   finaleVoiceFiles,
-  implementVoiceFiles,
-  mayorReactionVoiceFiles,
-  smallTalkVoice,
 } from '../data/voices';
 import { loadSession, saveSession, type QuestStage } from '../data/session';
 import { VISIBLE_WORLD_HEIGHT } from '../config';
@@ -1148,12 +1147,13 @@ export default class GameScene extends Phaser.Scene {
   private startLinaIntro(): void {
     if (this.quest !== 'lina-intro' || !this.lina) return;
     this.beginConversation(this.lina, false);
+    const introPages = scenarioLinaIntroPages();
     EventBus.emit(GameEvents.OPEN_DIALOGUE, {
       npcId: 'lina',
       name: 'Lina',
-      text: LINA_INTRO_PAGES[0],
-      pages: [...LINA_INTRO_PAGES.slice(1)],
-      voiceFiles: ['lina-intro-01.mp3', 'lina-intro-02.mp3', 'lina-intro-03.mp3'],
+      text: introPages[0],
+      pages: [...introPages.slice(1)],
+      voiceFiles: introPages.map(() => null),
     });
   }
 
@@ -1465,12 +1465,13 @@ export default class GameScene extends Phaser.Scene {
     const mayor = this.npcs.find((npc) => npc.definition.id === 'mayor');
     if (mayor) this.beginConversation(mayor);
     this.showToast('Çözüm planın belediyeye teslim edildi! 🎉', this.player.x, this.player.y - 90);
+    const reactionPages = scenarioMayorReactionPages(payload.solutionIds);
     EventBus.emit(GameEvents.OPEN_DIALOGUE, {
       npcId: 'mayor',
       name: 'Belediye Başkanı',
-      text: mayorReactionPages(payload.solutionIds)[0],
-      pages: mayorReactionPages(payload.solutionIds).slice(1),
-      voiceFiles: mayorReactionVoiceFiles(payload.solutionIds),
+      text: reactionPages[0],
+      pages: reactionPages.slice(1),
+      voiceFiles: reactionPages.map(() => null),
     });
   }
 
@@ -2337,13 +2338,15 @@ export default class GameScene extends Phaser.Scene {
       ANNOUNCE_NPC_IDS.includes(npc.definition.id) &&
       !this.announcedTo.has(npc.definition.id)
     ) {
-      const reaction = npcPlanReaction(npc.definition.id, this.planIds);
+      const reaction =
+        scenarioNpcPlanReaction(npc.definition.id, this.planIds) ??
+        npcPlanReaction(npc.definition.id, this.planIds);
       if (reaction) {
         this.presentDialogue(npc, {
           npcId: npc.definition.id,
           name: npc.definition.name,
           text: reaction,
-          voiceFiles: announceVoice(npc.definition.id, this.planIds),
+          voiceFiles: [null],
         });
         return;
       }
@@ -2379,21 +2382,13 @@ export default class GameScene extends Phaser.Scene {
 
     // Each Lina talk during the implementation advances to the next day stop.
     if (npc.definition.id === 'lina' && this.quest === 'implement') {
-      const twist = this.implPhase === 0 ? scenarioTwist(this.planIds) : null;
-      const pages =
-        this.implPhase === 0
-          ? [...IMPLEMENT_MID_PAGES, ...(twist ? [twist] : [])]
-          : [...IMPLEMENT_END_PAGES];
-      const voices = implementVoiceFiles(this.implPhase, this.planIds);
-      // The repair twist now quotes this student's reservoir — the old
-      // recording would contradict it, so that page is read, not played.
-      if (this.implPhase === 0 && twistIsScenarioText(this.planIds)) voices[1] = null;
+      const pages = scenarioImplementPages(this.implPhase, this.planIds);
       this.presentDialogue(npc, {
         npcId: 'lina',
         name: 'Lina',
         text: pages[0],
         pages: pages.slice(1),
-        voiceFiles: voices,
+        voiceFiles: pages.map(() => null),
       });
       return;
     }
@@ -2458,7 +2453,9 @@ export default class GameScene extends Phaser.Scene {
         npcId: 'mayor',
         name: 'Belediye Başkanı',
         text: mayorFinalePages(this.altPlanIds !== null)[0],
-        pages: mayorFinalePages(this.altPlanIds !== null).slice(1),
+        pages: mayorFinalePages(this.altPlanIds !== null)[1]
+          ? mayorFinalePages(this.altPlanIds !== null).slice(1)
+          : [],
         voiceFiles: finaleVoiceFiles(this.altPlanIds !== null),
       });
       return;
@@ -2477,9 +2474,9 @@ export default class GameScene extends Phaser.Scene {
     this.presentDialogue(npc, {
       npcId: npc.definition.id,
       name: npc.definition.name,
-      text: npc.definition.dialogue.text,
+      text: scenarioNpcSmallTalk(npc.definition.id, npc.definition.dialogue.text),
       choices: chapterOne ? npc.definition.dialogue.choices : [],
-      voiceFiles: smallTalkVoice(npc.definition.id),
+      voiceFiles: [null],
     });
   }
 
