@@ -3,7 +3,7 @@
  * (GameHUD.Nuri.cs), drawn with the Unity art (soil cut-away, steel pipes,
  * gold safety pins, sediment chamber, cistern). Replaces the Konut card.
  *
- *   1. briefing   — 35 L reaches the homes, pressure is low; Nuri hands over
+ *   1. briefing   — the homes' share (scenario) arrives, pressure is low; Nuri hands over
  *                   the acoustic radar
  *   2. (in town)  — the student walks Çınar Caddesi with the radar until the
  *                   dB peaks over the hidden leak, then opens the dig (E)
@@ -11,7 +11,7 @@
  *                   pulls the gold pins: bypass the limescale blockage, drain
  *                   the sediment into the trap, clamp the crack + fill the tank.
  *                   Unsafe moves trigger safety stops instead of failing.
- *   4. done       — 20 L/dk leak stopped, 50 L tank full
+ *   4. done       — the leak (scenario L/dk) stopped, 50 L tank full
  *
  * Metrics: correct hypotheses, safety alerts, seconds spent with the radar.
  */
@@ -20,6 +20,11 @@ import type { MinigameResult } from '../../Game/data/minigames';
 import type { FieldResult } from '../../Game/data/fieldTasks';
 import { TextureKeys } from '../../Game/data/assets';
 import { playTone } from './audio';
+import { activeFacts } from '../../Game/scenario';
+
+/** Stage texts carry {outflow}/{leak} slots — filled with this student's numbers. */
+const fillFacts = (text: string, f: { outflowL: number; leakL: number }) =>
+  text.replaceAll('{outflow}', String(f.outflowL)).replaceAll('{leak}', String(f.leakL));
 import WorkshopShell from './WorkshopShell';
 import './NuriWorkshop.css';
 
@@ -38,7 +43,7 @@ const QUESTIONS: readonly Question[] = [
     title: '1. Aşama · Tıkalı hattı ayır',
     goal: 'Suyu tıkalı borudan geçirmeden mahalleye ulaştır.',
     prompt:
-      'Ana boruda taşlaşmış kireç tıkacı var. Barajdan gelen tazyikli suyu (80 L) patlama olmadan şebekeye nasıl aktarırız?',
+      'Ana boruda taşlaşmış kireç tıkacı var. Barajdan gelen tazyikli suyu ({outflow} L/dk) patlama olmadan şebekeye nasıl aktarırız?',
     options: [
       {
         label: 'A) Tıkalı hattı zorla',
@@ -84,9 +89,9 @@ const QUESTIONS: readonly Question[] = [
   },
   {
     title: '3. Aşama · Çatlağı onar, depoyu doldur',
-    goal: '20 L/dk kaçağı durdur ve mahalle deposunu doldur.',
+    goal: '{leak} L/dk kaçağı durdur ve mahalle deposunu doldur.',
     prompt:
-      'Tortu temizlendi ama borudaki çatlaktan dakikada 20 litre içme suyu toprağa akıyor. Depoyu doldurmadan önce ne yapmalıyız?',
+      'Tortu temizlendi ama borudaki çatlaktan dakikada {leak} L içme suyu toprağa akıyor. Depoyu doldurmadan önce ne yapmalıyız?',
     options: [
       {
         label: 'A) Basıncı artır',
@@ -96,7 +101,7 @@ const QUESTIONS: readonly Question[] = [
       {
         label: 'B) Onarım kelepçesi tak',
         detail: 'Çatlağı sızdırmaz kelepçeyle sararak kaçağı durdur.',
-        feedback: 'Harika karar! Kelepçe çatlağı sarar, 20 L kaçak sıfırlanır. Kelepçeyi tak.',
+        feedback: 'Harika karar! Kelepçe çatlağı sarar, {leak} L/dk kaçak sıfırlanır. Kelepçeyi tak.',
       },
       {
         label: 'C) Depoyu boşaltıp bekle',
@@ -108,7 +113,6 @@ const QUESTIONS: readonly Question[] = [
   },
 ];
 
-const LEAK_L = 20;
 const TANK_L = 50;
 
 type NuriField = Extract<FieldResult, { task: 'nuri-radar' }>;
@@ -126,6 +130,10 @@ type Step = 'briefing' | 'stage' | 'done';
 export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }: Props) {
   const [step, setStep] = useState<Step>(field ? 'stage' : 'briefing');
   const [sound, setSound] = useState(true);
+  // This student's network numbers (scenario engine).
+  const [nf] = useState(activeFacts);
+  const LEAK_L = nf.leakL;
+  const t = (text: string) => fillFacts(text, nf);
   const tone = (kind: Parameters<typeof playTone>[0]) => playTone(kind, sound);
 
   const [stage, setStage] = useState(0);
@@ -178,7 +186,7 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
     const next = [...answers];
     next[stage] = option;
     setAnswers(next);
-    setMessage(QUESTIONS[stage].options[option].feedback);
+    setMessage(t(QUESTIONS[stage].options[option].feedback));
     tone(option === QUESTIONS[stage].correct ? 'win' : 'tap');
   };
 
@@ -221,7 +229,7 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
   let speech: string;
   if (step === 'briefing') {
     speech =
-      'Hoş geldin evlat! Barajdan çıkan suyun ancak 35 litresi evlere varıyor, musluklarda basınç düşük. Bir yerde boru patlak ama toprağın altında, gözle görünmüyor. Al şu akustik radarı, Çınar Caddesi’nde yürü — ses en yüksek nerede çıkıyorsa kaçak oradadır!';
+      `Hoş geldin evlat! Barajdan çıkan suyun ancak ${nf.homesL} L/dk’sı evlere varıyor, musluklarda basınç düşük. Bir yerde boru patlak ama toprağın altında, gözle görünmüyor. Al şu akustik radarı, Çınar Caddesi’nde yürü — ses en yüksek nerede çıkıyorsa kaçak oradadır!`;
   } else if (step === 'stage') {
     if (alertMsg) speech = alertMsg;
     else if (stageWon)
@@ -234,8 +242,8 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
     else
       speech =
         stage === 0 && field
-          ? `Buldun! Radar ${field.seconds} saniyede 94 dB’e ulaştı. Kazıyı açtık, boruyu görüyorsun. Önce düşünelim: ${QUESTIONS[0].prompt}`
-          : QUESTIONS[stage].prompt;
+          ? `Buldun! Radar ${field.seconds} saniyede 94 dB’e ulaştı. Kazıyı açtık, boruyu görüyorsun. Önce düşünelim: ${t(QUESTIONS[0].prompt)}`
+          : t(QUESTIONS[stage].prompt);
   } else {
     speech = `Tesisatı emniyetle ayırdık, tortuyu tahliye ettik ve çatlağı kelepçeledik. ${LEAK_L} litrelik kaçak durdu! Sen artık gerçek bir tesisat ustası çırağısın.`;
   }
@@ -271,7 +279,7 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
         <section className="ws-panel">
           <h2>Mahallede ölçtüklerimiz</h2>
           <ul className="ws-facts">
-            <li>🏠 Evlere ulaşan su: <b>35 litre</b> — olması gerekenden çok az.</li>
+            <li>🏠 Evlere ulaşan su: <b>dakikada {nf.homesL} L</b> — olması gerekenden çok az.</li>
             <li>🚿 Musluklarda <b>basınç düşük</b>, su kesik kesik akıyor.</li>
             <li>🎧 Caddenin altından <b>su sesi</b> geliyor ama kaçak görünmüyor.</li>
           </ul>
@@ -288,6 +296,8 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
         <div className="nuri-layout">
           <Excavation
             stage={stage}
+            leakL={nf.leakL}
+            outflowL={nf.outflowL}
             flash={flash}
             s1={{ bypassOpen, directTried }}
             s2={{ trapIn, drainOpen, sediment }}
@@ -303,7 +313,7 @@ export default function NuriWorkshop({ field, onGoToField, onComplete, onClose }
               ))}
             </div>
             <h2>{QUESTIONS[stage].title}</h2>
-            <p className="nuri-goal">🎯 {QUESTIONS[stage].goal}</p>
+            <p className="nuri-goal">🎯 {t(QUESTIONS[stage].goal)}</p>
 
             {!answered ? (
               <>
@@ -471,8 +481,13 @@ function Excavation({
   s1,
   s2,
   s3,
+  leakL,
+  outflowL,
 }: {
   stage: number;
+  /** This student's leak and dam outflow (scenario engine). */
+  leakL: number;
+  outflowL: number;
   flash: 'pressure' | 'tank' | 'crack' | null;
   s1: { bypassOpen: boolean; directTried: boolean };
   s2: { trapIn: boolean; drainOpen: boolean; sediment: number };
@@ -535,7 +550,7 @@ function Excavation({
         )}
         <GoldPin x={780} y={300} pulled={s3.tankOpen} vertical label="P5" />
         <text x={570} y={250} className={`nuri-tag ${s3.clamped ? 'ok' : 'danger'}`}>
-          {s3.clamped ? 'kelepçe · sızdırmaz ✓' : 'çatlak · 20 L/dk kaçak'}
+          {s3.clamped ? 'kelepçe · sızdırmaz ✓' : `çatlak · ${leakL} L/dk kaçak`}
         </text>
       </>
     );
@@ -551,7 +566,7 @@ function Excavation({
         <g className="nuri-source">
           <rect x={14} y={lineY - 34} width={106} height={68} rx={10} />
           <text x={67} y={lineY - 6}>Baraj</text>
-          <text x={67} y={lineY + 16} className="sub">80 L</text>
+          <text x={67} y={lineY + 16} className="sub">{outflowL} L/dk</text>
         </g>
         {content}
         <g className={flash === 'tank' ? 'shake' : ''}>

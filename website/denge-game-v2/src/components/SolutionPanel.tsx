@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   HORIZON_LABELS,
@@ -17,14 +17,49 @@ type SolutionPanelProps = {
   onSubmit: (selected: SolutionCard[], totalCost: number, rationale: string) => void;
 };
 
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+}
+
+interface SpeechRecognitionResultLike {
+  0: SpeechRecognitionAlternativeLike;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionEventLike {
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
 const tl = (n: number) => `₺${n.toLocaleString('tr-TR')}`;
 
 const STAKEHOLDERS: readonly Stakeholder[] = ['ev', 'tarim', 'park', 'su'];
 
 const RATIONALE_CHOICES = [
-  'En çok suyu kaybeden nedeni çözmek istedim',
-  'Herkesin ihtiyacını dengeli karşılamak istedim',
-  'Uzun vadede en kalıcı çözümleri seçtim',
+  'En çok suyu kaybeden boru kaçağını çözüp evleri korumak istedim',
+  'Hem tarlaları hem de evlerin içme suyunu dengeli korumak istedim',
+  'Parkın süs sularından vazgeçip uzun vadede kalıcı çözümleri seçtim',
 ];
 
 export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPanelProps) {
@@ -32,6 +67,56 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [askingWhy, setAskingWhy] = useState(false);
   const [rationale, setRationale] = useState('');
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const speechSupported = getSpeechRecognitionCtor() !== null;
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  const toggleVoiceDictation = () => {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return;
+
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+
+    try {
+      const rec = new Ctor();
+      rec.lang = 'tr-TR';
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.onresult = (ev: SpeechRecognitionEventLike) => {
+        const parts: string[] = [];
+        for (let i = 0; i < ev.results.length; i += 1) {
+          const item = ev.results[i];
+          if (item && item[0]?.transcript) {
+            parts.push(item[0].transcript.trim());
+          }
+        }
+        const spoken = parts.join(' ').trim();
+        if (spoken) {
+          setRationale((prev) => {
+            const base = prev.trim();
+            return base ? `${base} ${spoken}`.slice(0, 280) : spoken.slice(0, 280);
+          });
+        }
+      };
+      rec.onerror = () => setListening(false);
+      rec.onend = () => setListening(false);
+      recognitionRef.current = rec;
+      setListening(true);
+      rec.start();
+    } catch {
+      setListening(false);
+    }
+  };
 
   const spent = SOLUTION_CARDS.filter((c) => picked.has(c.id)).reduce((sum, c) => sum + c.cost, 0);
   const remaining = SOLUTION_BUDGET - spent;
@@ -81,12 +166,12 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
 
         <div className="solution-list">
           {SOLUTION_CARDS.map((card) => {
-            const isPicked = picked.has(card.id);
-            const affordable = isPicked || card.cost <= remaining;
+            const isSelected = picked.has(card.id);
+            const affordable = isSelected || card.cost <= remaining;
             return (
               <button
                 key={card.id}
-                className={`solution-item${isPicked ? ' picked' : ''}`}
+                className={`solution-item${isSelected ? ' picked' : ''}`}
                 onClick={() => toggle(card)}
                 disabled={!affordable}
               >
@@ -103,7 +188,7 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                     <em className="badge badge-horizon">⏳ {HORIZON_LABELS[card.horizon]}</em>
                   </span>
                 </span>
-                <span className="solution-check">{isPicked ? '✓' : '+'}</span>
+                <span className="solution-check">{isSelected ? '✓' : '+'}</span>
               </button>
             );
           })}
@@ -111,11 +196,14 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
 
         {askingWhy ? (
           <div className="rationale-step">
-            <p className="rationale-question">🗣️ Başkan soruyor: <strong>Neden bu paketi seçtin?</strong></p>
+            <p className="rationale-question">
+              🗣️ Başkan soruyor: <strong>Bu çözümleri neden seçtin? Kasabada neleri korumak, neleri feda etmek istedin?</strong>
+            </p>
             <div className="rationale-choices">
               {RATIONALE_CHOICES.map((choice) => (
                 <button
                   key={choice}
+                  type="button"
                   className={`rationale-chip${rationale === choice ? ' picked' : ''}`}
                   onClick={() => setRationale(choice)}
                 >
@@ -123,19 +211,40 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                 </button>
               ))}
             </div>
-            <input
-              className="rationale-input"
-              type="text"
-              maxLength={120}
-              placeholder="Ya da kendi cümleni yaz…"
-              value={RATIONALE_CHOICES.includes(rationale) ? '' : rationale}
-              onChange={(e) => setRationale(e.target.value)}
-            />
+            <div className="rationale-open-box">
+              <textarea
+                className="rationale-input rationale-textarea"
+                rows={3}
+                maxLength={280}
+                placeholder="Kendi cümlelerinle anlat (Örn: Parkın fıskiyelerini kapattım çünkü insanların içme suyu ve Nuri Amca'nın sokağındaki kaçak daha acildi…)"
+                value={rationale}
+                onChange={(e) => setRationale(e.target.value)}
+              />
+              <div className="rationale-meta-row">
+                <span className="rationale-ai-hint">
+                  ✨ Cümlen puanlanmaz; düşünce tarzın ve hangi kanıtları önemsediğin analiz edilir ({rationale.length}/280)
+                </span>
+                {speechSupported && (
+                  <button
+                    type="button"
+                    className={`rationale-mic-btn${listening ? ' listening' : ''}`}
+                    onClick={toggleVoiceDictation}
+                  >
+                    {listening ? '⏹ Dinleniyor…' : '🎤 Sesle Anlat'}
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="rationale-actions">
-              <button className="startup-button startup-button-glass" onClick={() => setAskingWhy(false)}>
+              <button
+                type="button"
+                className="startup-button startup-button-glass"
+                onClick={() => setAskingWhy(false)}
+              >
                 ← Pakete dön
               </button>
               <button
+                type="button"
                 className="startup-button investigation-cta"
                 disabled={!rationale.trim()}
                 onClick={() => onSubmit(selected, spent, rationale.trim())}
@@ -147,6 +256,7 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
         ) : (
           <footer className="investigation-footer">
             <button
+              type="button"
               className="startup-button investigation-cta"
               disabled={selected.length === 0}
               onClick={() => setAskingWhy(true)}

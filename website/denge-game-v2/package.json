@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node tools/check-scenarios.mjs && tsc -b && vite build",
+    "check:scenarios": "node tools/check-scenarios.mjs",
     "lint": "oxlint",
     "manifest": "node tools/gen-manifest.mjs",
     "preview": "vite preview"

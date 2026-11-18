@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  generatePedagogicalReport,
+  localAnalyzeRationale,
+  type PedagogicalReportResult,
+} from '../Game/ai/pedagogicalEngine';
 import type { PublicReportResult } from '../Game/sync/api';
 import { STAT_META, type GameStats } from '../Game/data/stats';
 import { SOLUTION_CARDS } from '../Game/data/story';
@@ -15,6 +20,12 @@ const STAT_COLORS: Record<keyof GameStats, string> = {
   water: '#4db8e0',
 };
 
+const THINKING_LEVEL_LABELS: Record<string, string> = {
+  BASLANGIC: 'Başlangıç · Tek Eksenli Odak',
+  GELISEN: 'Gelişen · Çoklu Faktör İlişkilendirme',
+  GUCLU: 'Güçlü · Bütüncül Sistem Düşüncesi',
+};
+
 function statusLabel(val: number): { text: string; cls: string } {
   if (val < 30) return { text: 'Kritik', cls: 'status-critical' };
   if (val < 60) return { text: 'Dikkat', cls: 'status-warning' };
@@ -25,6 +36,11 @@ const solutionTitle = (id: string) =>
   SOLUTION_CARDS.find((c) => c.id === id)?.title ?? id;
 
 export default function ParentReportModal({ report, onClose }: ParentReportModalProps) {
+  const cachedSummary = report.state?.aiProfile?.reportSummary ?? null;
+  const [fetchedSummary, setFetchedSummary] = useState<PedagogicalReportResult | null>(null);
+  const aiSummary = cachedSummary ?? fetchedSummary;
+  const loadingAi = !aiSummary;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -33,10 +49,31 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    if (cachedSummary) return;
+    let active = true;
+    void generatePedagogicalReport(report.state ?? {}).then((res) => {
+      if (active) {
+        setFetchedSummary(res);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [cachedSummary, report.state]);
+
   const stats = report.state?.stats;
   const notebook = report.state?.notebook ?? [];
   const plan = report.state?.plan;
   const finalStatement = report.state?.finalStatement;
+  const rationaleAnalysis =
+    report.state?.aiProfile?.rationaleAnalysis ??
+    (plan?.rationale
+      ? localAnalyzeRationale({
+          rationale: plan.rationale,
+          solutionIds: plan.solutionIds,
+        })
+      : null);
 
   return (
     <div className="report-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
@@ -62,6 +99,34 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
         </header>
 
         <div className="report-modal-body">
+          {/* Yapay Zeka Pedagojik Gelişim Hikayesi */}
+          <section className="report-section report-ai-card">
+            <div className="report-ai-header">
+              <span className="report-ai-badge">✨ YAPAY ZEKA PEDAGOJİK ÖZETİ</span>
+              {aiSummary && (
+                <span className="report-style-pill">{aiSummary.thinking_style_title}</span>
+              )}
+            </div>
+            {loadingAi && !aiSummary ? (
+              <p className="report-empty-note">↻ Öğrencinin karar izleri analiz ediliyor…</p>
+            ) : aiSummary ? (
+              <>
+                <p className="report-ai-narrative">{aiSummary.parent_summary}</p>
+                {aiSummary.strengths.length > 0 && (
+                  <ul className="report-ai-strengths">
+                    {aiSummary.strengths.map((item, idx) => (
+                      <li key={idx}>🌱 {item}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="report-dinner-box">
+                  <strong>🍽️ Akşam Yemeğinde Sohbet Önerisi</strong>
+                  <p>“{aiSummary.dinner_table_question}”</p>
+                </div>
+              </>
+            ) : null}
+          </section>
+
           {/* Denge Göstergeleri */}
           <section className="report-section">
             <h3 className="report-section-title">⚖ Kasaba Denge Göstergeleri</h3>
@@ -118,10 +183,10 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
             )}
           </section>
 
-          {/* Eylem Planı */}
+          {/* Eylem Planı ve Açık Uçlu Gerekçe Analizi */}
           {plan && (
             <section className="report-section">
-              <h3 className="report-section-title">📋 Uygulanan Eylem Planı</h3>
+              <h3 className="report-section-title">📋 Uygulanan Eylem Planı & Düşünce İzi</h3>
               <div className="report-plan-box">
                 <ul className="report-plan-solutions">
                   {plan.solutionIds.map((sid) => (
@@ -133,8 +198,27 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
                 </p>
                 {plan.rationale && (
                   <p className="report-plan-rationale">
-                    Gerekçe: <em>&quot;{plan.rationale}&quot;</em>
+                    Öğrencinin Gerekçesi: <em>&quot;{plan.rationale}&quot;</em>
                   </p>
+                )}
+                {rationaleAnalysis && (
+                  <div className="report-rationale-matrix">
+                    <div>
+                      <span>Sistem Düşüncesi:</span>{' '}
+                      <strong>
+                        {THINKING_LEVEL_LABELS[rationaleAnalysis.systemic_thinking.level] ??
+                          rationaleAnalysis.systemic_thinking.level}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Odaklanılan Paydaş:</span>{' '}
+                      <strong>{rationaleAnalysis.stakeholder_empathy.primary_focus}</strong>
+                    </div>
+                    <div>
+                      <span>Ödünleşme (Vazgeçilen):</span>{' '}
+                      <strong>{rationaleAnalysis.trade_off_awareness.sacrificed_axis}</strong>
+                    </div>
+                  </div>
                 )}
               </div>
             </section>

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import './AylinWorkshop.css';
+import { activeFacts } from '../Game/scenario';
+import type { ScenarioFacts } from '../Game/scenario/model';
 
 export interface AylinWorkshopDecisionResult {
   decisionId: 'patch' | 'replace' | 'sensor';
@@ -170,7 +172,7 @@ const STAGES = [
   },
   {
     name: 'KURAKLIK BASKISI',
-    subtitle: 'Yağış %42 azalırken akışı kesintisiz tut.',
+    subtitle: 'Yağış %{rain} azalırken akışı kesintisiz tut.',
     route: [
       [2, 0],
       [2, 1],
@@ -186,11 +188,11 @@ const STAGES = [
     ] as [number, number][],
     time: 75,
     level: 55,
-    clue: 'Yağış normallere göre %42 düşük. Fazla yanlış dönüş yapmadan doğru hattı bağla.',
+    clue: 'Yağış normallere göre %{rain} düşük. Fazla yanlış dönüş yapmadan doğru hattı bağla.',
   },
   {
     name: 'SICAKLIK DALGASI',
-    subtitle: 'Buharlaşma %28 artıyor. Son hattı zamanında tamamla.',
+    subtitle: 'Buharlaşma %{evap} artıyor. Son hattı zamanında tamamla.',
     route: [
       [2, 0],
       [2, 1],
@@ -206,9 +208,29 @@ const STAGES = [
     ] as [number, number][],
     time: 65,
     level: 42,
-    clue: 'Sıcaklık ve buharlaşma yükseliyor. Rezerv %40’ın altına inmeden sistemi kurtar.',
+    clue: 'Sıcaklık ve buharlaşma yükseliyor. Rezerv kritik eşiğin (%{critical}) altına inmeden sistemi kurtar.',
   },
 ];
+
+/**
+ * The three pipeline rounds with this student's numbers: the rounds start at
+ * last year's, spring's and today's reservoir level, and quote the variant's
+ * rain deficit, evaporation rise and alarm threshold (scenario engine).
+ */
+function stagesFor(f: ScenarioFacts) {
+  const levels = [f.history.lastYear, f.history.spring, f.history.today];
+  const fillText = (text: string) =>
+    text
+      .replaceAll('{rain}', String(f.rainDeficitPct))
+      .replaceAll('{evap}', String(f.evaporationPct))
+      .replaceAll('{critical}', String(f.criticalPct));
+  return STAGES.map((stage, i) => ({
+    ...stage,
+    level: levels[i],
+    subtitle: fillText(stage.subtitle),
+    clue: fillText(stage.clue),
+  }));
+}
 
 function PipeSVG({ cell, powered }: { cell: Cell; powered: boolean }) {
   const con = connections(cell);
@@ -284,6 +306,11 @@ export default function AylinWorkshopModal({
   >('briefing');
 
   const [sound, setSound] = useState(true);
+  // This student's dam numbers (scenario engine) and the rounds built from them.
+  const [af] = useState(activeFacts);
+  const stages = useMemo(() => stagesFor(af), [af]);
+  /** Litres a repair choice gives back = leak − what still escapes after it. */
+  const savedAfter = (remainPct: number) => af.leakL - Math.round((remainPct * af.outflowL) / 100);
 
   // --- Module A: Kanıt Analizi State ---
   const [selectedHypothesis, setSelectedHypothesis] = useState<number | null>(null);
@@ -291,10 +318,10 @@ export default function AylinWorkshopModal({
 
   // --- Module B: Boru Hattı Bulmacası State ---
   const [stageIndex, setStageIndex] = useState(0);
-  const stage = STAGES[stageIndex];
+  const stage = stages[stageIndex];
   const [board, setBoard] = useState<Cell[][]>(() => buildBoard(STAGES[0].route, 0));
   const [timeLeft, setTimeLeft] = useState(STAGES[0].time);
-  const [waterLevel, setWaterLevel] = useState(STAGES[0].level);
+  const [waterLevel, setWaterLevel] = useState(() => stagesFor(af)[0].level);
   const [puzzleStatus, setPuzzleStatus] = useState<'playing' | 'won' | 'lost' | 'finished'>('playing');
 
   // BFS Connectivity
@@ -382,14 +409,14 @@ export default function AylinWorkshopModal({
 
   const nextStage = () => {
     const next = stageIndex + 1;
-    if (next >= STAGES.length) {
+    if (next >= stages.length) {
       setPuzzleStatus('finished');
       return;
     }
     setStageIndex(next);
-    setBoard(buildBoard(STAGES[next].route, next));
-    setTimeLeft(STAGES[next].time);
-    setWaterLevel(STAGES[next].level);
+    setBoard(buildBoard(stages[next].route, next));
+    setTimeLeft(stages[next].time);
+    setWaterLevel(stages[next].level);
     setPuzzleStatus('playing');
   };
 
@@ -470,9 +497,9 @@ export default function AylinWorkshopModal({
 
   const handleFinalSubmit = () => {
     const decisionMeta = {
-      patch: { decisionTitle: 'Çatlağı Onar (Geçici Yama)', cost: 150000, waterSaved: 12 },
-      replace: { decisionTitle: 'Eski Boruyu Değiştir (Kalıcı Yenileme)', cost: 400000, waterSaved: 20 },
-      sensor: { decisionTitle: 'İzleme Sensörü Kur (Erken Uyarı)', cost: 100000, waterSaved: 5 },
+      patch: { decisionTitle: 'Çatlağı Onar (Geçici Yama)', cost: 150000, waterSaved: savedAfter(af.aylinRemainPct.patch) },
+      replace: { decisionTitle: 'Eski Boruyu Değiştir (Kalıcı Yenileme)', cost: 400000, waterSaved: savedAfter(af.aylinRemainPct.replace) },
+      sensor: { decisionTitle: 'İzleme Sensörü Kur (Erken Uyarı)', cost: 100000, waterSaved: savedAfter(af.aylinRemainPct.sensor) },
     }[selectedDecision];
 
     onComplete({
@@ -532,7 +559,7 @@ export default function AylinWorkshopModal({
               color: 'rgba(217, 248, 250, 0.7)',
             }}
           >
-            CANLI BARAJ REZERVİ · %38 KRİTİK SEVİYE
+            CANLI BARAJ REZERVİ · %{af.reservoirPct} · KRİTİK EŞİK %{af.criticalPct}
           </div>
           <div className="aylin-avatar">
             <div className="aylin-hair"></div>
@@ -545,9 +572,9 @@ export default function AylinWorkshopModal({
               SU MÜHENDİSİ AYLIN
             </div>
             {step === 'briefing' &&
-              '“Hoş geldin! Barajdan çıkan 80 litre suyun tamamı mahallelere ulaşmıyor. Ölçümlerde 20 litrelik garip bir kayıp var. Kasabada topladığımız verileri inceleyip gizemi çözelim.”'}
+              `“Hoş geldin! Barajdan dakikada çıkan ${af.outflowL} L suyun tamamı mahallelere ulaşmıyor. Ölçümlerde dakikada ${af.leakL} L’lik garip bir kayıp var. Kasabada topladığımız verileri inceleyip gizemi çözelim.”`}
             {step === 'evidence' &&
-              '“Topladığımız verileri masaya yatırdık. Barajdan çıkan 80 litrenin yalnızca 60 litresi ulaşıyor. Islak zemin ve basınç düşüşü kanıtlarını incele ve hipotezini belirle!”'}
+              `“Topladığımız verileri masaya yatırdık. Barajdan dakikada çıkan ${af.outflowL} L’nin yalnızca ${af.deliveredL} L’si ulaşıyor. Islak zemin ve basınç düşüşü kanıtlarını incele ve hipotezini belirle!”`}
             {step === 'pipe_puzzle' &&
               '“Harika bir çıkarım! Boru hattında kaçak var. Parçaları döndürerek barajdan kasabaya kesintisiz bir akış yolu kur. Suyu hedefe ulaştırmalıyız!”'}
             {step === 'decision' &&
@@ -589,7 +616,7 @@ export default function AylinWorkshopModal({
                     <span className="aylin-badge">KAYNAK</span>
                   </div>
                   <strong style={{ fontSize: '24px', color: '#5ae5f3', display: 'block', margin: '8px 0' }}>
-                    80 Litre / dk
+                    {af.outflowL} Litre / dk
                   </strong>
                   <p style={{ fontSize: '12px', color: '#9fc0c9', margin: 0 }}>
                     Baraj ana vanasından şebekeye pompalanan brüt su miktarı.
@@ -611,7 +638,7 @@ export default function AylinWorkshopModal({
                     </span>
                   </div>
                   <strong style={{ fontSize: '24px', color: '#70e0a5', display: 'block', margin: '8px 0' }}>
-                    25 Litre / dk
+                    {af.parkL} Litre / dk
                   </strong>
                   <p style={{ fontSize: '12px', color: '#9fc0c9', margin: 0 }}>
                     <strong>Kritik Gözlem:</strong> Boru hattı yakınında beklenmedik şekilde ıslak zemin ve çamurlaşma görüldü!
@@ -633,7 +660,7 @@ export default function AylinWorkshopModal({
                     </span>
                   </div>
                   <strong style={{ fontSize: '24px', color: '#f7c65a', display: 'block', margin: '8px 0' }}>
-                    35 Litre / dk
+                    {af.homesL} Litre / dk
                   </strong>
                   <p style={{ fontSize: '12px', color: '#9fc0c9', margin: 0 }}>
                     <strong>Kritik Gözlem:</strong> Evlerin musluklarında anormal su basıncı düşüşü rapor edildi.
@@ -652,7 +679,7 @@ export default function AylinWorkshopModal({
               }}
             >
               <div className="aylin-mono" style={{ fontSize: '12px', color: '#89adb4' }}>
-                Toplam Alınan Su: 25 L + 35 L = 60 L (Kayıp: 20 L)
+                Toplam Alınan Su: {af.parkL} L + {af.homesL} L = {af.deliveredL} L (Kayıp: {af.leakL} L)
               </div>
               <button
                 className="aylin-btn"
@@ -675,7 +702,7 @@ export default function AylinWorkshopModal({
                 MÜHENDİSLİK ANALİZ MASASI · VERİ VE MATEMATİKSEL ÇIKARIM
               </div>
               <h2 style={{ fontSize: '20px', margin: '0 0 12px 0', color: '#fff' }}>
-                Barajdan çıkan 80 litre suyun yalnızca 60 litresi ulaşıyor. Aradaki 20 litreye ne olmuş olabilir?
+                Barajdan dakikada çıkan {af.outflowL} L suyun yalnızca {af.deliveredL} L’si ulaşıyor. Aradaki {af.leakL} L’ye ne olmuş olabilir?
               </h2>
 
               <div
@@ -690,19 +717,19 @@ export default function AylinWorkshopModal({
                   <span className="aylin-mono" style={{ fontSize: '11px', color: '#89adb4' }}>
                     BARAJDAN ÇIKIŞ
                   </span>
-                  <strong>80 Litre</strong>
+                  <strong>{af.outflowL} Litre</strong>
                 </div>
                 <div className="aylin-stat">
                   <span className="aylin-mono" style={{ fontSize: '11px', color: '#89adb4' }}>
                     ULAŞAN TOPLAM SU
                   </span>
-                  <strong style={{ color: '#70e0a5' }}>60 Litre (25 + 35)</strong>
+                  <strong style={{ color: '#70e0a5' }}>{af.deliveredL} Litre ({af.parkL} + {af.homesL})</strong>
                 </div>
                 <div className="aylin-stat" style={{ borderColor: 'rgba(255, 105, 118, 0.4)' }}>
                   <span className="aylin-mono" style={{ fontSize: '11px', color: '#ff6976' }}>
                     KAYIP / EKSİK SU
                   </span>
-                  <strong style={{ color: '#ff6976' }}>20 Litre (%25 Kayıp!)</strong>
+                  <strong style={{ color: '#ff6976' }}>{af.leakL} Litre (%{af.leakPct} Kayıp!)</strong>
                 </div>
               </div>
 
@@ -727,19 +754,19 @@ export default function AylinWorkshopModal({
                     id: 0,
                     label: 'A) Baraj yeterince su üretmiyor.',
                     correct: false,
-                    feedback: 'İlginç bir tahmin ama barajdan 80 litre çıktığını bizzat ölçtük. Üretim değil, dağıtım hattında bir sorun var.',
+                    feedback: `İlginç bir tahmin ama barajdan dakikada ${af.outflowL} L çıktığını bizzat ölçtük. Üretim değil, dağıtım hattında bir sorun var.`,
                   },
                   {
                     id: 1,
                     label: 'B) Boru hattında yeraltı kaçağı veya çatlak olabilir.',
                     correct: true,
-                    feedback: 'Harika bir çıkarım! Topladığın kanıtlar (ıslak zemin, 20 L kayıp ve basınç düşüşü) tam olarak boru hattındaki bir kaçağı kanıtlıyor.',
+                    feedback: `Harika bir çıkarım! Topladığın kanıtlar (ıslak zemin, dakikada ${af.leakL} L kayıp ve basınç düşüşü) tam olarak boru hattındaki bir kaçağı kanıtlıyor.`,
                   },
                   {
                     id: 2,
                     label: 'C) Yağmur yağmadığı için su borunun içinde kaybolmuştur.',
                     correct: false,
-                    feedback: 'Yağışlar az ama borular yerin altındadır; buharlaşma boru içindeki 20 litreyi yok edemez. Islak zemin ne anlatıyor?',
+                    feedback: `Yağışlar az ama borular yerin altındadır; buharlaşma boru içindeki dakikada ${af.leakL} L suyu yok edemez. Islak zemin ne anlatıyor?`,
                   },
                 ].map((hyp) => {
                   const isPicked = selectedHypothesis === hyp.id;
@@ -924,16 +951,16 @@ export default function AylinWorkshopModal({
                     <strong
                       style={{
                         fontSize: '36px',
-                        color: waterLevel <= 40 ? '#ff6976' : '#5ae5f3',
+                        color: waterLevel <= af.criticalPct ? '#ff6976' : '#5ae5f3',
                       }}
                     >
                       %{Math.round(waterLevel)}
                     </strong>
                     <span className="aylin-mono" style={{ fontSize: '11px', color: '#89adb4' }}>
-                      Kritik Eşik: %40
+                      Kritik Eşik: %{af.criticalPct}
                     </span>
                   </div>
-                  <div className={`aylin-bar ${waterLevel <= 40 ? 'critical' : ''}`} style={{ marginTop: '10px' }}>
+                  <div className={`aylin-bar ${waterLevel <= af.criticalPct ? 'critical' : ''}`} style={{ marginTop: '10px' }}>
                     <i style={{ width: `${waterLevel}%` }}></i>
                   </div>
                   <div
@@ -947,7 +974,7 @@ export default function AylinWorkshopModal({
                     }}
                   >
                     <span>Hatalı dönüş = su sızıntısı</span>
-                    <span>Geçen yıl: %70</span>
+                    <span>Geçen yıl: %{af.history.lastYear}</span>
                   </div>
                 </section>
 
@@ -971,7 +998,7 @@ export default function AylinWorkshopModal({
                         YAĞIŞ
                       </span>
                       <strong style={{ fontSize: '16px', color: '#f7c65a' }}>
-                        {stageIndex === 0 ? 'Normal' : '−%42 Düşüş'}
+                        {stageIndex === 0 ? 'Normal' : `−%${af.rainDeficitPct} Düşüş`}
                       </strong>
                     </div>
                     <div className="aylin-stat">
@@ -979,7 +1006,7 @@ export default function AylinWorkshopModal({
                         BUHARLAŞMA
                       </span>
                       <strong style={{ fontSize: '16px', color: '#ff6976' }}>
-                        {stageIndex < 2 ? 'Normal' : '+%28 Artış'}
+                        {stageIndex < 2 ? 'Normal' : `+%${af.evaporationPct} Artış`}
                       </strong>
                     </div>
                   </div>
@@ -1003,20 +1030,20 @@ export default function AylinWorkshopModal({
                   </p>
                   <div style={{ display: 'flex', gap: '8px', margin: '18px 0' }}>
                     <span className="aylin-badge">+ KESİNTİSİZ AKIŞ KURULDU</span>
-                    <span className="aylin-badge">+ 20 LİTRE SU KURTARILDI</span>
+                    <span className="aylin-badge">+ {af.leakL} LİTRE SU KURTARILDI</span>
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button
                       className="aylin-btn"
                       onClick={() => {
-                        if (stageIndex >= STAGES.length - 1) {
+                        if (stageIndex >= stages.length - 1) {
                           setStep('decision');
                         } else {
                           nextStage();
                         }
                       }}
                     >
-                      {stageIndex >= STAGES.length - 1
+                      {stageIndex >= stages.length - 1
                         ? 'Mühendislik Kararına Geç →'
                         : 'Sonraki Seviyeye Geç →'}
                     </button>
@@ -1038,7 +1065,7 @@ export default function AylinWorkshopModal({
                     Rezerv kritik eşiğin altına indi!
                   </h2>
                   <p style={{ fontSize: '13px', color: '#d9f8fa', lineHeight: 1.5 }}>
-                    Süre doldu veya hatalı boru bağlantıları yüzünden su seviyesi kritik %40 sınırına geriledi.
+                    Süre doldu veya hatalı boru bağlantıları yüzünden su seviyesi kritik %{af.criticalPct} sınırına geriledi.
                     Aylin: “Pes etmek yok! Kısa yolu değil, sürekli ve dengeli akışı ara.”
                   </p>
                   <button className="aylin-btn danger" style={{ marginTop: '16px' }} onClick={restartPuzzle}>
@@ -1099,7 +1126,7 @@ export default function AylinWorkshopModal({
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
                     <div>💰 Maliyet: <strong>₺150.000</strong></div>
-                    <div>💧 Kalan Kayıp: <strong>%12</strong></div>
+                    <div>💧 Kalan Kayıp: <strong>%{af.aylinRemainPct.patch}</strong></div>
                     <div>🛡️ Dayanıklılık: <strong>1-2 Yıl</strong></div>
                     <div>⚠️ Risk: <strong>Yüksek</strong></div>
                   </div>
@@ -1131,7 +1158,7 @@ export default function AylinWorkshopModal({
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
                     <div>💰 Maliyet: <strong>₺400.000</strong></div>
-                    <div>💧 Kalan Kayıp: <strong>%0 (Sıfır)</strong></div>
+                    <div>💧 Kalan Kayıp: <strong>%{af.aylinRemainPct.replace} (Sıfır)</strong></div>
                     <div>🛡️ Dayanıklılık: <strong>15+ Yıl</strong></div>
                     <div>🌱 Çevre Etkisi: <strong>Mükemmel</strong></div>
                   </div>
@@ -1163,7 +1190,7 @@ export default function AylinWorkshopModal({
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
                     <div>💰 Maliyet: <strong>₺100.000</strong></div>
-                    <div>💧 Kalan Kayıp: <strong>%18</strong></div>
+                    <div>💧 Kalan Kayıp: <strong>%{af.aylinRemainPct.sensor}</strong></div>
                     <div>🛡️ Dayanıklılık: <strong>Orta</strong></div>
                     <div>📡 Özellik: <strong>Erken Uyarı</strong></div>
                   </div>
@@ -1230,7 +1257,7 @@ export default function AylinWorkshopModal({
                   📋 Kasaba Kayıtlarına Eklenen Mühendislik Özeti:
                 </div>
                 <div style={{ fontSize: '13px', color: '#c7e4eb' }}>
-                  • <strong>Bulgu:</strong> Baraj çıkışı (80 L) ile tüketim (60 L) arasındaki 20 L kaçak yeraltı sızıntısıydı.
+                  • <strong>Bulgu:</strong> Baraj çıkışı ({af.outflowL} L/dk) ile tüketim ({af.deliveredL} L/dk) arasındaki {af.leakL} L/dk kaçak yeraltı sızıntısıydı.
                 </div>
                 <div style={{ fontSize: '13px', color: '#c7e4eb' }}>
                   • <strong>Müdahale:</strong> Boru ağı rotalandı ve akış kesintisiz sağlandı.

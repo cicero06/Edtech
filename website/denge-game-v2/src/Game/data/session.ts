@@ -30,6 +30,19 @@ import { INITIAL_STATS, type GameStats } from './stats';
 import type { InvestigationId } from './story';
 import { noteEvent, noteState } from '../sync/engine';
 import type { DecisionContext, DecisionStep } from './decisions';
+import { createScenario, type ScenarioState } from '../scenario/variants';
+import type {
+  GuideChatTurn,
+  PedagogicalReportResult,
+  RationaleAnalysisResult,
+} from '../ai/pedagogicalEngine';
+
+export interface AiSessionProfile {
+  rationaleAnalysis?: RationaleAnalysisResult;
+  altRationaleAnalysis?: RationaleAnalysisResult;
+  reportSummary?: PedagogicalReportResult;
+  guideHistory?: GuideChatTurn[];
+}
 
 /** Mirrors the stage machine inside GameScene. */
 export type QuestStage =
@@ -151,7 +164,9 @@ export type SessionEventType =
   /** A district workshop finished (see data/minigames.ts). */
   | 'minigame'
   /** One step of a decision trace (see data/decisions.ts). */
-  | 'decision';
+  | 'decision'
+  /** Pedagogical AI analysis of open-ended justification. */
+  | 'rationale-analysis';
 
 /** Result of the Kadim Uyum Haritası puzzle, kept for the teacher report. */
 export interface KadimResult {
@@ -196,6 +211,11 @@ export interface GameSession {
   // ---- chapter 2 ------------------------------------------------------------
   /** Kadim Uyum Haritası, solved at the mayor before the plan meeting. */
   kadim?: KadimResult;
+  /**
+   * This student's town variant (scenario/variants.ts). Absent on saves made
+   * before the scenario engine — those keep the original numbers.
+   */
+  scenario?: ScenarioState;
   /** The player's prediction, picked right after the announcement. */
   expectation?: string;
   /** Implementation timeline stop reached: 0 start, 1 mid-month, 2 day 30. */
@@ -214,6 +234,8 @@ export interface GameSession {
   altStats?: GameStats;
   /** The closing "Bugün karar versem…" sentence. */
   finalStatement?: string;
+  /** Pedagogical AI profile (rationale analysis, parent/teacher narrative, guide history). */
+  aiProfile?: AiSessionProfile;
   stats: GameStats;
   /** Structured gameplay trace - the raw material for Atlas analytics. */
   events: SessionEvent[];
@@ -725,6 +747,8 @@ export function newSession(student: StudentProfile): GameSession {
     events: [],
     muted: false,
     savedAt: Date.now(),
+    // A fresh game is a fresh town: new numbers each time the student starts over.
+    scenario: createScenario(`${student.id}:${Date.now().toString(36)}`),
   };
 }
 

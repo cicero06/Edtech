@@ -2,7 +2,7 @@
  * İşçi Kemal's smart-park workshop — web port of the Unity mini-game
  * (GameHUD.Kemal.cs). Replaces the plain Park investigation card.
  *
- *   1. briefing — Kemal explains the 25 L park reading and the wet paths,
+ *   1. briefing — Kemal explains the park's reading (scenario) and the wet paths,
  *                 then sends the student into the park
  *   2. (in town) — three real sprinklers spray onto paths; the student walks
  *                 up and turns each one onto grass (GameScene, fieldTasks.ts)
@@ -18,6 +18,7 @@ import type { MinigameResult } from '../../Game/data/minigames';
 import type { FieldResult } from '../../Game/data/fieldTasks';
 import { TextureKeys } from '../../Game/data/assets';
 import { playTone } from './audio';
+import { activeFacts } from '../../Game/scenario';
 import WorkshopShell from './WorkshopShell';
 
 interface HourOption {
@@ -48,7 +49,6 @@ const HOURS: readonly HourOption[] = [
   },
 ];
 
-const WATER_SAVED_L = 10;
 
 type KemalField = Extract<FieldResult, { task: 'kemal-sprinklers' }>;
 
@@ -71,6 +71,8 @@ const STEP_LABEL: Record<Step, string> = {
 export default function KemalWorkshop({ field, onGoToField, onComplete, onClose }: Props) {
   const [step, setStep] = useState<Step>(field ? 'hour' : 'briefing');
   const [sound, setSound] = useState(true);
+  // This student's park numbers (scenario engine): draw, saving, draw after.
+  const [{ parkL, kemalSaveL, kemalAfterL }] = useState(activeFacts);
   const [hour, setHour] = useState<HourOption['id'] | null>(null);
   const [wrongHourPicks, setWrongHourPicks] = useState(0);
   const [firstGuess, setFirstGuess] = useState<HourOption['id'] | null>(null);
@@ -98,7 +100,7 @@ export default function KemalWorkshop({ field, onGoToField, onComplete, onClose 
       gameId: 'kemal',
       score,
       metrics: {
-        waterSaved: WATER_SAVED_L,
+        waterSaved: kemalSaveL,
         rotations,
         extraTurns,
         wrongHourPicks,
@@ -109,11 +111,11 @@ export default function KemalWorkshop({ field, onGoToField, onComplete, onClose 
 
   const speech: Record<Step, string> = {
     briefing:
-      'Merhaba genç dostum! Parkta ölçtüğümüz 25 litre suyun bir kısmı çimlere hiç ulaşmıyor. Fıskiyeler taş yollara ve asfalta su sıçratıyor. Parka çık, her fıskiyenin yanına git ve suyu yeşil alanlara çevir!',
+      `Merhaba genç dostum! Parkta ölçtüğümüz dakikada ${parkL} L suyun bir kısmı çimlere hiç ulaşmıyor. Fıskiyeler taş yollara ve asfalta su sıçratıyor. Parka çık, her fıskiyenin yanına git ve suyu yeşil alanlara çevir!`,
     hour: selectedHour
       ? selectedHour.feedback
       : 'Aslanım! Fıskiyelerin hepsi artık çimleri suluyor, yollar kuru. Şimdi son soru: sence hangi saatte sularsak suyun en azı buharlaşır?',
-    done: `Aslanımsın! Sıfır yol israfı, %4 buharlaşma ve ${WATER_SAVED_L} litre net tasarruf. Park hem yemyeşil hem de kuraklığa hazır!`,
+    done: `Aslanımsın! Sıfır yol israfı, %4 buharlaşma ve dakikada ${kemalSaveL} L net tasarruf. Park hem yemyeşil hem de kuraklığa hazır!`,
   };
 
   return (
@@ -129,17 +131,17 @@ export default function KemalWorkshop({ field, onGoToField, onComplete, onClose 
       onToggleSound={() => setSound(!sound)}
       onClose={onClose}
       chips={[
-        { icon: '🚰', label: step === 'done' ? 'Debi 15 L/sn' : 'Debi 25 L/sn', ok: step === 'done' },
+        { icon: '🚰', label: step === 'done' ? `Debi ${kemalAfterL} L/dk` : `Debi ${parkL} L/dk`, ok: step === 'done' },
         { icon: '🧱', label: aligned ? 'Yol israfı yok' : 'Fıskiyeler yola su basıyor', ok: aligned },
         { icon: '☀️', label: `Buharlaşma %${selectedHour?.loss ?? 28}`, ok: hour === 'morning' },
-        { icon: '🌿', label: step === 'done' ? `+${WATER_SAVED_L} L tasarruf` : 'Tasarruf 0 L', ok: step === 'done' },
+        { icon: '🌿', label: step === 'done' ? `+${kemalSaveL} L/dk tasarruf` : 'Tasarruf 0 L/dk', ok: step === 'done' },
       ]}
     >
       {step === 'briefing' && (
         <section className="ws-panel">
           <h2>Sahada gördüklerimiz</h2>
           <ul className="ws-facts">
-            <li>💧 Park her gün <b>25 litre</b> su alıyor.</li>
+            <li>💧 Park dakikada <b>{parkL} L</b> su çekiyor.</li>
             <li>🧱 Fıskiyelerin yanındaki <b>taş yollar ve asfalt ıslak</b> — su çimlere gitmiyor.</li>
             <li>☀️ Sulama <b>öğle saatinde</b> yapılıyor; güneş suyu buharlaştırıyor.</li>
           </ul>
@@ -194,7 +196,7 @@ export default function KemalWorkshop({ field, onGoToField, onComplete, onClose 
             <ul className="ws-facts">
               <li>🚿 3 fıskiyeyi <b>{field?.rotations ?? 0}</b> çevirmede düzelttin.</li>
               <li>☀️ Buharlaşma: <b>%28 → %4</b> (sabah 06:00)</li>
-              <li>🌿 Günlük tasarruf: <b>{WATER_SAVED_L} litre</b></li>
+              <li>🌿 Tasarruf: <b>dakikada {kemalSaveL} L</b></li>
             </ul>
             <p className="ws-hint">
               Öğrendiğin: Yeşil alanları susuz bırakmadan da su tasarrufu yapılabilir — doğru yön ve doğru saat yeter.

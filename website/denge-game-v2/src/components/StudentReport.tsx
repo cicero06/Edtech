@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AvatarFace } from './IntroSequence';
+import {
+  generatePedagogicalReport,
+  localAnalyzeRationale,
+  type PedagogicalReportResult,
+} from '../Game/ai/pedagogicalEngine';
 import {
   QUEST_STAGE_LABELS,
   loadSession,
@@ -10,6 +15,8 @@ import {
 } from '../Game/data/session';
 import { STAT_META, type GameStats } from '../Game/data/stats';
 import { SOLUTION_CARDS, investigationCard } from '../Game/data/story';
+import { scenarioOf, scenarioSummary } from '../Game/scenario';
+import { facts } from '../Game/scenario/model';
 
 /**
  * Read-only descriptive report of one student's session - shown to the
@@ -38,6 +45,7 @@ const EVENT_LABELS: Record<SessionEvent['type'], string> = {
   finale: 'Kapanış yaptı',
   minigame: 'Atölye görevini tamamladı',
   decision: 'Karar adımı',
+  'rationale-analysis': 'Açık uçlu gerekçe analizi',
 };
 
 const KADIM_PREDICTION_LABELS: Record<string, string> = {
@@ -114,6 +122,16 @@ function StatDelta({ before, after }: { before?: GameStats; after?: GameStats })
 function PlanBlock({ session, which }: { session: GameSession; which: 'plan' | 'altPlan' }) {
   const plan = which === 'plan' ? session.plan : session.altPlan;
   if (!plan) return null;
+  const savedAnalysis =
+    which === 'plan'
+      ? session.aiProfile?.rationaleAnalysis
+      : session.aiProfile?.altRationaleAnalysis;
+  const analysis =
+    savedAnalysis ??
+    (plan.rationale
+      ? localAnalyzeRationale({ rationale: plan.rationale, solutionIds: plan.solutionIds })
+      : null);
+
   return (
     <>
       <ul className="plan-items">
@@ -132,6 +150,26 @@ function PlanBlock({ session, which }: { session: GameSession; which: 'plan' | '
         </li>
       </ul>
       {plan.rationale && <blockquote className="report-quote">“{plan.rationale}”</blockquote>}
+      {analysis && (
+        <ul className="report-notes-list">
+          <li>
+            🧠 Sistem düşüncesi: <strong>{analysis.systemic_thinking.level}</strong> —{' '}
+            {analysis.systemic_thinking.rationale}
+          </li>
+          <li>
+            ⚖️ Ödünleşme bilinci:{' '}
+            <strong>{analysis.trade_off_awareness.sacrificed_axis}</strong> —{' '}
+            {analysis.trade_off_awareness.rationale}
+          </li>
+          <li>
+            🔎 Kanıt kullanımı: <strong>{analysis.evidence_grounding.level}</strong> (
+            {analysis.evidence_grounding.referenced_clues.join(', ')})
+          </li>
+          <li>
+            🤝 Paydaş empatisi: <strong>{analysis.stakeholder_empathy.primary_focus}</strong>
+          </li>
+        </ul>
+      )}
       <StatDelta
         before={which === 'plan' ? session.baseStats : session.planStats}
         after={which === 'plan' ? session.planStats : session.altStats}
@@ -157,6 +195,22 @@ export default function StudentReport({
 }: StudentReportProps) {
   // Snapshot on mount - the report never writes back to the session.
   const [session] = useState<GameSession | null>(() => loadSession(student.id));
+  const [aiReport, setAiReport] = useState<PedagogicalReportResult | null>(
+    () => session?.aiProfile?.reportSummary ?? null,
+  );
+
+  useEffect(() => {
+    if (!session || session.aiProfile?.reportSummary) return;
+    let active = true;
+    const townFacts = facts(scenarioOf(session).params);
+    void generatePedagogicalReport(session, townFacts).then((res) => {
+      if (active) setAiReport(res);
+    });
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
   // Decision-trace steps are summarised in their own sections (e.g. Kadim);
   // the timeline keeps the milestones readable.
   const milestones = session?.events.filter((ev) => ev.type !== 'decision') ?? [];
@@ -188,6 +242,16 @@ export default function StudentReport({
               <em> · son kayıt {fmtTime(session.savedAt)}</em>
             </p>
           </section>
+
+          {aiReport && (
+            <section className="report-section">
+              <h3>✨ Yapay Zeka Pedagojik Özeti · {aiReport.thinking_style_title}</h3>
+              <p className="report-note">{aiReport.teacher_summary}</p>
+              <blockquote className="report-quote">
+                <strong>🎓 Sınıf İçi Tartışma Önerisi:</strong> {aiReport.classroom_discussion_prompt}
+              </blockquote>
+            </section>
+          )}
 
           <section className="report-section">
             <h3>İncelemeler ({session.completedCards.length})</h3>
@@ -224,6 +288,15 @@ export default function StudentReport({
               </ul>
             </section>
           )}
+
+          <section className="report-section">
+            <h3>Senaryo</h3>
+            <p className="report-note">
+              {session.scenario
+                ? `Bu öğrencinin kasabası: ${scenarioSummary(scenarioOf(session))}. Sayılar öğrenciye özeldir; sonuçlar aynı modelle hesaplanır.`
+                : 'Standart senaryo (senaryo motorundan önce başlanmış oyun).'}
+            </p>
+          </section>
 
           {session.kadim && (
             <section className="report-section">

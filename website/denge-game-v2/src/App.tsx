@@ -10,6 +10,13 @@ import FieldHud from './components/workshop/FieldHud';
 import RizaWorkshop from './components/workshop/RizaWorkshop';
 import KadimPuzzle from './components/workshop/KadimPuzzle';
 import { KadimTracker, StoneReward } from './components/KadimStones';
+import { planEffects, scenarioCard, activeFacts } from './Game/scenario';
+import GuideModal from './components/GuideModal';
+import {
+  analyzeStudentRationale,
+  generatePedagogicalReport,
+  type GuideChatTurn,
+} from './Game/ai/pedagogicalEngine';
 import { collectedStones, stoneForCard, type KadimPieceId } from './Game/data/kadim';
 import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
@@ -43,7 +50,6 @@ import {
   EVIDENCE_IDS,
   EVIDENCE_PROMPT,
   REPORT_PROMPT,
-  investigationCard,
   type SolutionCard,
 } from './Game/data/story';
 import {
@@ -125,6 +131,10 @@ function App() {
   const [district, setDistrict] = useState<string>('—');
   const [muted, setMutedState] = useState(isMuted());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideHistory, setGuideHistory] = useState<GuideChatTurn[]>(
+    () => loadSession()?.aiProfile?.guideHistory ?? [],
+  );
 
   useEffect(() => subscribeSyncStatus(setSyncStatus), []);
 
@@ -277,7 +287,7 @@ function App() {
   };
 
   const completeInvestigation = (cardId: string) => {
-    const card = investigationCard(cardId);
+    const card = scenarioCard(cardId);
     if (card && !notebook.some((entry) => entry.cardId === card.id)) {
       const next = [
         ...notebook,
@@ -375,16 +385,17 @@ function App() {
     playSfx(SoundKeys.ALERT, 0.9);
 
     const session = loadSession();
-    if (session?.quest === 'retry') {
+    const isRetry = session?.quest === 'retry';
+    if (isRetry) {
       // Second-chance run: same starting conditions, so the alt plan applies
       // to the pre-plan snapshot - not on top of the first run's results.
       const baseStats = session.baseStats ?? stats;
-      const nextStats = applyStatChanges(baseStats, ...selected.map((c) => c.effects));
+      const nextStats = applyStatChanges(baseStats, ...planEffects(selected));
       setStats(nextStats);
       persist({ altPlan: plan, altStats: nextStats, stats: nextStats });
       recordEvent('alt-plan', plan);
     } else {
-      const nextStats = applyStatChanges(stats, ...selected.map((c) => c.effects));
+      const nextStats = applyStatChanges(stats, ...planEffects(selected));
       setStats(nextStats);
       persist({
         plan,
@@ -394,6 +405,29 @@ function App() {
       });
       recordEvent('plan', plan);
     }
+
+    // Asynchronously run the Pedagogical AI Rationale Analyzer without blocking gameplay
+    void analyzeStudentRationale({
+      rationale,
+      solutionIds: plan.solutionIds,
+      totalCost,
+      facts: activeFacts(),
+      mode: isRetry ? 'retry' : 'initial',
+    }).then((analysis) => {
+      const current = loadSession();
+      if (!current) return;
+      const nextAiProfile = {
+        ...current.aiProfile,
+        ...(isRetry ? { altRationaleAnalysis: analysis } : { rationaleAnalysis: analysis }),
+      };
+      saveSession({ ...current, aiProfile: nextAiProfile });
+      recordEvent('rationale-analysis', {
+        mode: isRetry ? 'retry' : 'initial',
+        systemicLevel: analysis.systemic_thinking.level,
+        primaryFocus: analysis.stakeholder_empathy.primary_focus,
+        sacrificedAxis: analysis.trade_off_awareness.sacrificed_axis,
+      });
+    });
 
     EventBus.emit(GameEvents.PLAN_SUBMITTED, {
       solutionIds: plan.solutionIds,
@@ -407,6 +441,39 @@ function App() {
     persist({ finalStatement: statement });
     recordEvent('finale', { statement });
     EventBus.emit(GameEvents.FINALE_SUBMITTED, { statement });
+
+    // Pre-generate the personalized Parent & Teacher Pedagogical AI Report
+    const latest = loadSession();
+    if (latest) {
+      void generatePedagogicalReport(latest, activeFacts()).then((summary) => {
+        const current = loadSession();
+        if (!current) return;
+        saveSession({
+          ...current,
+          aiProfile: {
+            ...current.aiProfile,
+            reportSummary: summary,
+          },
+        });
+      });
+    }
+  };
+
+  const addGuideTurn = (turn: GuideChatTurn) => {
+    setGuideHistory((prev) => {
+      const next = [...prev, turn];
+      const current = loadSession();
+      if (current) {
+        saveSession({
+          ...current,
+          aiProfile: {
+            ...current.aiProfile,
+            guideHistory: next,
+          },
+        });
+      }
+      return next;
+    });
   };
 
   /** The composed announcement is saved, then the scene hangs the poster. */
@@ -438,6 +505,7 @@ function App() {
     } else {
       setNotebook([]);
       setKadimDone(false);
+      setGuideHistory([]);
       setStats({ ...INITIAL_STATS });
       setEvidencePicked(new Set());
       saveSession(newSession(student));
@@ -474,6 +542,7 @@ function App() {
   const hydrate = (session: GameSession) => {
     setNotebook(session.notebook);
     setKadimDone(!!session.kadim);
+    setGuideHistory(session.aiProfile?.guideHistory ?? []);
     setStats(session.stats);
     setEvidencePicked(new Set(session.evidence));
     setMuted(session.muted);
@@ -633,6 +702,18 @@ function App() {
           onClick={() => applyMuted(!muted)}
         >
           {muted ? '🔇' : '🔊'}
+        </button>
+
+        <button
+          type="button"
+          className="guide-hud-button"
+          aria-label="Lina Akıllı Rehbere sor"
+          onClick={() => {
+            playSfx(SoundKeys.TICK, 0.7);
+            setGuideOpen(true);
+          }}
+        >
+          🧭 <span>Lina’ya Sor</span>
         </button>
 
         {player && (
@@ -838,7 +919,7 @@ function App() {
         )}
 
         {investigation && !minigameForCard(investigation.cardId) && (() => {
-          const card = investigationCard(investigation.cardId);
+          const card = scenarioCard(investigation.cardId);
           return card ? <InvestigationCard card={card} onComplete={completeInvestigation} /> : null;
         })()}
 
@@ -850,7 +931,22 @@ function App() {
 
         {finaleOpen && <FinaleCard onSubmit={submitFinale} />}
 
-        {!dialogue && !investigation && !kadimOpen && !solutionOpen && !finaleOpen && !announceOpen && !mapOverview && (
+        {guideOpen && (() => {
+          const currentSession = loadSession();
+          return (
+            <GuideModal
+              facts={activeFacts()}
+              quest={currentSession?.quest ?? 'investigate'}
+              completedCards={currentSession?.completedCards ?? notebook.map((n) => n.cardId)}
+              plan={currentSession?.plan ?? null}
+              history={guideHistory}
+              onAddTurn={addGuideTurn}
+              onClose={() => setGuideOpen(false)}
+            />
+          );
+        })()}
+
+        {!dialogue && !investigation && !kadimOpen && !solutionOpen && !finaleOpen && !announceOpen && !guideOpen && !mapOverview && (
           <p className="controls">
             WASD / Yön tuşları ile hareket et · NPC'nin yanında <kbd>E</kbd> ile konuş ·{' '}
             <kbd>M</kbd> ile kasaba haritası · <kbd>`</kbd> ile çarpışma kutularını göster

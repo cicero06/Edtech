@@ -84,23 +84,21 @@ import {
   RETRY_CHOICES,
   RETRY_KEEP_FEEDBACK,
   REVIEW_NPC_IDS,
-  implementationTwist,
   implementationTwistSpot,
   linaComparePages,
   mayorFinalePages,
   mayorFollowUpChoices,
   mayorReactionPages,
   npcPlanReaction,
-  npcReviewOutcome,
   type InvestigationId,
 } from '../data/story';
+import { reviewOutcome, scenarioTwist, twistIsScenarioText } from '../scenario';
 import {
   announceVoice,
   compareVoiceFiles,
   finaleVoiceFiles,
   implementVoiceFiles,
   mayorReactionVoiceFiles,
-  reviewVoice,
   smallTalkVoice,
 } from '../data/voices';
 import { loadSession, saveSession, type QuestStage } from '../data/session';
@@ -2381,17 +2379,21 @@ export default class GameScene extends Phaser.Scene {
 
     // Each Lina talk during the implementation advances to the next day stop.
     if (npc.definition.id === 'lina' && this.quest === 'implement') {
-      const twist = this.implPhase === 0 ? implementationTwist(this.planIds) : null;
+      const twist = this.implPhase === 0 ? scenarioTwist(this.planIds) : null;
       const pages =
         this.implPhase === 0
           ? [...IMPLEMENT_MID_PAGES, ...(twist ? [twist] : [])]
           : [...IMPLEMENT_END_PAGES];
+      const voices = implementVoiceFiles(this.implPhase, this.planIds);
+      // The repair twist now quotes this student's reservoir — the old
+      // recording would contradict it, so that page is read, not played.
+      if (this.implPhase === 0 && twistIsScenarioText(this.planIds)) voices[1] = null;
       this.presentDialogue(npc, {
         npcId: 'lina',
         name: 'Lina',
         text: pages[0],
         pages: pages.slice(1),
-        voiceFiles: implementVoiceFiles(this.implPhase, this.planIds),
+        voiceFiles: voices,
       });
       return;
     }
@@ -2402,7 +2404,8 @@ export default class GameScene extends Phaser.Scene {
       REVIEW_NPC_IDS.includes(npc.definition.id) &&
       !this.reviewedBy.has(npc.definition.id)
     ) {
-      const outcome = npcReviewOutcome(npc.definition.id, this.planIds);
+      // Day-30 reports are computed from this student's town and plan.
+      const outcome = reviewOutcome(npc.definition.id, this.planIds);
       if (outcome) {
         this.pendingFinding = {
           npcId: npc.definition.id,
@@ -2417,7 +2420,8 @@ export default class GameScene extends Phaser.Scene {
           name: npc.definition.name,
           text: outcome.text,
           chart: outcome.chart,
-          voiceFiles: reviewVoice(npc.definition.id, this.planIds),
+          // Recorded reviews quote the old fixed numbers — read these instead.
+          voiceFiles: [null],
         });
         return;
       }

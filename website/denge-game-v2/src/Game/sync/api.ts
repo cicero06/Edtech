@@ -3,6 +3,8 @@
  * Base URL comes from VITE_API_URL; localhost is the dev default.
  */
 
+import type { AiSessionProfile, KadimResult } from '../data/session';
+
 const API_BASE: string =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   'http://localhost:3000';
@@ -169,7 +171,10 @@ export interface PublicReportResult {
     };
     notebook?: { cardId: string; icon: string; text: string; datum?: string }[];
     evidence?: string[];
-    plan?: { solutionIds: string[]; totalCost: number; rationale: string } | null;
+    plan?: { solutionIds: string[]; totalCost: number; rationale?: string } | null;
+    altPlan?: { solutionIds: string[]; totalCost: number; rationale?: string } | null;
+    kadim?: KadimResult;
+    aiProfile?: AiSessionProfile;
     report?: { workedIds: string[]; problemIds: string[] };
     finalStatement?: string;
     quest?: string;

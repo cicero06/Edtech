@@ -43,7 +43,7 @@ function announceVariant(npcId: string, solutionIds: readonly string[]): PlanVar
   }
 }
 
-/** The variant `npcReviewOutcome` selects — Aylin does split on `repair` here. */
+/** Legacy review-recording variant (unused since day-30 reviews come from the scenario engine). */
 function reviewVariant(npcId: string, solutionIds: readonly string[]): PlanVariant {
   if (npcId === 'muhendis-aylin' && solutionIds.includes('repair-pipes')) return 'repair';
   return announceVariant(npcId, solutionIds);

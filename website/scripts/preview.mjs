@@ -1,6 +1,7 @@
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
+import { handleAiRequest } from "../api/ai.js";
 const root = resolve("dist");
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -22,15 +23,19 @@ const types = {
   ".txt": "text/plain; charset=utf-8",
 };
 const server = http.createServer(async (req, res) => {
-  if (!["GET", "HEAD"].includes(req.method)) {
-    res.writeHead(405, { Allow: "GET, HEAD" });
-    return res.end();
-  }
   let path;
   try {
     path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
   } catch {
     res.writeHead(400);
+    return res.end();
+  }
+  if (path.startsWith("/api/ai/") || path.startsWith("/ai/")) {
+    const stripped = path.replace(/^\/api/, "");
+    return handleAiRequest(req, res, stripped);
+  }
+  if (!["GET", "HEAD"].includes(req.method)) {
+    res.writeHead(405, { Allow: "GET, HEAD" });
     return res.end();
   }
   let file = resolve(root, "." + path);
