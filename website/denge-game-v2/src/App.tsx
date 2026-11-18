@@ -12,6 +12,7 @@ import KadimPuzzle from './components/workshop/KadimPuzzle';
 import { KadimTracker, StoneReward } from './components/KadimStones';
 import { planEffects, scenarioCard, activeFacts } from './Game/scenario';
 import GuideModal from './components/GuideModal';
+import DataReportModal, { type DataQuizMetric } from './components/DataReportModal';
 import {
   analyzeStudentRationale,
   generatePedagogicalReport,
@@ -352,12 +353,30 @@ function App() {
     });
   };
 
-  const submitEvidence = () => {
+  const recordDataQuiz = (metric?: DataQuizMetric) => {
+    if (!metric) return;
+    const current = loadSession();
+    if (!current) return;
+    const prevList = current.aiProfile?.dataQuizzes ?? [];
+    saveSession({
+      ...current,
+      aiProfile: {
+        ...current.aiProfile,
+        dataQuizzes: [...prevList, metric],
+      },
+    });
+  };
+
+  const submitEvidence = (metric?: DataQuizMetric) => {
     const confirmedIds = [...evidencePicked];
     setEvidenceMode(false);
     setNotebookOpen(false);
     persist({ evidence: confirmedIds });
-    recordEvent('evidence', { confirmedIds });
+    recordDataQuiz(metric);
+    recordEvent('evidence', {
+      confirmedIds,
+      graphWrongAttempts: metric?.wrongAttempts ?? 0,
+    });
     EventBus.emit(GameEvents.EVIDENCE_SUBMITTED, { confirmedIds });
   };
 
@@ -373,12 +392,16 @@ function App() {
     });
   };
 
-  const submitReport = () => {
+  const submitReport = (metric?: DataQuizMetric) => {
     const report = { workedIds: [...reportWorked], problemIds: [...reportProblems] };
     setReportMode(false);
     setNotebookOpen(false);
     persist({ report });
-    recordEvent('report', report);
+    recordDataQuiz(metric);
+    recordEvent('report', {
+      ...report,
+      graphWrongAttempts: metric?.wrongAttempts ?? 0,
+    });
     EventBus.emit(GameEvents.REPORT_SUBMITTED, report);
   };
 
@@ -797,7 +820,7 @@ function App() {
               <button
                 className="startup-button evidence-submit"
                 disabled={evidencePicked.size === 0}
-                onClick={submitEvidence}
+                onClick={() => submitEvidence()}
               >
                 ✔ Nedenleri işaretledim
               </button>
@@ -809,7 +832,7 @@ function App() {
                 <button
                   className="startup-button evidence-submit"
                   disabled={reportWorked.size === 0 || reportProblems.size === 0}
-                  onClick={submitReport}
+                  onClick={() => submitReport()}
                 >
                   ✔ Raporu hazırladım
                 </button>
@@ -927,6 +950,28 @@ function App() {
         })()}
 
         {kadimOpen && <KadimPuzzle onComplete={finishKadim} onClose={closeKadim} />}
+
+        {evidenceMode && (
+          <DataReportModal
+            mode="evidence"
+            notebook={notebook}
+            pickedIds={evidencePicked}
+            onToggleEvidence={toggleEvidence}
+            onSubmitEvidence={(metric) => submitEvidence(metric)}
+          />
+        )}
+
+        {reportMode && (
+          <DataReportModal
+            mode="debrief"
+            notebook={notebook}
+            planIds={loadSession()?.plan?.solutionIds ?? []}
+            workedIds={reportWorked}
+            problemIds={reportProblems}
+            onToggleFinding={toggleReportFinding}
+            onSubmitDebrief={(metric) => submitReport(metric)}
+          />
+        )}
 
         {solutionOpen && <SolutionPanel mode={solutionMode} onSubmit={submitPlan} />}
 

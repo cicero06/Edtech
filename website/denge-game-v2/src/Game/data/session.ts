@@ -37,11 +37,18 @@ import type {
   RationaleAnalysisResult,
 } from '../ai/pedagogicalEngine';
 
+export interface DataQuizRecord {
+  mode: 'evidence' | 'debrief';
+  wrongAttempts: number;
+  completedAt: number;
+}
+
 export interface AiSessionProfile {
   rationaleAnalysis?: RationaleAnalysisResult;
   altRationaleAnalysis?: RationaleAnalysisResult;
   reportSummary?: PedagogicalReportResult;
   guideHistory?: GuideChatTurn[];
+  dataQuizzes?: DataQuizRecord[];
 }
 
 /** Mirrors the stage machine inside GameScene. */

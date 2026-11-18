@@ -5394,3 +5394,383 @@ canvas {
 .social-bnav-item.active {
   color: #4f46e5;
 }
+
+/* ========================================================= */
+/* GAME THEORY & NASH EQUILIBRIUM PAYOFF MATRIX              */
+/* ========================================================= */
+
+.gt-payoff-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.gt-payoff-cell {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gt-payoff-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.gt-payoff-top strong {
+  color: #0f172a;
+}
+
+.gt-payoff-track {
+  height: 5px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.gt-payoff-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.gt-payoff-fill.good {
+  background: #10b981;
+}
+
+.gt-payoff-fill.mid {
+  background: #0284c7;
+}
+
+.gt-payoff-fill.low {
+  background: #f59e0b;
+}
+
+.gt-sacrifice-note {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #92400e;
+}
+
+.gt-hint-line {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.council-vote-toprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ========================================================= */
+/* DATA INTERPRETATION & GRAPH REPORT MODAL (DataReportModal)*/
+/* ========================================================= */
+
+.data-report-overlay {
+  padding: 14px;
+}
+
+.data-report-card {
+  width: min(980px, 96vw);
+  max-height: 92vh;
+  background: #f8fbf9;
+  border: 2.5px solid #0d7a5f;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  color: #1e293b;
+}
+
+.data-report-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid #dbe7df;
+}
+
+.data-report-eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0d7a5f;
+}
+
+.data-report-header h2 {
+  margin: 2px 0 0;
+  font-size: 21px;
+  color: #14362b;
+}
+
+.data-report-status-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e6f4ef;
+  color: #0d7a5f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.data-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.data-chart-box {
+  background: #ffffff;
+  border: 1.5px solid #cfe0d6;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-chart-box h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #14362b;
+}
+
+.data-chart-sub {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.data-bars-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-hbar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.data-hbar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #334155;
+}
+
+.data-hbar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.data-hbar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.data-column-chart {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  height: 140px;
+  align-items: end;
+  padding-top: 10px;
+}
+
+.data-col-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 4px;
+}
+
+.data-col-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.data-col-track {
+  flex: 1;
+  width: 34px;
+  border-radius: 8px 8px 4px 4px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.data-col-fill {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  transition: height 0.35s ease;
+}
+
+.data-col-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-align: center;
+}
+
+.data-quiz-section h3,
+.data-findings-section h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #14362b;
+}
+
+.data-quiz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.data-quiz-card {
+  background: #ffffff;
+  border: 1.5px solid #cfe0d6;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-quiz-prompt {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.data-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.data-quiz-btn {
+  text-align: left;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.data-quiz-btn.correct {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.data-quiz-btn.wrong {
+  border-color: #dc2626;
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.data-quiz-feedback {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.data-quiz-feedback.ok {
+  color: #15803d;
+}
+
+.data-quiz-feedback.warn {
+  color: #b45309;
+}
+
+.data-evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.data-evidence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.data-evidence-item.checked {
+  border-color: #0d7a5f;
+  background: #e6f4ef;
+}
+
+.data-debrief-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  font-size: 12.5px;
+}
+
+.data-debrief-text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.data-debrief-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.data-report-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #dbe7df;
+}
+
+@media (max-width: 820px) {
+  .data-charts-grid,
+  .data-quiz-grid {
+    grid-template-columns: 1fr;
+  }
+}

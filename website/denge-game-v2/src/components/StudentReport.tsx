@@ -16,6 +16,7 @@ import {
 import { STAT_META, type GameStats } from '../Game/data/stats';
 import { SOLUTION_CARDS, investigationCard } from '../Game/data/story';
 import { scenarioOf, scenarioSummary } from '../Game/scenario';
+import { analyzeGameTheory } from '../Game/scenario/gameTheory';
 import { facts } from '../Game/scenario/model';
 
 /**
@@ -122,6 +123,7 @@ function StatDelta({ before, after }: { before?: GameStats; after?: GameStats })
 function PlanBlock({ session, which }: { session: GameSession; which: 'plan' | 'altPlan' }) {
   const plan = which === 'plan' ? session.plan : session.altPlan;
   if (!plan) return null;
+  const gt = analyzeGameTheory(scenarioOf(session).params, plan.solutionIds);
   const savedAnalysis =
     which === 'plan'
       ? session.aiProfile?.rationaleAnalysis
@@ -150,6 +152,16 @@ function PlanBlock({ session, which }: { session: GameSession; which: 'plan' | '
         </li>
       </ul>
       {plan.rationale && <blockquote className="report-quote">“{plan.rationale}”</blockquote>}
+      <ul className="report-notes-list">
+        <li>
+          ♟️ Oyun Teorisi & Nash Uzlaşma Skoru: <strong>%{gt.nashScore}</strong> ({gt.equilibriumLabel})
+        </li>
+        {gt.sacrifices[0] && (
+          <li>
+            🔄 Fırsat Maliyeti (Feragat): <strong>{gt.sacrifices[0].title}</strong> ({gt.sacrifices[0].forgoneWaterL} L/dk potansiyel su · {gt.sacrifices[0].affectedStakeholder})
+          </li>
+        )}
+      </ul>
       {analysis && (
         <ul className="report-notes-list">
           <li>
