@@ -4045,21 +4045,91 @@ canvas {
 /* 3D BELEDİYE MECLİS SALONU (MayorCouncilDiorama)           */
 /* ========================================================= */
 
-.council-3d-modal {
-  width: min(880px, 95vw);
-  max-height: 92vh;
-  overflow-y: auto;
+.council-fullscreen-overlay {
+  padding: 12px;
 }
 
-.council-3d-wrapper {
-  width: 100%;
-  height: 295px;
-  border-radius: 16px;
+.council-chamber-shell {
+  width: min(1280px, 97vw);
+  height: min(820px, 94vh);
+  background: #0f1c24;
+  border: 2.5px solid rgba(241, 205, 129, 0.55);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
   overflow: hidden;
-  border: 2px solid #b9cfc4;
-  background: #16241f;
-  margin-bottom: 10px;
+}
+
+.council-stage-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #0b151c;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.council-stage-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(15, 28, 36, 0.96);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.council-session-badge {
+  display: flex;
+  flex-direction: column;
+}
+
+.council-session-badge span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #fbbf24;
+}
+
+.council-session-badge strong {
+  font-size: 14px;
+  color: #fff8e9;
+}
+
+.council-QuickSpeakers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.council-speaker-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbeafe;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.council-speaker-chip.active {
+  background: #0284c7;
+  border-color: #7dd3fc;
+  color: #ffffff;
+}
+
+.council-3d-viewport {
+  flex: 1;
+  min-height: 280px;
   position: relative;
+  overflow: hidden;
 }
 
 .council-3d-loading {
@@ -4095,40 +4165,60 @@ canvas {
   gap: 1px;
   padding: 5px 10px;
   border-radius: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
-  background: rgba(16, 34, 28, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: rgba(15, 23, 42, 0.88);
   color: #fff8e9;
-  font-size: 11px;
+  font-size: 10.5px;
   line-height: 1.25;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   pointer-events: auto;
   cursor: pointer;
-  transition: opacity 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: opacity 0.15s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.council-badge-role {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .council-3d-badge strong {
   font-size: 11.5px;
-  color: #f1cd81;
+  color: #fde68a;
 }
 
-.council-3d-badge span {
-  font-size: 10.5px;
-  color: #d8ece2;
+.council-badge-status {
+  font-size: 10px;
+  color: #e2e8f0;
 }
 
-.council-3d-badge.tone-mayor {
-  border-color: #f1cd81;
-  background: rgba(54, 34, 18, 0.94);
+.council-badge-vote {
+  margin-top: 2px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.council-3d-badge.tone-active {
-  border-color: #2ecc71;
-  background: rgba(13, 88, 60, 0.94);
+.council-3d-badge.is-speaking {
+  border-color: #38bdf8;
+  background: rgba(12, 74, 110, 0.94);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
-.council-3d-badge.tone-active strong {
-  color: #a6f7c6;
+.council-3d-badge.vote-yes {
+  border-color: #22c55e;
+  background: rgba(6, 78, 59, 0.94);
+}
+
+.council-3d-badge.vote-caution {
+  border-color: #f59e0b;
+  background: rgba(120, 53, 15, 0.94);
 }
 
 .council-3d-help {
@@ -4138,8 +4228,8 @@ canvas {
   z-index: 4;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(10, 22, 18, 0.78);
-  color: #d6e8df;
+  background: rgba(10, 22, 28, 0.82);
+  color: #cbd5e1;
   font-size: 11px;
   font-weight: 600;
   pointer-events: none;
@@ -4150,51 +4240,362 @@ canvas {
   bottom: 8px;
   right: 10px;
   z-index: 4;
-  padding: 4px 11px;
+  padding: 5px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(241, 205, 129, 0.55);
-  background: rgba(18, 38, 30, 0.88);
-  color: #f1cd81;
+  border: 1px solid rgba(241, 205, 129, 0.6);
+  background: rgba(15, 28, 36, 0.92);
+  color: #fde68a;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.council-metrics-strip {
+/* Live Parliamentary Floor Speech Bar */
+.council-floor-speech {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(15, 32, 44, 0.96), rgba(10, 22, 30, 0.99));
+  border-top: 2px solid #0284c7;
+  color: #f8fafc;
+}
+
+.council-speaker-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1.5px solid #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.council-speech-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.council-speech-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 3px;
 }
 
-.council-projection-pill {
+.council-speech-header strong {
+  font-size: 13.5px;
+  color: #fde68a;
+}
+
+.council-speech-header span {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.council-speech-content p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.48;
+  color: #f1f5f9;
+}
+
+/* Right Column: Official Legislative Dossier */
+.council-dossier-column {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 13px;
-  border-radius: 12px;
-  background: #e6f4fb;
-  border: 1.5px solid #b5d9ec;
-  color: #184b68;
-  font-size: 12.5px;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #f8fbf9;
+  color: #1e293b;
+  padding: 14px 16px;
+  gap: 10px;
+  overflow-y: auto;
 }
 
-.council-projection-pill strong {
-  color: #0b6594;
+.council-phase-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.c-step {
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 11px;
   font-weight: 800;
 }
 
-.council-projection-pill em {
-  font-style: normal;
-  font-size: 11.5px;
-  color: #547b91;
+.c-step.active {
+  background: #0d7a5f;
+  color: #ffffff;
+}
+
+.c-step.done {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.council-telemetry-card {
+  background: #ffffff;
+  border: 1.5px solid #cfe0d6;
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.council-telemetry-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.council-budget-block,
+.council-reservoir-block {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.council-budget-block span,
+.council-reservoir-block span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.04em;
+}
+
+.council-budget-block strong {
+  font-size: 18px;
+  color: #0d7a5f;
+}
+
+.council-reservoir-block strong {
+  font-size: 17px;
+}
+
+.council-reservoir-block strong.up {
+  color: #0284c7;
+}
+
+.council-reservoir-block strong.down {
+  color: #d97706;
+}
+
+.council-budget-block small,
+.council-reservoir-block small {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.council-dossier-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.council-dossier-instruction {
+  margin: 0;
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.council-dossier-footer {
+  padding-top: 6px;
+  border-top: 1px solid #dce6e0;
+  flex-shrink: 0;
+}
+
+.council-full-btn {
+  width: 100%;
+}
+
+/* Phase 2: Podium Speech */
+.council-podium-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.council-selected-summary {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #eef7f2;
+  border: 1px solid #b9cfc4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #14532d;
+}
+
+.council-summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.council-mini-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #a7f3d0;
+  font-size: 11px;
+  color: #065f46;
+}
+
+/* Phase 3: Roll-Call Voting Board */
+.council-voting-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.council-vote-heading {
+  margin: 0;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.council-vote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.council-vote-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.council-vote-row.state-yes {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.council-vote-row.state-caution {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.vote-member-icon {
+  font-size: 20px;
+}
+
+.vote-member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.vote-member-info strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.vote-member-info small {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.vote-status-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.vote-status-badge.state-yes {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vote-status-badge.state-caution {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.council-verdict-banner {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  border: 2px solid #10b981;
+  color: #065f46;
+}
+
+.council-verdict-banner strong {
+  display: block;
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.council-verdict-banner p {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.council-voting-wait {
+  margin: 0;
+  padding: 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0284c7;
 }
 
 .badge-water-gain {
   background: #dff7ea;
   color: #0d7a5f;
+}
+
+@media (max-width: 960px) {
+  .council-chamber-shell {
+    grid-template-columns: 1fr;
+    height: 95vh;
+    overflow-y: auto;
+  }
+
+  .council-stage-column {
+    height: 440px;
+  }
+
+  .council-dossier-column {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 /* ========================================================= */

@@ -1,42 +1,59 @@
 /**
- * React host for the Three.js 3D Belediye Meclis Salonu (Council Chamber).
- * Lazy-loaded inside SolutionPanel so Three.js only runs when the council
- * meeting opens.
+ * React host for the full-stage Three.js 3D Belediye Meclis Salonu (Council Chamber).
  */
 import { useEffect, useRef } from 'react';
 import {
   MayorCouncilScene,
-  type CouncilAnchorId,
+  type CouncilMemberId,
   type CouncilVisualState,
+  type VoteLampState,
 } from './MayorCouncilScene';
 import type { SolutionId } from '../../../Game/scenario/model';
 
 export interface CouncilFloatingBadge {
-  id: CouncilAnchorId;
-  name: string;
+  id: CouncilMemberId;
+  title: string;
+  role: string;
   statusText: string;
-  tone: 'mayor' | 'active' | 'waiting';
-  linkedSolutionId?: SolutionId;
+  isSpeaking: boolean;
+  vote: VoteLampState;
 }
 
 interface Props {
   state: CouncilVisualState;
   badges: CouncilFloatingBadge[];
   onToggleSolution: (id: SolutionId) => void;
+  onSelectMember: (id: CouncilMemberId) => void;
 }
 
-export default function MayorCouncilDiorama({ state, badges, onToggleSolution }: Props) {
+const VOTE_PILL: Record<VoteLampState, string> = {
+  idle: '',
+  yes: '🟢 KABUL',
+  caution: '🟡 ŞERHLİ ONAY',
+};
+
+export default function MayorCouncilDiorama({
+  state,
+  badges,
+  onToggleSolution,
+  onSelectMember,
+}: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<MayorCouncilScene | null>(null);
   const toggleRef = useRef(onToggleSolution);
+  const selectMemberRef = useRef(onSelectMember);
 
   useEffect(() => {
     toggleRef.current = onToggleSolution;
   }, [onToggleSolution]);
 
-  const badgeEls = useRef(new Map<CouncilAnchorId, HTMLElement>());
+  useEffect(() => {
+    selectMemberRef.current = onSelectMember;
+  }, [onSelectMember]);
 
-  const bindBadge = (id: CouncilAnchorId) => (el: HTMLButtonElement | null) => {
+  const badgeEls = useRef(new Map<CouncilMemberId, HTMLElement>());
+
+  const bindBadge = (id: CouncilMemberId) => (el: HTMLButtonElement | null) => {
     if (el) badgeEls.current.set(id, el);
     else badgeEls.current.delete(id);
     sceneRef.current?.attachLabel(id, el);
@@ -44,7 +61,11 @@ export default function MayorCouncilDiorama({ state, badges, onToggleSolution }:
 
   useEffect(() => {
     if (!hostRef.current) return;
-    const scene = new MayorCouncilScene(hostRef.current, (id) => toggleRef.current(id));
+    const scene = new MayorCouncilScene(
+      hostRef.current,
+      (id) => toggleRef.current(id),
+      (id) => selectMemberRef.current(id),
+    );
     sceneRef.current = scene;
     for (const [id, el] of badgeEls.current) scene.attachLabel(id, el);
     return () => {
@@ -65,23 +86,30 @@ export default function MayorCouncilDiorama({ state, badges, onToggleSolution }:
           key={b.id}
           ref={bindBadge(b.id)}
           type="button"
-          className={`council-3d-badge tone-${b.tone}`}
-          onClick={() => b.linkedSolutionId && onToggleSolution(b.linkedSolutionId)}
+          className={`council-3d-badge${b.isSpeaking ? ' is-speaking' : ''}${
+            b.vote !== 'idle' ? ` vote-${b.vote}` : ''
+          }`}
+          onClick={() => onSelectMember(b.id)}
           tabIndex={-1}
         >
-          <strong>{b.name}</strong>
-          <span>{b.statusText}</span>
+          <span className="council-badge-role">{b.role}</span>
+          <strong>
+            {b.isSpeaking ? '🎤 ' : ''}
+            {b.title}
+          </strong>
+          <span className="council-badge-status">{b.statusText}</span>
+          {b.vote !== 'idle' && <em className="council-badge-vote">{VOTE_PILL[b.vote]}</em>}
         </button>
       ))}
       <div className="council-3d-help" aria-hidden="true">
-        🏛️ 3B Meclis Salonu · Sürükle: Çevir · Masadaki Makete veya Üyelere Tıkla: Paketi Seç
+        🖱️ Sürükle: Salonu Çevir · Masadaki Makete veya Komisyon Başkanlarına Tıkla: Söz Ver / Seç
       </div>
       <button
         type="button"
         className="council-3d-reset"
         onClick={() => sceneRef.current?.resetView()}
       >
-        ⟲ Kamerayı Sıfırla
+        ⟲ Genel Görünüm
       </button>
     </div>
   );
