@@ -134,7 +134,7 @@ export class MayorCouncilScene {
     this.onSelectMember = onSelectMember;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;

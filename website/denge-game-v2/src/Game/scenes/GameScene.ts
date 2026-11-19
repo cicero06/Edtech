@@ -292,6 +292,11 @@ export default class GameScene extends Phaser.Scene {
   private markerSignature = '';
   /** Throttle for the PLAYER_MOVED feed. */
   private lastPosEmit = 0;
+  /** Throttle for the MARKERS_CHANGED feed (~4 Hz). */
+  private lastMarkersEmit = 0;
+  /** Spillway particle emitters throttled by camera proximity. */
+  private spillwayEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+  private spillwayActive = true;
 
   /**
    * The strips have one pose per direction - no walk cycle - so a gentle
@@ -940,19 +945,23 @@ export default class GameScene extends Phaser.Scene {
   /**
    * Feeds the React mini-map: quest "!"s (at live positions, so follower Lina
    * tracks correctly), one pin per implemented measure, and a warning pin for
-   * the mid-month twist. Emitted only when the set actually changes - this
-   * runs every frame via refreshQuestMarkers.
+   * the mid-month twist. Emitted only when the set actually changes - throttled
+   * to ~4 Hz with integer rounding to prevent re-render thrashing.
    */
-  private emitMinimapMarkers(): void {
+  private emitMinimapMarkers(force = false): void {
+    const now = this.time ? this.time.now : Date.now();
+    if (!force && now - this.lastMarkersEmit < 250) return;
+    this.lastMarkersEmit = now;
+
     const markers: MinimapMarker[] = [];
 
     for (const [id, marker] of this.questMarkers) {
       if (!marker.visible) continue;
       const npc = this.npcs.find((n) => n.definition.id === id);
-      if (npc) markers.push({ x: npc.sprite.x, y: npc.sprite.y, kind: 'quest' });
+      if (npc) markers.push({ x: Math.round(npc.sprite.x), y: Math.round(npc.sprite.y), kind: 'quest' });
     }
     if (this.boardMarker?.visible) {
-      markers.push({ x: NOTICE_BOARD.x, y: NOTICE_BOARD.y, kind: 'quest' });
+      markers.push({ x: Math.round(NOTICE_BOARD.x), y: Math.round(NOTICE_BOARD.y), kind: 'quest' });
     }
 
     if (this.implPhase >= 0) {
@@ -960,7 +969,7 @@ export default class GameScene extends Phaser.Scene {
       for (let phase = 0; phase <= Math.min(this.implPhase, IMPLEMENTATION_PROPS.length - 1); phase++) {
         for (const prop of IMPLEMENTATION_PROPS[phase]) {
           if (!this.worldPlanIds.includes(prop.solutionId) || spots.has(prop.solutionId)) continue;
-          spots.set(prop.solutionId, { x: prop.x, y: prop.y });
+          spots.set(prop.solutionId, { x: Math.round(prop.x), y: Math.round(prop.y) });
         }
       }
       for (const spot of spots.values()) markers.push({ ...spot, kind: 'impl' });
@@ -968,7 +977,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.implPhase >= 1) {
       const twist = implementationTwistSpot(this.worldPlanIds);
-      if (twist) markers.push({ ...twist, kind: 'warning' });
+      if (twist) markers.push({ x: Math.round(twist.x), y: Math.round(twist.y), kind: 'warning' });
     }
 
     const signature = JSON.stringify(markers);
@@ -1926,9 +1935,10 @@ export default class GameScene extends Phaser.Scene {
     const gates = [0.446, 0.527, 0.608];
     const sx = DAM.width;
     const sy = DAM.height;
+    this.spillwayEmitters = [];
     for (const f of gates) {
       const x = DAM.x + f * sx;
-      this.add
+      const streak = this.add
         .particles(x, DAM.y + 0.45 * sy, 'fx-streak', {
           x: { min: -14, max: 14 },
           speedY: { min: 90, max: 130 },
@@ -1938,7 +1948,7 @@ export default class GameScene extends Phaser.Scene {
           alpha: { start: 0.55, end: 0 },
         })
         .setDepth(DAM_SORT_Y + 2);
-      this.add
+      const foam = this.add
         .particles(x, DAM.y + 0.66 * sy, 'fx-foam', {
           x: { min: -24, max: 24 },
           y: { min: -4, max: 8 },
@@ -1950,6 +1960,7 @@ export default class GameScene extends Phaser.Scene {
           alpha: { start: 0.6, end: 0 },
         })
         .setDepth(DAM_SORT_Y + 3);
+      this.spillwayEmitters.push(streak, foam);
     }
   }
 
@@ -2582,17 +2593,6 @@ export default class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.DEBUG)) this.toggleDebug();
     if (Phaser.Input.Keyboard.JustDown(this.keys.M)) this.toggleOverview();
 
-    this.updateGuideArrow();
-    this.refreshQuestMarkers();
-
-    // ~8 Hz is plenty for the mini-map's player dot.
-    if (time - this.lastPosEmit > 120) {
-      this.lastPosEmit = time;
-      EventBus.emit(GameEvents.PLAYER_MOVED, { x: this.player.x, y: this.player.y });
-    }
-
-    this.updateTownsfolk(delta);
-
     if (this.dialogueOpen || this.overview) {
       // React or the map view owns the moment; freeze but keep rendering.
       this.player.setVelocity(0, 0);
@@ -2600,11 +2600,38 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.updateGuideArrow();
+    this.refreshQuestMarkers();
+
+    // ~8 Hz is plenty for the mini-map's player dot.
+    if (time - this.lastPosEmit > 120) {
+      this.lastPosEmit = time;
+      EventBus.emit(GameEvents.PLAYER_MOVED, {
+        x: Math.round(this.player.x),
+        y: Math.round(this.player.y),
+      });
+    }
+
+    this.updateTownsfolk(delta);
+    this.updateSpillwayCulling();
     this.updateNearestNpc();
     this.updateMovement();
     this.updateFollower(delta);
     this.player.setDepth(this.player.y);
     this.updateDistrict();
+  }
+
+  /** Pause spillway particles when the dam is offscreen to save CPU/GPU. */
+  private updateSpillwayCulling(): void {
+    if (!this.player || this.spillwayEmitters.length === 0) return;
+    const nearDam = this.player.y < 1100;
+    if (nearDam !== this.spillwayActive) {
+      this.spillwayActive = nearDam;
+      for (const emitter of this.spillwayEmitters) {
+        if (nearDam) emitter.start();
+        else emitter.stop();
+      }
+    }
   }
 
   /** Shows the hint for the closest NPC in range and handles the E press. */

@@ -1,10 +1,18 @@
+import { memo, useEffect, useState } from 'react';
 import { DISTRICTS, WORLD_BOUNDS, type DistrictId } from '../Game/data/districts';
-import type { MinimapMarker } from '../Game/events/gameEvents';
+import { EventBus } from '../Game/events/EventBus';
+import {
+  GameEvents,
+  type MarkersChangedPayload,
+  type MinimapMarker,
+  type PlayerMovedPayload,
+} from '../Game/events/gameEvents';
 
 /**
  * Stilize kasaba haritası: bölge renkleri üzerine canlı işaretler.
  * Scene, işaret listesini MARKERS_CHANGED ile, oyuncu konumunu PLAYER_MOVED
- * ile besler. Tıklamak tam ekran harita görünümünü açar/kapatır (M ile aynı).
+ * ile doğrudan MiniMap'e besler. Bu sayede ana App bileşeni her adımda re-render edilmez.
+ * Tıklamak tam ekran harita görünümünü açar/kapatır (M ile aynı).
  */
 
 const DISTRICT_COLORS: Record<DistrictId, string> = {
@@ -33,8 +41,6 @@ const LABEL_ANCHORS: Record<DistrictId, { x: number; y: number }> = {
 };
 
 type MiniMapProps = {
-  player: { x: number; y: number } | null;
-  markers: MinimapMarker[];
   overview: boolean;
   onToggle: () => void;
 };
@@ -75,7 +81,23 @@ function MarkerDot({ marker }: { marker: MinimapMarker }) {
   }
 }
 
-export default function MiniMap({ player, markers, overview, onToggle }: MiniMapProps) {
+export default memo(function MiniMap({ overview, onToggle }: MiniMapProps) {
+  const [player, setPlayer] = useState<{ x: number; y: number } | null>(null);
+  const [markers, setMarkers] = useState<MinimapMarker[]>([]);
+
+  useEffect(() => {
+    const onPlayerMoved = (payload: PlayerMovedPayload) => setPlayer(payload);
+    const onMarkersChanged = (payload: MarkersChangedPayload) => setMarkers(payload.markers);
+
+    EventBus.on(GameEvents.PLAYER_MOVED, onPlayerMoved);
+    EventBus.on(GameEvents.MARKERS_CHANGED, onMarkersChanged);
+
+    return () => {
+      EventBus.off(GameEvents.PLAYER_MOVED, onPlayerMoved);
+      EventBus.off(GameEvents.MARKERS_CHANGED, onMarkersChanged);
+    };
+  }, []);
+
   return (
     <button
       type="button"
@@ -125,4 +147,4 @@ export default function MiniMap({ player, markers, overview, onToggle }: MiniMap
       <span className="minimap-legend">● sen · ! görev · ⚠ dikkat</span>
     </button>
   );
-}
+});

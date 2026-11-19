@@ -38,12 +38,9 @@ import type {
   DistrictChangedPayload,
   FindingAddedPayload,
   InvestigationPayload,
-  MarkersChangedPayload,
-  MinimapMarker,
   ObjectivePayload,
   OpenSolutionPayload,
   OverviewChangedPayload,
-  PlayerMovedPayload,
   SolutionPanelMode,
 } from './Game/events/gameEvents';
 import { applyDecision, applyStatChanges, INITIAL_STATS, STAT_META, type GameStats } from './Game/data/stats';
@@ -125,8 +122,6 @@ function App() {
   const [dayTint, setDayTint] = useState<string | null>(null);
   const lastTime = useRef<{ date: string; time: string } | null>(null);
   const [finaleOpen, setFinaleOpen] = useState(false);
-  const [playerPos, setPlayerPos] = useState<{ x: number; y: number } | null>(null);
-  const [mapMarkers, setMapMarkers] = useState<MinimapMarker[]>([]);
   const [mapOverview, setMapOverview] = useState(false);
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [district, setDistrict] = useState<string>('—');
@@ -198,8 +193,6 @@ function App() {
     };
     const onOpenFinale = () => setFinaleOpen(true);
     const onOpenAnnounce = () => setAnnounceOpen(true);
-    const onPlayerMoved = (payload: PlayerMovedPayload) => setPlayerPos(payload);
-    const onMarkersChanged = (payload: MarkersChangedPayload) => setMapMarkers(payload.markers);
     const onOverviewChanged = (payload: OverviewChangedPayload) => setMapOverview(payload.active);
     const onFieldStatus = (payload: FieldStatus | null) => setFieldStatus(payload);
     const onOpenKadim = () => setKadimOpen(true);
@@ -215,8 +208,6 @@ function App() {
     EventBus.on(GameEvents.OPEN_REPORT, onOpenReport);
     EventBus.on(GameEvents.OPEN_FINALE, onOpenFinale);
     EventBus.on(GameEvents.OPEN_ANNOUNCE, onOpenAnnounce);
-    EventBus.on(GameEvents.PLAYER_MOVED, onPlayerMoved);
-    EventBus.on(GameEvents.MARKERS_CHANGED, onMarkersChanged);
     EventBus.on(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
     EventBus.on(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
     EventBus.on(GameEvents.OPEN_KADIM, onOpenKadim);
@@ -233,8 +224,6 @@ function App() {
       EventBus.off(GameEvents.OPEN_REPORT, onOpenReport);
       EventBus.off(GameEvents.OPEN_FINALE, onOpenFinale);
       EventBus.off(GameEvents.OPEN_ANNOUNCE, onOpenAnnounce);
-      EventBus.off(GameEvents.PLAYER_MOVED, onPlayerMoved);
-      EventBus.off(GameEvents.MARKERS_CHANGED, onMarkersChanged);
       EventBus.off(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
       EventBus.off(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
       EventBus.off(GameEvents.OPEN_KADIM, onOpenKadim);
@@ -709,8 +698,6 @@ function App() {
         )}
 
         <MiniMap
-          player={playerPos}
-          markers={mapMarkers}
           overview={mapOverview}
           onToggle={() => EventBus.emit(GameEvents.MAP_TOGGLED)}
         />

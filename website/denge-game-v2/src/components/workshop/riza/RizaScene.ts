@@ -81,7 +81,7 @@ export class RizaScene {
     this.host = host;
     this.onPick = onPick;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -189,7 +189,7 @@ export class RizaScene {
     const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
     sun.position.set(-8, 14, 6);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(1024, 1024);
     const s = sun.shadow.camera;
     s.left = -12;
     s.right = 12;
