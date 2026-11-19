@@ -19,6 +19,13 @@ import type {
   CouncilMemberId,
   VoteLampState,
 } from './workshop/council/MayorCouncilScene';
+import {
+  CONCEPT_TAGS,
+  MIN_OWN_CHARS,
+  ownWordsReady,
+  stripConceptTags,
+  usedConceptTags,
+} from '../Game/data/learningProfile';
 import { playTone } from './workshop/audio';
 
 const MayorCouncilDiorama = lazy(() => import('./workshop/council/MayorCouncilDiorama'));
@@ -68,12 +75,6 @@ function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
 const tl = (n: number) => `₺${n.toLocaleString('tr-TR')}`;
 
 const STAKEHOLDERS: readonly Stakeholder[] = ['ev', 'tarim', 'park', 'su'];
-
-const RATIONALE_CHOICES = [
-  'En çok suyu kaybeden boru kaçağını çözüp evleri korumak istedim',
-  'Hem tarlaları hem de evlerin içme suyunu dengeli korumak istedim',
-  'Parkın süs sularından vazgeçip uzun vadede kalıcı çözümleri seçtim',
-];
 
 const COUNCIL_META: Record<
   CouncilMemberId,
@@ -421,6 +422,21 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
   const currentSpeakerMeta = COUNCIL_META[activeSpeaker];
   const currentSpeechText = customSpeech ?? memberOpinion[activeSpeaker].speech;
 
+  const ownText = stripConceptTags(rationale);
+  const ownChars = ownText.length;
+  const ownWords = ownText.split(' ').filter(Boolean).length;
+  const activeTags = usedConceptTags(rationale);
+  const rationaleReady = ownWordsReady(rationale);
+
+  const insertConceptTag = (tag: string) => {
+    playTone('tap', true);
+    setRationale((prev) => {
+      const trimmed = prev.trim();
+      if (trimmed.includes(tag)) return prev;
+      return trimmed ? `${trimmed} ${tag} ` : `${tag} `;
+    });
+  };
+
   const yesVotesCount = Object.values(votes).filter((v) => v === 'yes').length;
   const cautionVotesCount = Object.values(votes).filter((v) => v === 'caution').length;
 
@@ -656,17 +672,26 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                 önceliklendirdiğini ve hangi alandan neden feragat ettiğini açıkla:
               </p>
 
-              <div className="rationale-choices">
-                {RATIONALE_CHOICES.map((choice) => (
-                  <button
-                    key={choice}
-                    type="button"
-                    className={`rationale-chip${rationale === choice ? ' picked' : ''}`}
-                    onClick={() => setRationale(choice)}
-                  >
-                    {choice}
-                  </button>
-                ))}
+              <div className="concept-tags-panel">
+                <span className="concept-tags-label" style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
+                  🏷️ Konuşmana Kavram Anahtarı Ekle:
+                </span>
+                <div className="rationale-choices">
+                  {CONCEPT_TAGS.map((c) => {
+                    const active = rationale.includes(c.tag);
+                    return (
+                      <button
+                        key={c.tag}
+                        type="button"
+                        className={`rationale-chip${active ? ' picked' : ''}`}
+                        title={c.prompt}
+                        onClick={() => insertConceptTag(c.tag)}
+                      >
+                        <strong>{c.tag}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="rationale-open-box">
@@ -674,13 +699,15 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                   className="rationale-input rationale-textarea"
                   rows={3}
                   maxLength={280}
-                  placeholder="Meclis üyelerine kendi cümlelerinle hitap et (Örn: Sayın meclis üyeleri, önce boru kaçağını onardık çünkü dakikada 45 L temiz su boşa akıyordu…)"
+                  placeholder="Meclis üyelerine kendi cümlelerinle hitap et (Örn: Sayın meclis üyeleri, önce #BoruKaçağı önlemini aldık çünkü temiz su boşa akıyordu…)"
                   value={rationale}
                   onChange={(e) => setRationale(e.target.value)}
                 />
                 <div className="rationale-meta-row">
-                  <span className="rationale-ai-hint">
-                    ✨ Konuşman meclis tutanağına işlenir ve ödünleşme/sistem düşüncesi profilin analiz edilir ({rationale.length}/280)
+                  <span className={`rationale-ai-hint${rationaleReady ? ' ready' : ' need-more'}`}>
+                    {rationaleReady
+                      ? `✓ Özgün gerekçe hazır (${ownChars} karakter · ${ownWords} kelime · ${activeTags.length} kavram etiketi)`
+                      : `✍️ Lütfen kendi cümlelerinle gerekçelendir (en az ${MIN_OWN_CHARS} karakter özgün ifade yaz veya sesle anlat: ${ownChars}/${MIN_OWN_CHARS})`}
                   </span>
                   {speechSupported && (
                     <button
@@ -709,7 +736,8 @@ export default function SolutionPanel({ mode = 'initial', onSubmit }: SolutionPa
                 <button
                   type="button"
                   className="startup-button investigation-cta"
-                  disabled={!rationale.trim()}
+                  disabled={!rationaleReady}
+                  title={!rationaleReady ? `Lütfen en az ${MIN_OWN_CHARS} karakterlik özgün gerekçe yazın` : 'Meclis oylamasına sun'}
                   onClick={enterVotingPhase}
                 >
                   🗳️ MECLİS OYLAMASINA SUN →

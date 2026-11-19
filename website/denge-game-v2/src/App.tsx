@@ -23,6 +23,14 @@ import type { FieldStatus, FieldTaskId } from './Game/data/fieldTasks';
 import type { MinigameResult } from './Game/data/minigames';
 import { minigameForCard } from './Game/data/minigames';
 import SolutionPanel from './components/SolutionPanel';
+import CrisisModal from './components/CrisisModal';
+import type {
+  CrisisDef,
+  CrisisOption,
+  CrisisRecord,
+  JustificationRecord,
+} from './Game/data/learningProfile';
+import { stripConceptTags, usedConceptTags } from './Game/data/learningProfile';
 import FinaleCard from './components/FinaleCard';
 import AnnouncementCard from './components/AnnouncementCard';
 import MiniMap from './components/MiniMap';
@@ -39,6 +47,7 @@ import type {
   FindingAddedPayload,
   InvestigationPayload,
   ObjectivePayload,
+  OpenCrisisPayload,
   OpenSolutionPayload,
   OverviewChangedPayload,
   SolutionPanelMode,
@@ -122,6 +131,7 @@ function App() {
   const [dayTint, setDayTint] = useState<string | null>(null);
   const lastTime = useRef<{ date: string; time: string } | null>(null);
   const [finaleOpen, setFinaleOpen] = useState(false);
+  const [activeCrisis, setActiveCrisis] = useState<CrisisDef | null>(null);
   const [mapOverview, setMapOverview] = useState(false);
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [district, setDistrict] = useState<string>('—');
@@ -196,6 +206,7 @@ function App() {
     const onOverviewChanged = (payload: OverviewChangedPayload) => setMapOverview(payload.active);
     const onFieldStatus = (payload: FieldStatus | null) => setFieldStatus(payload);
     const onOpenKadim = () => setKadimOpen(true);
+    const onOpenCrisis = (payload: OpenCrisisPayload) => setActiveCrisis(payload.crisis);
 
     EventBus.on(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
     EventBus.on(GameEvents.DISTRICT_CHANGED, onDistrictChanged);
@@ -211,6 +222,7 @@ function App() {
     EventBus.on(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
     EventBus.on(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
     EventBus.on(GameEvents.OPEN_KADIM, onOpenKadim);
+    EventBus.on(GameEvents.OPEN_CRISIS, onOpenCrisis);
 
     return () => {
       EventBus.off(GameEvents.OPEN_DIALOGUE, onOpenDialogue);
@@ -227,6 +239,7 @@ function App() {
       EventBus.off(GameEvents.OVERVIEW_CHANGED, onOverviewChanged);
       EventBus.off(GameEvents.FIELD_TASK_STATUS, onFieldStatus);
       EventBus.off(GameEvents.OPEN_KADIM, onOpenKadim);
+      EventBus.off(GameEvents.OPEN_CRISIS, onOpenCrisis);
     };
   }, []);
 
@@ -326,10 +339,61 @@ function App() {
     EventBus.emit(GameEvents.INVESTIGATION_CLOSED);
   };
 
+  const recordWorkshopResult = (result: MinigameResult) => {
+    const current = loadSession();
+    if (!current) return;
+    saveSession({
+      ...current,
+      aiProfile: {
+        ...current.aiProfile,
+        workshops: {
+          ...current.aiProfile?.workshops,
+          [result.gameId]: result,
+        },
+      },
+    });
+  };
+
   /** A district workshop finished: notebook entry + its own analytics event. */
   const finishWorkshop = (cardId: string, result: MinigameResult) => {
     completeInvestigation(cardId);
+    recordWorkshopResult(result);
     recordEvent('minigame', { ...result });
+  };
+
+  const resolveCrisis = (option: CrisisOption, seconds: number) => {
+    if (!activeCrisis) return;
+    const nextStats = applyStatChanges(stats, option.effects);
+    setStats(nextStats);
+    persist({ stats: nextStats });
+    const current = loadSession();
+    const run = current?.quest === 'retry' ? 'retry' : 'initial';
+    const crisisRecord: CrisisRecord = {
+      crisisId: activeCrisis.id,
+      optionId: option.id,
+      stance: option.stance,
+      run,
+      seconds,
+      completedAt: Date.now(),
+    };
+    if (current) {
+      const prevCrises = current.aiProfile?.crises ?? [];
+      saveSession({
+        ...current,
+        aiProfile: {
+          ...current.aiProfile,
+          crises: [...prevCrises, crisisRecord],
+        },
+      });
+    }
+    recordEvent('choice', {
+      type: 'crisis-decision',
+      crisisId: activeCrisis.id,
+      optionId: option.id,
+      stance: option.stance,
+    });
+    setActiveCrisis(null);
+    EventBus.emit(GameEvents.CRISIS_RESOLVED, { optionId: option.id });
   };
 
   const toggleEvidence = (cardId: string) => {
@@ -351,7 +415,17 @@ function App() {
       ...current,
       aiProfile: {
         ...current.aiProfile,
-        dataQuizzes: [...prevList, metric],
+        dataQuizzes: [
+          ...prevList,
+          {
+            mode: metric.mode,
+            wrongAttempts: metric.wrongAttempts,
+            completedAt: metric.completedAt,
+            firstTryCorrect: metric.firstTryCorrect,
+            misconceptions: metric.misconceptions,
+          },
+        ],
+        ...(metric.evidenceCheck ? { evidenceCheck: metric.evidenceCheck } : {}),
       },
     });
   };
@@ -401,6 +475,24 @@ function App() {
 
     const session = loadSession();
     const isRetry = session?.quest === 'retry';
+    const justRecord: JustificationRecord = {
+      run: isRetry ? 'retry' : 'initial',
+      conceptTags: usedConceptTags(rationale),
+      ownChars: stripConceptTags(rationale).length,
+      ownWords: stripConceptTags(rationale).split(' ').filter(Boolean).length,
+      dictated: false,
+    };
+    if (session) {
+      const prevJust = session.aiProfile?.justifications ?? [];
+      saveSession({
+        ...session,
+        aiProfile: {
+          ...session.aiProfile,
+          justifications: [...prevJust, justRecord],
+        },
+      });
+    }
+
     if (isRetry) {
       // Second-chance run: same starting conditions, so the alt plan applies
       // to the pre-plan snapshot - not on top of the first run's results.
@@ -894,6 +986,11 @@ function App() {
               const nextStats = applyDecision(stats, choiceKey);
               setStats(nextStats);
               persist({ stats: nextStats });
+              recordWorkshopResult({
+                gameId: 'aylin',
+                decisionId: result.decisionId,
+                metrics: { cost: result.cost, waterSaved: result.waterSaved },
+              });
               recordEvent('minigame', {
                 gameId: 'aylin',
                 decisionId: result.decisionId,
@@ -961,6 +1058,8 @@ function App() {
         )}
 
         {solutionOpen && <SolutionPanel mode={solutionMode} onSubmit={submitPlan} />}
+
+        {activeCrisis && <CrisisModal crisis={activeCrisis} onResolve={resolveCrisis} />}
 
         {announceOpen && <AnnouncementCard player={player} onSubmit={submitAnnouncement} />}
 

@@ -67,6 +67,10 @@ export const GameEvents = {
   OPEN_KADIM: 'open-kadim',
   /** React -> Phaser: the Kadim puzzle was solved — the plan meeting may open. */
   KADIM_COMPLETED: 'kadim-completed',
+  /** Phaser -> React: Day 15 counter-move crisis surfaced. */
+  OPEN_CRISIS: 'open-crisis',
+  /** React -> Phaser: student resolved the Day 15 crisis decision. */
+  CRISIS_RESOLVED: 'crisis-resolved',
 } as const;
 
 export type GameEventName = (typeof GameEvents)[keyof typeof GameEvents];
@@ -197,6 +201,14 @@ export interface AnnounceSubmittedPayload {
   message: string;
 }
 
+export interface OpenCrisisPayload {
+  crisis: import('../data/learningProfile').CrisisDef;
+}
+
+export interface CrisisResolvedPayload {
+  optionId: string;
+}
+
 /** Maps each event name to its payload type. `void` means "no payload". */
 export interface GameEventPayloads {
   [GameEvents.OPEN_DIALOGUE]: DialoguePayload;
@@ -228,4 +240,6 @@ export interface GameEventPayloads {
   [GameEvents.FIELD_TASK_STATUS]: FieldStatus | null;
   [GameEvents.OPEN_KADIM]: void;
   [GameEvents.KADIM_COMPLETED]: void;
+  [GameEvents.OPEN_CRISIS]: OpenCrisisPayload;
+  [GameEvents.CRISIS_RESOLVED]: CrisisResolvedPayload;
 }

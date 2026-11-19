@@ -36,19 +36,41 @@ import type {
   PedagogicalReportResult,
   RationaleAnalysisResult,
 } from '../ai/pedagogicalEngine';
+import type {
+  CrisisRecord,
+  EvidenceCheckRecord,
+  JustificationRecord,
+} from './learningProfile';
+import type { MinigameId, MinigameResult } from './minigames';
 
 export interface DataQuizRecord {
   mode: 'evidence' | 'debrief';
   wrongAttempts: number;
   completedAt: number;
+  /** How many of the two graph questions were right on the first try. */
+  firstTryCorrect?: number;
+  /** Graph-reading misconception ids (see learningProfile.GRAPH_MISCONCEPTIONS). */
+  misconceptions?: string[];
 }
 
+/**
+ * Pedagogical profile. Lives inside the session snapshot so it syncs to the
+ * server state and reaches the parent report without new event types.
+ */
 export interface AiSessionProfile {
   rationaleAnalysis?: RationaleAnalysisResult;
   altRationaleAnalysis?: RationaleAnalysisResult;
   reportSummary?: PedagogicalReportResult;
   guideHistory?: GuideChatTurn[];
   dataQuizzes?: DataQuizRecord[];
+  /** Did the student filter rumours out of the evidence desk? */
+  evidenceCheck?: EvidenceCheckRecord;
+  /** Day-15 counter-move decisions (one per run). */
+  crises?: CrisisRecord[];
+  /** Concept tags + own-words stats of each podium speech. */
+  justifications?: JustificationRecord[];
+  /** Last result of each district workshop. */
+  workshops?: Partial<Record<MinigameId, MinigameResult>>;
 }
 
 /** Mirrors the stage machine inside GameScene. */

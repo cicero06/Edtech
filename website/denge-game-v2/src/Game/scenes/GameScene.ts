@@ -89,6 +89,7 @@ import {
   type InvestigationId,
 } from '../data/story';
 import {
+  activeFacts,
   reviewOutcome,
   scenarioImplementPages,
   scenarioLinaIntroPages,
@@ -96,6 +97,7 @@ import {
   scenarioNpcPlanReaction,
   scenarioNpcSmallTalk,
 } from '../scenario';
+import { crisisFor } from '../data/learningProfile';
 import {
   compareVoiceFiles,
   finaleVoiceFiles,
@@ -1315,6 +1317,7 @@ export default class GameScene extends Phaser.Scene {
     EventBus.on(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
     EventBus.on(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
     EventBus.on(GameEvents.KADIM_COMPLETED, this.handleKadimCompleted, this);
+    EventBus.on(GameEvents.CRISIS_RESOLVED, this.handleCrisisResolved, this);
 
     // Scenes outlive neither the game nor React, so unbind on shutdown to avoid
     // stacking duplicate handlers if the scene is ever restarted.
@@ -1332,6 +1335,7 @@ export default class GameScene extends Phaser.Scene {
       EventBus.off(GameEvents.INVESTIGATION_CLOSED, this.handleInvestigationClosed, this);
       EventBus.off(GameEvents.FIELD_TASK_START, this.handleFieldTaskStart, this);
       EventBus.off(GameEvents.KADIM_COMPLETED, this.handleKadimCompleted, this);
+      EventBus.off(GameEvents.CRISIS_RESOLVED, this.handleCrisisResolved, this);
     });
   }
 
@@ -1405,11 +1409,25 @@ export default class GameScene extends Phaser.Scene {
     if (this.implPhase === 1) {
       this.spawnImplementationPhase(1);
       EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.mid, direction: 'forward' });
+      // Day 15 Game Theory Counter-Move Crisis
+      const crisis = crisisFor(this.worldPlanIds, activeFacts());
+      this.dialogueOpen = true;
+      this.player.setVelocity(0, 0);
+      this.stopWaddle();
+      this.setIdleFrame();
+      EventBus.emit(GameEvents.OPEN_CRISIS, { crisis });
     } else if (this.implPhase >= 2) {
       this.implPhase = 2;
       EventBus.emit(GameEvents.DAY_CHANGED, { ...DAY_STOPS.end, direction: 'forward' });
       this.quest = 'revisit';
     }
+    this.refreshQuestMarkers();
+    this.emitObjective();
+  }
+
+  private handleCrisisResolved(): void {
+    this.dialogueOpen = false;
+    this.showToast('Kriz müdahalesi kayda geçti! ✓', this.player.x, this.player.y - 90);
     this.refreshQuestMarkers();
     this.emitObjective();
   }

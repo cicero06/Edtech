@@ -7,6 +7,11 @@ import {
 import type { PublicReportResult } from '../Game/sync/api';
 import { STAT_META, type GameStats } from '../Game/data/stats';
 import { SOLUTION_CARDS } from '../Game/data/story';
+import {
+  dataLiteracyLines,
+  STANCE_LABELS,
+  workshopInsights,
+} from '../Game/data/learningProfile';
 
 type ParentReportModalProps = {
   report: PublicReportResult;
@@ -66,6 +71,12 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
   const notebook = report.state?.notebook ?? [];
   const plan = report.state?.plan;
   const finalStatement = report.state?.finalStatement;
+  const wsInsights = workshopInsights(report.state?.aiProfile?.workshops ?? {});
+  const dataLines = dataLiteracyLines(
+    report.state?.aiProfile?.dataQuizzes ?? [],
+    report.state?.aiProfile?.evidenceCheck,
+  );
+  const crises = report.state?.aiProfile?.crises ?? [];
   const rationaleAnalysis =
     report.state?.aiProfile?.rationaleAnalysis ??
     (plan?.rationale
@@ -181,7 +192,64 @@ export default function ParentReportModal({ report, onClose }: ParentReportModal
             ) : (
               <p className="report-empty-note">Henüz deftere işlenmiş bulgu yok.</p>
             )}
+
+            {wsInsights.length > 0 && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                <h4 style={{ fontSize: '13px', color: '#38bdf8', margin: '0 0 8px' }}>
+                  🛠️ 4 Kasaba Atölyesi · Pratik Uygulama ve Karar İzi
+                </h4>
+                <ul className="report-notebook-list">
+                  {wsInsights.map((ws) => (
+                    <li key={ws.id} className="report-notebook-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{ws.icon}</span>
+                        <strong>{ws.title}</strong>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>({ws.skill})</span>
+                      </div>
+                      {ws.lines.map((l, idx) => (
+                        <div key={idx} style={{ fontSize: '12px', color: '#cbd5e1', paddingLeft: '22px' }}>
+                          • {l}
+                        </div>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
+
+          {/* Veri Okuryazarlığı ve Grafik Okuma Analizi */}
+          {dataLines.length > 0 && (
+            <section className="report-section">
+              <h3 className="report-section-title">📊 Veri Okuryazarlığı ve Bilimsel Kanıt İzi</h3>
+              <ul className="report-notebook-list">
+                {dataLines.map((dl, idx) => (
+                  <li key={idx} className="report-notebook-item">
+                    <span className="report-notebook-icon">{dl.icon}</span>
+                    <span className="report-notebook-text">{dl.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* 15. Gün Kriz Karşı-Hamlesi Tutumu */}
+          {crises.length > 0 && (
+            <section className="report-section">
+              <h3 className="report-section-title">⚡ 15. Gün Kriz Müdahalesi & Oyun Teorisi Tutumu</h3>
+              <ul className="report-notebook-list">
+                {crises.map((c, idx) => (
+                  <li key={idx} className="report-notebook-item">
+                    <span className="report-notebook-icon">⚡</span>
+                    <span className="report-notebook-text">
+                      <strong>Kriz:</strong> {c.crisisId} · <strong>Strateji:</strong> {c.optionId} ·{' '}
+                      <strong>Tutum:</strong> {STANCE_LABELS[c.stance]} (Karar süresi: {c.seconds} sn)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* Eylem Planı ve Açık Uçlu Gerekçe Analizi */}
           {plan && (

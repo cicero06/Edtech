@@ -13,6 +13,7 @@
 import { useMemo, useState } from 'react';
 import { EVIDENCE_IDS } from '../Game/data/story';
 import type { NotebookEntry } from '../Game/data/session';
+import { rumorsFor, type EvidenceCheckRecord, type RumorClaim } from '../Game/data/learningProfile';
 import { activeFacts, activeScenario } from '../Game/scenario';
 import { simulate } from '../Game/scenario/model';
 import { playTone } from './workshop/audio';
@@ -21,6 +22,21 @@ export interface DataQuizMetric {
   mode: 'evidence' | 'debrief';
   wrongAttempts: number;
   completedAt: number;
+  /** How many of the 2 questions were answered right on the first try. */
+  firstTryCorrect: number;
+  /** Misconception ids behind each wrong pick (deduplicated). */
+  misconceptions: string[];
+  /** Evidence mode only: rumour-filtering trace. */
+  evidenceCheck?: EvidenceCheckRecord;
+}
+
+/** One quiz question; `misconceptions[i]` names the reading error behind option i. */
+interface QuizQuestion {
+  prompt: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+  misconceptions: (string | null)[];
 }
 
 type DataReportModalProps =
@@ -55,12 +71,40 @@ export default function DataReportModal(props: DataReportModalProps) {
   const [q1Answered, setQ1Answered] = useState<number | null>(null);
   const [q2Answered, setQ2Answered] = useState<number | null>(null);
   const [wrongAttempts, setWrongAttempts] = useState(0);
+  /** First pick per question: true = right on first try. */
+  const [firstTry, setFirstTry] = useState<{ q1: boolean | null; q2: boolean | null }>({
+    q1: null,
+    q2: null,
+  });
+  const [misconceptions, setMisconceptions] = useState<string[]>([]);
+
+  // ---- Rumour distractors (evidence mode only) ----------------------------
+  const rumors = useMemo(() => rumorsFor(scenario.seed), [scenario.seed]);
+  const [rumorChecked, setRumorChecked] = useState<Set<string>>(new Set());
+  const [rumorEver, setRumorEver] = useState<Set<string>>(new Set());
+  const [rumorFeedback, setRumorFeedback] = useState<RumorClaim | null>(null);
+
+  const toggleRumor = (rumor: RumorClaim) => {
+    setRumorChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(rumor.id)) {
+        next.delete(rumor.id);
+        setRumorFeedback(null);
+      } else {
+        next.add(rumor.id);
+        setRumorEver((ever) => new Set(ever).add(rumor.id));
+        setRumorFeedback(rumor);
+        playTone('alert', true);
+      }
+      return next;
+    });
+  };
 
   // Build dynamic scenario-specific graph interpretation questions
   const totalDrop = f.history.lastYear - f.reservoirPct;
   const netGainVsNoPlan = o.reservoirAfter - o.reservoirNoPlan;
 
-  const q1 = useMemo(() => {
+  const q1 = useMemo<QuizQuestion>(() => {
     if (props.mode === 'evidence') {
       const wrongLow = Math.max(6, f.leakPct - 11);
       const wrongHigh = Math.min(68, f.leakPct + 14);
@@ -73,6 +117,7 @@ export default function DataReportModal(props: DataReportModalProps) {
         ],
         correct: 1,
         explanation: `Doğru okuma! Grafiğe göre ${f.outflowL} L/dk şebeke çıkışının ${f.leakL} L/dk’sı (yani tam %${f.leakPct}’i) eski borulardan toprağa sızıyor.`,
+        misconceptions: ['bar-scale', null, 'category-swap'],
       };
     }
 
@@ -87,10 +132,11 @@ export default function DataReportModal(props: DataReportModalProps) {
       ],
       correct: 1,
       explanation: `Kesinlikle! Hiçbir önlem alınmasaydı rezerv %${o.reservoirNoPlan}’e çakılacaktı; senin planınla %${o.reservoirAfter} seviyesinde kalarak net +${netGainVsNoPlan} puan koruma sağladı.`,
+      misconceptions: ['difference-calc', null, 'difference-calc'],
     };
   }, [props.mode, f, o, netGainVsNoPlan]);
 
-  const q2 = useMemo(() => {
+  const q2 = useMemo<QuizQuestion>(() => {
     if (props.mode === 'evidence') {
       return {
         prompt: `2. Baraj Rezerv Trend Grafiğine göre geçen yıldan (%${f.history.lastYear}) bugüne (%${f.reservoirPct}) toplam düşüş kaç puandır ve düşüş hızı nasıl değişmiştir?`,
@@ -101,6 +147,7 @@ export default function DataReportModal(props: DataReportModalProps) {
         ],
         correct: 0,
         explanation: `Harika veri yorumu! Dönemlik düşüşler sırasıyla -${f.drops[0]}, -${f.drops[1]} ve -${f.drops[2]} puan (toplam ${totalDrop} puan). Eğri dikleşiyor, yani müdahale şart!`,
+        misconceptions: [null, 'trend-direction', 'static-reading'],
       };
     }
 
@@ -120,31 +167,45 @@ export default function DataReportModal(props: DataReportModalProps) {
       ],
       correct: 0,
       explanation: `Veriyi çok doğru okudun! Grafikte en büyük debi düşüşü ${biggestSector} kaleminde gerçekleşerek barajı destekledi.`,
+      misconceptions: [null, 'static-reading', 'category-swap'],
     };
   }, [props.mode, f, o, totalDrop]);
 
   const answerQ1 = (idx: number) => {
     setQ1Answered(idx);
-    if (idx === q1.correct) playTone('win', true);
-    else {
+    const isCorrect = idx === q1.correct;
+    setFirstTry((ft) => ({ ...ft, q1: ft.q1 ?? isCorrect }));
+    if (isCorrect) {
+      playTone('win', true);
+    } else {
       playTone('alert', true);
       setWrongAttempts((w) => w + 1);
+      const misc = q1.misconceptions[idx];
+      if (misc) setMisconceptions((m) => [...m, misc]);
     }
   };
 
   const answerQ2 = (idx: number) => {
     setQ2Answered(idx);
-    if (idx === q2.correct) playTone('win', true);
-    else {
+    const isCorrect = idx === q2.correct;
+    setFirstTry((ft) => ({ ...ft, q2: ft.q2 ?? isCorrect }));
+    if (isCorrect) {
+      playTone('win', true);
+    } else {
       playTone('alert', true);
       setWrongAttempts((w) => w + 1);
+      const misc = q2.misconceptions[idx];
+      if (misc) setMisconceptions((m) => [...m, misc]);
     }
   };
 
   const questionsSolved = q1Answered === q1.correct && q2Answered === q2.correct;
 
   const evidenceReady =
-    props.mode === 'evidence' && questionsSolved && props.pickedIds.size > 0;
+    props.mode === 'evidence' &&
+    questionsSolved &&
+    props.pickedIds.size > 0 &&
+    rumorChecked.size === 0;
   const debriefReady =
     props.mode === 'debrief' &&
     questionsSolved &&
@@ -389,7 +450,11 @@ export default function DataReportModal(props: DataReportModalProps) {
         {/* ---------------- EVIDENCE / FINDINGS CLASSIFICATION ---------------- */}
         {props.mode === 'evidence' ? (
           <section className="data-findings-section">
-            <h3>📋 Saha Kanıtlarını Raporuna Ekle (En az 1 neden işaretle)</h3>
+            <h3>📋 Saha Kanıtlarını Raporuna Ekle (En az 1 doğrulanmış kanıt seç)</h3>
+            <p className="data-evidence-hint">
+              ⚠️ Dikkat: Masaya kasabada konuşulan bazı söylentiler de karışmış olabilir. Yalnızca
+              ölçüm ve sayaç verisiyle doğrulanmış gerçek kanıtları rapora ekle.
+            </p>
             <div className="data-evidence-list">
               {props.notebook
                 .filter((entry) => (EVIDENCE_IDS as readonly string[]).includes(entry.cardId))
@@ -412,7 +477,35 @@ export default function DataReportModal(props: DataReportModalProps) {
                     </label>
                   );
                 })}
+
+              {/* Rumor distractors: student must identify them as non-empirical */}
+              {rumors.map((rumor) => {
+                const checked = rumorChecked.has(rumor.id);
+                return (
+                  <label
+                    key={rumor.id}
+                    className={`data-evidence-item rumor-item${checked ? ' rumor-checked' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleRumor(rumor)}
+                    />
+                    <span>
+                      {rumor.icon} <strong>[{rumor.source}]</strong> {rumor.text}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
+
+            {rumorFeedback && (
+              <div className="rumor-warning-box" role="alert">
+                <strong>⚠️ Bilimsel Kanıt Uyarısı ({rumorFeedback.source}):</strong>
+                <p>{rumorFeedback.whyNotEvidence}</p>
+                <small>Meclis raporuna yalnızca doğrulanmış ölçümler girebilir; lütfen işareti kaldır.</small>
+              </div>
+            )}
           </section>
         ) : (
           <section className="data-findings-section">
@@ -460,13 +553,22 @@ export default function DataReportModal(props: DataReportModalProps) {
               type="button"
               className="startup-button investigation-cta"
               disabled={!evidenceReady}
-              onClick={() =>
+              onClick={() => {
+                const firstTryCorrect = (firstTry.q1 ? 1 : 0) + (firstTry.q2 ? 1 : 0);
                 props.onSubmitEvidence({
                   mode: 'evidence',
                   wrongAttempts,
                   completedAt: Date.now(),
-                })
-              }
+                  firstTryCorrect,
+                  misconceptions: Array.from(new Set(misconceptions)),
+                  evidenceCheck: {
+                    shownRumorIds: rumors.map((r) => r.id),
+                    rumorPicks: Array.from(rumorEver),
+                    filteredAll: rumorEver.size === 0,
+                    completedAt: Date.now(),
+                  },
+                });
+              }}
             >
               📊 VERİ RAPORUNU ONAYLA VE MECLİSE GÖNDER →
             </button>
@@ -475,13 +577,16 @@ export default function DataReportModal(props: DataReportModalProps) {
               type="button"
               className="startup-button investigation-cta"
               disabled={!debriefReady}
-              onClick={() =>
+              onClick={() => {
+                const firstTryCorrect = (firstTry.q1 ? 1 : 0) + (firstTry.q2 ? 1 : 0);
                 props.onSubmitDebrief({
                   mode: 'debrief',
                   wrongAttempts,
                   completedAt: Date.now(),
-                })
-              }
+                  firstTryCorrect,
+                  misconceptions: Array.from(new Set(misconceptions)),
+                });
+              }}
             >
               📈 30. GÜN GRAFİK RAPORUNU BAŞKANA SUN →
             </button>

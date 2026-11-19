@@ -18,6 +18,12 @@ import { SOLUTION_CARDS, investigationCard } from '../Game/data/story';
 import { scenarioOf, scenarioSummary } from '../Game/scenario';
 import { analyzeGameTheory } from '../Game/scenario/gameTheory';
 import { facts } from '../Game/scenario/model';
+import {
+  dataLiteracyLines,
+  STANCE_LABELS,
+  workshopInsights,
+} from '../Game/data/learningProfile';
+import type { MinigameId, MinigameResult } from '../Game/data/minigames';
 
 /**
  * Read-only descriptive report of one student's session - shown to the
@@ -227,6 +233,26 @@ export default function StudentReport({
   // the timeline keeps the milestones readable.
   const milestones = session?.events.filter((ev) => ev.type !== 'decision') ?? [];
 
+  const workshopMap: Partial<Record<MinigameId, MinigameResult>> = {
+    ...(session?.aiProfile?.workshops ?? {}),
+  };
+  if (session?.events) {
+    for (const ev of session.events) {
+      if (ev.type === 'minigame' && ev.data) {
+        const d = ev.data as unknown as MinigameResult;
+        if (d.gameId && !workshopMap[d.gameId]) {
+          workshopMap[d.gameId] = d;
+        }
+      }
+    }
+  }
+  const wsInsights = workshopInsights(workshopMap);
+  const dataLines = dataLiteracyLines(
+    session?.aiProfile?.dataQuizzes ?? [],
+    session?.aiProfile?.evidenceCheck,
+  );
+  const crises = session?.aiProfile?.crises ?? [];
+
   return (
     <div className="gate-card report-card" aria-label={`${student.name} raporu`}>
       <header className="report-head">
@@ -277,17 +303,41 @@ export default function StudentReport({
                 })}
               </ul>
             )}
-            {session.notebook.length > 0 && (
+            {wsInsights.length > 0 && (
+              <div className="report-workshop-group" style={{ marginTop: '12px' }}>
+                <h4 style={{ fontSize: '13px', color: '#38bdf8', margin: '8px 0 4px' }}>
+                  🛠️ 4 Kasaba Atölyesi · Pratik Uygulama ve Karar İzi
+                </h4>
+                <ul className="report-notes-list">
+                  {wsInsights.map((ws) => (
+                    <li key={ws.id}>
+                      <strong>{ws.icon} {ws.title}:</strong> {ws.skill}
+                      {ws.lines.length > 0 && (
+                        <div style={{ paddingLeft: '12px', fontSize: '12px', color: '#94a3b8' }}>
+                          {ws.lines.map((l, idx) => (
+                            <div key={idx}>• {l}</div>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          {dataLines.length > 0 && (
+            <section className="report-section">
+              <h3>📊 Veri Okuryazarlığı ve Grafik Analiz İzi</h3>
               <ul className="report-notes-list">
-                {session.notebook.map((n) => (
-                  <li key={n.cardId}>
-                    {n.icon} {n.text}
-                    {n.datum && <em> ({n.datum})</em>}
+                {dataLines.map((dl, idx) => (
+                  <li key={idx}>
+                    {dl.icon} {dl.text}
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
 
           {session.evidence.length > 0 && (
             <section className="report-section">
@@ -331,6 +381,19 @@ export default function StudentReport({
                 {session.announcement.icon} <strong>{session.announcement.headline}</strong>
               </p>
               <blockquote className="report-quote">{session.announcement.message}</blockquote>
+            </section>
+          )}
+
+          {crises.length > 0 && (
+            <section className="report-section">
+              <h3>⚡ 15. Gün Kriz Karşı-Hamlesi & Oyun Teorisi Tutumu</h3>
+              <ul className="report-notes-list">
+                {crises.map((c, idx) => (
+                  <li key={idx}>
+                    <strong>Kriz {c.run === 'retry' ? '(Revizyon)' : '(1. Koşu)'}:</strong> {c.crisisId} · Müdahale Stratejisi: <em>{c.optionId}</em> (Tutum: <strong>{STANCE_LABELS[c.stance]}</strong> · Düşünme süresi: {c.seconds} sn)
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 

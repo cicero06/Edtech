@@ -5774,3 +5774,224 @@ canvas {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------- Rumor / Distractor & Scientific Evidence Feedback ---------------- */
+.data-evidence-hint {
+  font-size: 11.5px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 0 0 10px;
+}
+
+.data-evidence-item.rumor-item {
+  border-style: dashed;
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.data-evidence-item.rumor-checked {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.rumor-warning-box {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1.5px solid #ef4444;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #991b1b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.rumor-warning-box small {
+  color: #b91c1c;
+  font-style: italic;
+}
+
+/* ---------------- Day 15 Game Theory Counter-Move Crisis Modal ---------------- */
+.crisis-overlay {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.crisis-card {
+  max-width: 760px;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+}
+
+.crisis-cause-tag {
+  font-size: 12px;
+  color: #d97706;
+  margin: 0 0 6px;
+}
+
+.crisis-desc-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #334155;
+  margin: 0 0 12px;
+}
+
+.crisis-theory-box {
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.crisis-theory-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.crisis-options-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 12px 0 8px;
+}
+
+.crisis-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 680px) {
+  .crisis-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crisis-option-card {
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crisis-option-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+}
+
+.crisis-option-card.selected {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.crisis-opt-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.crisis-opt-icon {
+  font-size: 24px;
+}
+
+.crisis-opt-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.crisis-opt-stance {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+.crisis-opt-text {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.crisis-opt-cost {
+  font-size: 11px;
+  color: #b45309;
+}
+
+.crisis-opt-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.crisis-effect-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.crisis-effect-tag.pos {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.crisis-effect-tag.neg {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.crisis-reflection-box {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-size: 12.5px;
+  color: #1e40af;
+}
+
+.crisis-reflection-box p {
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+/* ---------------- Concept Tags & Rationale Helpers in SolutionPanel ---------------- */
+.concept-tags-panel {
+  margin-bottom: 8px;
+}
+
+.rationale-ai-hint.ready {
+  color: #10b981;
+}
+
+.rationale-ai-hint.need-more {
+  color: #f59e0b;
+}
+

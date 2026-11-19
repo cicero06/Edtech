@@ -258,6 +258,17 @@ export function localGeneratePedagogicalReport(
   if (repairedLeak) {
     strengths.push('Görünmeyen altyapı kayıplarını veriye dayanarak önceliklendirme');
   }
+  if (session.aiProfile?.evidenceCheck?.filteredAll) {
+    strengths.push('Kanıt masasında söylenti ve dedikoduları bilimsel ölçümlerden başarıyla ayıklama');
+  }
+  const wsCount = Object.keys(session.aiProfile?.workshops ?? {}).length;
+  if (wsCount >= 3) {
+    strengths.push('Kasaba atölyelerinde (hidrolik, sızıntı tespiti, akıllı sulama) doğrudan saha mühendisliği yapma');
+  }
+  const crises = session.aiProfile?.crises ?? [];
+  if (crises.length > 0) {
+    strengths.push('15. gün krizinde ihmal edilen paydaşın karşı-hamlesini müzakere ve kriz yönetimiyle karşılama');
+  }
   if (triedAlt) {
     strengths.push('30 günlük sonuçları gördükten sonra alternatif strateji deneme esnekliği');
   }
