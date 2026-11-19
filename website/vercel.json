@@ -18,6 +18,14 @@
       "destination": "/cup-rush/index.html"
     },
     {
+      "source": "/ding-five",
+      "destination": "/ding-five/index.html"
+    },
+    {
+      "source": "/ding-five/",
+      "destination": "/ding-five/index.html"
+    },
+    {
       "source": "/denge-kasabasi",
       "destination": "/denge-kasabasi/index.html"
     },

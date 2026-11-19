@@ -957,6 +957,31 @@ a:hover {
   color: var(--muted);
   margin: 0 0 22px;
 }
+.dingfive-card {
+  margin-top: 24px;
+}
+.dingfive-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  background: radial-gradient(circle at 30% 20%, #8bc34a, #2e7d32 70%);
+}
+.dingfive-animal {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 30px;
+  background: #fffaf0;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s ease;
+}
+.dingfive-card:hover .dingfive-animal:nth-child(odd) {
+  transform: translateY(-8px) rotate(-4deg);
+}
 @media (max-width: 720px) {
   .cuprush-card {
     grid-template-columns: 1fr;
@@ -967,6 +992,15 @@ a:hover {
   .cuprush-cup {
     width: 36px;
     height: 48px;
+  }
+  .dingfive-visual {
+    padding: 32px 12px;
+    gap: 6px;
+  }
+  .dingfive-animal {
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
   }
 }
 .educators {

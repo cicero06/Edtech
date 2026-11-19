@@ -733,6 +733,27 @@ export function Home() {
             </a>
           </div>
         </article>
+        <article className="cuprush-card dingfive-card" data-reveal>
+          <div className="dingfive-visual" aria-hidden="true">
+            {["🦊", "🐻", "🐰", "🦉", "🦔"].map((a) => (
+              <span key={a} className="dingfive-animal">
+                {a}
+              </span>
+            ))}
+          </div>
+          <div className="cuprush-body">
+            <span className="future-label">YENİ • ÜCRETSİZ • ÇOCUKLAR İÇİN</span>
+            <h3>Ding Five</h3>
+            <p>
+              Orman hayvanlı kartları sırayla aç, masada aynı hayvandan tam 5
+              tane görünce zile ilk sen bas. Toplama ve dikkat becerisini
+              geliştiren hızlı bir kart oyunu; 1–3 orman arkadaşına karşı oyna.
+            </p>
+            <a className="button primary" href="/ding-five">
+              Hemen Oyna <Arrow />
+            </a>
+          </div>
+        </article>
       </section>
       <section className="trust" aria-label="Güven ve etik">
         <div className="container trust-inner" data-reveal-group>
