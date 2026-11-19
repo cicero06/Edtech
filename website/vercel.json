@@ -5,6 +5,8 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/cup-rush", "destination": "/cup-rush/index.html" },
+    { "source": "/cup-rush/", "destination": "/cup-rush/index.html" },
     { "source": "/denge-kasabasi", "destination": "/denge-kasabasi/index.html" },
     { "source": "/denge-kasabasi/", "destination": "/denge-kasabasi/index.html" },
     { "source": "/denge-kasabasi/oyna", "destination": "/denge-kasabasi/oyna/index.html" },

@@ -916,6 +916,59 @@ a:hover {
 .future-grid p {
   font-size: 13px;
 }
+.cuprush-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) 1.1fr;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+.cuprush-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 90px),
+    linear-gradient(160deg, #a26a3c, #6b4423);
+}
+.cuprush-cup {
+  width: 44px;
+  height: 58px;
+  clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
+  border-radius: 4px;
+  box-shadow: inset -10px 0 14px rgba(0, 0, 0, 0.28), inset 8px 0 10px rgba(255, 255, 255, 0.25);
+  transition: transform 0.25s ease;
+}
+.cuprush-card:hover .cuprush-cup:nth-child(odd) {
+  transform: translateY(-8px);
+}
+.cuprush-body {
+  padding: 32px 30px;
+}
+.cuprush-body h3 {
+  font-size: 28px;
+  margin: 8px 0 10px;
+}
+.cuprush-body p {
+  color: var(--muted);
+  margin: 0 0 22px;
+}
+@media (max-width: 720px) {
+  .cuprush-card {
+    grid-template-columns: 1fr;
+  }
+  .cuprush-visual {
+    padding: 32px 16px;
+  }
+  .cuprush-cup {
+    width: 36px;
+    height: 48px;
+  }
+}
 .educators {
   background: #edf0e2;
   border-radius: 8px;
