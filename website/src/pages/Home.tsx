@@ -699,6 +699,41 @@ export function Home() {
           ilk adımıdır.
         </p>
       </section>
+      <section id="mini-oyunlar" className="section container">
+        <div className="section-heading" data-reveal>
+          <div>
+            <Eyebrow>MİNİ OYUN</Eyebrow>
+            <h2>
+              Gör, diz,
+              <br />
+              zile vur!
+            </h2>
+          </div>
+          <p>
+            Renk algısı ve refleksi geliştiren hızlı bir dikkat oyunu. Tek
+            başına 120 bölüm oyna ya da 6 arkadaşınla online odada yarış.
+          </p>
+        </div>
+        <article className="cuprush-card" data-reveal>
+          <div className="cuprush-visual" aria-hidden="true">
+            {["#e53935", "#1e88e5", "#43a047", "#fdd835", "#263238"].map((c) => (
+              <span key={c} className="cuprush-cup" style={{ background: c }} />
+            ))}
+          </div>
+          <div className="cuprush-body">
+            <span className="future-label">YENİ • ÜCRETSİZ</span>
+            <h3>Cup Rush</h3>
+            <p>
+              Karttaki dizilişi bardaklarınla en hızlı kur, doğruysa zile ilk
+              sen bas. Kampanya, aynı cihazda 2 kişilik düello ve 2–6 kişilik
+              online odalar.
+            </p>
+            <a className="button primary" href="/cup-rush">
+              Hemen Oyna <Arrow />
+            </a>
+          </div>
+        </article>
+      </section>
       <section className="trust" aria-label="Güven ve etik">
         <div className="container trust-inner" data-reveal-group>
           <div className="trust-head">

@@ -10,6 +10,14 @@
       "destination": "/api"
     },
     {
+      "source": "/cup-rush",
+      "destination": "/cup-rush/index.html"
+    },
+    {
+      "source": "/cup-rush/",
+      "destination": "/cup-rush/index.html"
+    },
+    {
       "source": "/denge-kasabasi",
       "destination": "/denge-kasabasi/index.html"
     },
